@@ -31,6 +31,7 @@ export async function updateHomepage(form: FormData) {
         availabilityLabel: getString(form, 'availabilityLabel') || defaultHomepageContent.availabilityLabel,
         profileTitle: getString(form, 'profileTitle') || defaultHomepageContent.profileTitle,
         profileDescription: getString(form, 'profileDescription') || defaultHomepageContent.profileDescription,
+        profileImage: getString(form, 'profileImage'),
     };
 
     await prisma.siteSettings.upsert({
