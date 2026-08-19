@@ -84,7 +84,7 @@ export function Navbar() {
     const cardItems = about.length ? [{ label: 'About', links: about.map((item) => ({ label: item.label, href: item.href, description: item.label })) }] : [];
 
     const toggleLocale = useCallback(() => {
-        const next = locale === 'en' ? 'bg' : 'en';
+        const next = locale === 'en' ? 'id' : 'en';
         document.cookie = `locale=${next};path=/;max-age=31536000`;
         setLocale(next);
         window.location.reload();
