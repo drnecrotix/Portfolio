@@ -19,3 +19,19 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+Credits / Attribution
+
+This repository is a substantially modified derivative of the MIT-licensed
+"PersonalBlog" project by Syahril Arfian Almazril (GitHub: Arfazrll):
+https://github.com/Arfazrll/PersonalBlog
+
+The original MIT copyright and permission notice above are intentionally
+preserved. The current Portfolio repository includes substantial subsequent
+modifications, CMS/backend functionality, security hardening, content
+architecture and project-specific work by Dr Necrotix and other contributors.
+
+This attribution section is informational and does not replace, restrict or
+alter the permissions granted by the MIT License above.
