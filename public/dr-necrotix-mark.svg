@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Dr Necrotix">
+  <rect width="512" height="512" rx="112" fill="#0a0a0f"/>
+  <path d="M118 356V156h72c72 0 116 36 116 100s-44 100-116 100h-72Zm54-48h18c39 0 61-18 61-52s-22-52-61-52h-18v104Z" fill="#fff"/>
+  <path d="M323 356V156h49l58 103V156h52v200h-48l-59-104v104h-52Z" fill="#fff"/>
+</svg>
