@@ -1,0 +1,146 @@
+name: Portfolio CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: portfolio-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  protected-design-guard:
+    name: Protected design guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check protected frontend files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          protected_regex='^(src/components/sections/HeroVisual\.tsx|src/components/layout/ConditionalNavigation\.tsx|src/components/layout/Navigation\.tsx|src/components/projects/ProjectsArchiveClient\.tsx|src/components/blog/BlogArchiveClient\.tsx|src/app/projects/page\.tsx|src/app/blog/page\.tsx)$'
+          protected_changed="$(printf '%s\n' "$changed" | grep -E "$protected_regex" || true)"
+          if [ -n "$protected_changed" ]; then
+            echo "Protected frontend files changed:"
+            echo "$protected_changed"
+            if [[ ",${PR_LABELS}," != *",design-approved,"* ]]; then
+              echo "::error::Protected design files changed without the design-approved label."
+              exit 1
+            fi
+          fi
+
+  quality:
+    name: Typecheck, changed-file lint and build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: portfolio
+          POSTGRES_PASSWORD: portfolio
+          POSTGRES_DB: portfolio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U portfolio"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://portfolio:portfolio@127.0.0.1:5432/portfolio?schema=public
+      AUTH_SECRET: ci-only-auth-secret-not-for-production
+      AUTH_TRUST_HOST: true
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate Prisma client
+        run: npm run db:generate
+      - name: Prepare CI database
+        run: npx prisma db push --skip-generate
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint changed source files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+          if [ "${#files[@]}" -gt 0 ]; then
+            printf 'Linting changed files:\n%s\n' "${files[@]}"
+            npx eslint --quiet "${files[@]}"
+          else
+            echo "No changed lintable source files."
+          fi
+      - name: Build
+        run: npm run build
+
+  visual-smoke:
+    name: Frontend visual smoke
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: portfolio
+          POSTGRES_PASSWORD: portfolio
+          POSTGRES_DB: portfolio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U portfolio"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://portfolio:portfolio@127.0.0.1:5432/portfolio?schema=public
+      AUTH_SECRET: ci-only-auth-secret-not-for-production
+      AUTH_TRUST_HOST: true
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Prepare CI database
+        run: npx prisma db push
+      - name: Install Chromium
+        run: npx playwright install chromium
+      - name: Run visual smoke tests
+        run: npm run test:visual
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-smoke-${{ github.sha }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
