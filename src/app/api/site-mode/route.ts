@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resolveSiteMode } from '@/lib/site-mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,14 +10,10 @@ export async function GET() {
         update: {},
         create: { id: 'default' },
     });
-
-    const now = new Date();
-    const beforeStart = settings.startsAt && now < settings.startsAt;
-    const afterEnd = settings.endsAt && now >= settings.endsAt;
-    const effectiveMode = beforeStart || afterEnd ? 'NORMAL' : settings.mode;
+    const effective = resolveSiteMode(settings);
 
     return NextResponse.json({
-        mode: effectiveMode,
+        mode: effective.mode,
         bypassAdmins: settings.bypassAdmins,
         title: settings.title,
         message: settings.message,
@@ -24,8 +21,6 @@ export async function GET() {
         showSocials: settings.showSocials,
         showContact: settings.showContact,
     }, {
-        headers: {
-            'Cache-Control': 'no-store, max-age=0',
-        },
+        headers: { 'Cache-Control': 'no-store, max-age=0' },
     });
 }
