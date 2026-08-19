@@ -6,7 +6,10 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "lint": "next lint"
+        "lint": "next lint",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:studio": "prisma studio"
     },
     "dependencies": {
         "@base-ui/react": "^1.4.1",
@@ -14,6 +17,7 @@
         "@hugeicons/core-free-icons": "^4.2.2",
         "@hugeicons/react": "^1.1.9",
         "@phosphor-icons/react": "^2.1.10",
+        "@prisma/client": "^6.16.2",
         "@radix-ui/react-avatar": "^1.1.11",
         "@radix-ui/react-dialog": "^1.1.18",
         "@radix-ui/react-popover": "^1.1.18",
@@ -29,10 +33,14 @@
         "@react-three/rapier": "^1.4.0",
         "@splinetool/react-spline": "^4.1.0",
         "@splinetool/runtime": "^1.12.47",
+        "@tiptap/extension-link": "^3.4.3",
+        "@tiptap/react": "^3.4.3",
+        "@tiptap/starter-kit": "^3.4.3",
         "@tsparticles/react": "^3.0.0",
         "@tsparticles/slim": "^3.0.0",
         "@types/matter-js": "^0.20.2",
         "aos": "^2.3.4",
+        "bcryptjs": "^3.0.2",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "date-fns": "^4.1.0",
@@ -46,6 +54,7 @@
         "mini-svg-data-uri": "^1.4.4",
         "motion": "^12.38.0",
         "next": "^16.2.5",
+        "next-auth": "^5.0.0-beta.29",
         "next-intl": "^4.8.0",
         "next-themes": "^0.2.1",
         "nodemailer": "^8.0.1",
@@ -62,7 +71,8 @@
         "tailwindcss-animate": "^1.0.7",
         "three": "^0.170.0",
         "three-globe": "^2.45.0",
-        "tsparticles": "^3.9.1"
+        "tsparticles": "^3.9.1",
+        "zod": "^4.1.8"
     },
     "devDependencies": {
         "@types/aos": "^3.0.7",
@@ -77,6 +87,7 @@
         "eslint": "^9.39.4",
         "eslint-config-next": "^16.2.5",
         "postcss": "^8.4.0",
+        "prisma": "^6.16.2",
         "tailwindcss": "^3.4.0",
         "typescript": "^5.3.0"
     }

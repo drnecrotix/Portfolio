@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  EDITOR
+}
+
+enum ContentStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ProjectStatus {
+  PLANNED
+  ONGOING
+  COMPLETED
+  ARCHIVED
+}
+
+enum PostType {
+  ARTICLE
+  POETRY
+  THOUGHT
+  NOTE
+  PROJECT_LOG
+}
+
+enum SiteMode {
+  NORMAL
+  MAINTENANCE
+  COMING_SOON
+  PRIVATE
+  ARCHIVE
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(EDITOR)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  revisions    Revision[]
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  title           String
+  description     String
+  longDescription String?       @db.Text
+  status          ProjectStatus @default(PLANNED)
+  category        String?
+  technologies    String[]
+  tools           String[]
+  highlights      String[]
+  repoUrl         String?
+  demoUrl         String?
+  role            String?
+  timeline        String?
+  team            String?
+  sortOrder       Int           @default(0)
+  content         Json?
+  seoTitle        String?
+  seoDescription  String?
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  revisions       Revision[]
+}
+
+model Post {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  title          String
+  excerpt        String?
+  content        Json
+  type           PostType      @default(ARTICLE)
+  status         ContentStatus @default(DRAFT)
+  category       String?
+  tags           String[]
+  authorName     String
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  scheduledAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  revisions      Revision[]
+}
+
+model Page {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  title          String
+  status         ContentStatus @default(DRAFT)
+  content        Json
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  revisions      Revision[]
+}
+
+model NavigationItem {
+  id        String  @id @default(cuid())
+  label     String
+  href      String
+  location  String  @default("primary")
+  sortOrder Int     @default(0)
+  isVisible Boolean @default(true)
+  isExternal Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteSettings {
+  id                    String   @id @default("default")
+  siteName              String   @default("Dr Necrotix")
+  siteDescription       String?
+  defaultTheme          String   @default("dark")
+  allowDayMode          Boolean  @default(true)
+  accentColor           String?
+  locale                String   @default("en")
+  timezone              String   @default("Europe/Sofia")
+  socialLinks           Json?
+  contactDetails        Json?
+  homepageContent       Json?
+  profileCardContent    Json?
+  seoDefaults           Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model SiteModeSettings {
+  id              String   @id @default("default")
+  mode            SiteMode @default(NORMAL)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  bypassAdmins    Boolean  @default(true)
+  passwordHash    String?
+  title           String?
+  message         String?  @db.Text
+  countdownTarget DateTime?
+  showSocials     Boolean  @default(true)
+  showContact     Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+model MediaAsset {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  fileName  String
+  mimeType  String
+  size      Int
+  width     Int?
+  height    Int?
+  altText   String?
+  caption   String?
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Redirect {
+  id        String   @id @default(cuid())
+  source    String   @unique
+  target    String
+  permanent Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Revision {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  snapshot   Json
+  note       String?
+  createdAt  DateTime @default(now())
+  createdBy  String?
+  user       User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  postId     String?
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  pageId     String?
+  page       Page?    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+}
