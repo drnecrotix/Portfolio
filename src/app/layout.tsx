@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono, Playfair_Display, Alex_Brush } from 'next/font/google';
 import { getMessages, getLocale } from 'next-intl/server';
 import { ThemeProvider, I18nProvider, SmoothScrollProvider } from '@/providers';
+import { prisma } from '@/lib/prisma';
+import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 
 import '@/styles/globals.css';
 
@@ -32,47 +34,67 @@ const signature = Alex_Brush({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-export const metadata: Metadata = {
-    title: {
-        default: 'Dr Necrotix | Digital Portfolio',
-        template: '%s | Dr Necrotix',
-    },
-    description: 'Personal portfolio of Dr Necrotix - projects, development, design, creative work and digital experiments.',
-    keywords: ['Dr Necrotix', 'Nikola Stoyanov', 'portfolio', 'developer', 'design', 'open source', 'digital creator'],
-    authors: [{ name: 'Nikola Stoyanov' }],
-    creator: 'Dr Necrotix',
-    metadataBase: new URL(siteUrl),
-    openGraph: {
-        type: 'website',
-        locale: 'en_US',
-        url: siteUrl,
-        title: 'Dr Necrotix | Digital Portfolio',
-        description: 'Projects, development, design, creative work and digital experiments.',
-        siteName: 'Dr Necrotix',
-    },
-    twitter: {
-        card: 'summary_large_image',
-        title: 'Dr Necrotix | Digital Portfolio',
-        description: 'Projects, development, design, creative work and digital experiments.',
-    },
-    robots: {
-        index: true,
-        follow: true,
-        googleBot: {
-            index: true,
-            follow: true,
-            'max-video-preview': -1,
-            'max-image-preview': 'large',
-            'max-snippet': -1,
+export async function generateMetadata(): Promise<Metadata> {
+    let seo = defaultSeoDefaults;
+    let siteName = 'Dr Necrotix';
+
+    try {
+        const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+        seo = normalizeSeoDefaults(settings?.seoDefaults);
+        siteName = settings?.siteName || siteName;
+    } catch {
+        // Keep the public site renderable when the CMS database is temporarily unavailable.
+    }
+
+    const ogImages = seo.ogImage ? [{ url: seo.ogImage }] : undefined;
+    const twitterImages = seo.twitterImage ? [seo.twitterImage] : seo.ogImage ? [seo.ogImage] : undefined;
+
+    return {
+        title: {
+            default: seo.titleDefault,
+            template: seo.titleTemplate,
         },
-    },
-    icons: {
-        icon: [
-            { url: '/Arfazrll_light.svg', media: '(prefers-color-scheme: light)' },
-            { url: '/Arfazrll_dark.svg', media: '(prefers-color-scheme: dark)' },
-        ],
-    },
-};
+        description: seo.description,
+        keywords: seo.keywords,
+        authors: [{ name: seo.authorName }],
+        creator: seo.creatorName,
+        metadataBase: new URL(siteUrl),
+        openGraph: {
+            type: 'website',
+            locale: seo.locale,
+            url: siteUrl,
+            title: seo.ogTitle,
+            description: seo.ogDescription,
+            siteName,
+            images: ogImages,
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: seo.twitterTitle,
+            description: seo.twitterDescription,
+            creator: seo.twitterCreator || undefined,
+            images: twitterImages,
+        },
+        robots: {
+            index: seo.indexSite,
+            follow: seo.followLinks,
+            googleBot: {
+                index: seo.indexSite,
+                follow: seo.followLinks,
+                'max-video-preview': -1,
+                'max-image-preview': 'large',
+                'max-snippet': -1,
+            },
+        },
+        verification: seo.googleVerification ? { google: seo.googleVerification } : undefined,
+        icons: {
+            icon: [
+                { url: '/Arfazrll_light.svg', media: '(prefers-color-scheme: light)' },
+                { url: '/Arfazrll_dark.svg', media: '(prefers-color-scheme: dark)' },
+            ],
+        },
+    };
+}
 
 export const viewport: Viewport = {
     themeColor: [
