@@ -2,15 +2,22 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Separator } from "@/components/ui/separator";
 import { Github, Linkedin, Instagram, ArrowDownRight, Bot, Zap, ExternalLink, MessageSquare } from 'lucide-react';
-import { portfolioData } from "@/data/portfolio";
 import Link from 'next/link';
 import gsap from "gsap";
 import { ProfileCard } from "@/components/ui/profile-card";
 import { Spotlight } from "@/components/ui/spotlight-new";
 import { defaultHomepageContent, type HomepageContent } from '@/lib/homepage-content';
+import { defaultPublicIdentity, type PublicIdentity } from '@/lib/public-identity';
 
-export function HeroVisual({ isExiting = false, content = defaultHomepageContent }: { isExiting?: boolean; content?: HomepageContent }) {
-  const { personal } = portfolioData;
+export function HeroVisual({
+  isExiting = false,
+  content = defaultHomepageContent,
+  identity = defaultPublicIdentity,
+}: {
+  isExiting?: boolean;
+  content?: HomepageContent;
+  identity?: PublicIdentity;
+}) {
   const [showProfile, setShowProfile] = useState(false);
   const [tooltip, setTooltip] = useState<{ show: boolean; text: string; x: number; y: number; icon: 'zap' | 'bot' | null }>({ show: false, text: '', x: 0, y: 0, icon: null });
 
@@ -69,9 +76,11 @@ export function HeroVisual({ isExiting = false, content = defaultHomepageContent
               {content.intro}
             </motion.p>
             <div className="relative">
-              <div ref={githubRef} className="absolute -top-4 right-0 md:right-2 text-primary/60 hover:text-primary z-20 opacity-0">
-                <a href={personal.socialLinks.find(s => s.platform === 'GitHub')?.url} target="_blank" className="block"><Github size={32} /></a>
-              </div>
+              {identity.githubUrl && (
+                <div ref={githubRef} className="absolute -top-4 right-0 md:right-2 text-primary/60 hover:text-primary z-20 opacity-0">
+                  <a href={identity.githubUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="GitHub"><Github size={32} /></a>
+                </div>
+              )}
               <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }} className="text-[clamp(3rem,11vw,13rem)] font-black leading-[0.85] tracking-tighter text-shiny will-change-transform px-4">
                 {content.lineOne}
               </motion.h1>
@@ -80,12 +89,16 @@ export function HeroVisual({ isExiting = false, content = defaultHomepageContent
 
           <div className="md:flex gap-8 items-center relative">
             <div className="relative">
-              <div ref={linkedinRef} className="absolute -top-8 left-4 text-primary/60 hover:text-primary z-20 opacity-0">
-                <a href={personal.socialLinks.find(s => s.platform === 'LinkedIn')?.url} target="_blank" className="block"><Linkedin size={32} /></a>
-              </div>
-              <div ref={instagramRef} className="absolute -bottom-12 right-24 md:right-36 text-primary/60 hover:text-primary z-20 opacity-0">
-                <a href={personal.socialLinks.find(s => s.platform === 'Instagram')?.url} target="_blank" className="block"><Instagram size={32} /></a>
-              </div>
+              {identity.linkedinUrl && (
+                <div ref={linkedinRef} className="absolute -top-8 left-4 text-primary/60 hover:text-primary z-20 opacity-0">
+                  <a href={identity.linkedinUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="LinkedIn"><Linkedin size={32} /></a>
+                </div>
+              )}
+              {identity.instagramUrl && (
+                <div ref={instagramRef} className="absolute -bottom-12 right-24 md:right-36 text-primary/60 hover:text-primary z-20 opacity-0">
+                  <a href={identity.instagramUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="Instagram"><Instagram size={32} /></a>
+                </div>
+              )}
               <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, delay: 0.1, ease: [0.16, 1, 0.3, 1] }} className="text-[clamp(3rem,11vw,13rem)] md:flex items-center font-black leading-[0.85] tracking-tighter text-shiny will-change-transform px-4">
                 <span>{content.lineTwoPrefix}</span>
                 <div ref={zapRef} className="hidden lg:block mx-[0.05em] relative cursor-pointer group" onClick={() => window.open(content.workspaceUrl, '_blank')} onMouseEnter={(e) => setTooltip({ show: true, text: content.workspaceTooltip, icon: 'zap', x: e.clientX, y: e.clientY })} onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))} onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}>
@@ -141,7 +154,16 @@ export function HeroVisual({ isExiting = false, content = defaultHomepageContent
         <AnimatePresence>
           {showProfile && (
             <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="pl-4 pointer-events-auto" style={{ width: 'max-content' }}>
-              <ProfileCard name={personal.name} title={content.profileTitle} description={content.profileDescription} imageUrl={content.profileImage || personal.avatar} githubUrl={personal.socialLinks.find(s => s.platform === 'GitHub')?.url} linkedinUrl={personal.socialLinks.find(s => s.platform === 'LinkedIn')?.url} instagramUrl={personal.socialLinks.find(s => s.platform === 'Instagram')?.url} className="!max-w-4xl scale-[0.8] origin-left" />
+              <ProfileCard
+                name={identity.name}
+                title={content.profileTitle}
+                description={content.profileDescription}
+                imageUrl={content.profileImage || identity.avatar || '/dr-necrotix-mark.svg'}
+                githubUrl={identity.githubUrl || '#'}
+                linkedinUrl={identity.linkedinUrl || '#'}
+                instagramUrl={identity.instagramUrl || '#'}
+                className="!max-w-4xl scale-[0.8] origin-left"
+              />
             </motion.div>
           )}
         </AnimatePresence>
