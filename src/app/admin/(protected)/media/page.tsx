@@ -1,5 +1,6 @@
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { mediaStorageConfigured } from '@/lib/media-storage';
+import { isManagedMediaKey, mediaStorageConfigured } from '@/lib/media-storage';
 import { createMediaAsset, deleteMediaAsset, updateMediaAsset, uploadMediaAsset } from './actions';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
@@ -16,8 +17,32 @@ function formatBytes(size: number) {
     return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
-export default async function MediaLibraryPage() {
-    const assets = await prisma.mediaAsset.findMany({ orderBy: { createdAt: 'desc' } });
+type SearchParams = Promise<{ q?: string; type?: string }>;
+
+export default async function MediaLibraryPage({ searchParams }: { searchParams: SearchParams }) {
+    const params = await searchParams;
+    const query = String(params.q ?? '').trim();
+    const type = ['all', 'image', 'file'].includes(String(params.type)) ? String(params.type) : 'all';
+
+    const where = {
+        ...(query ? {
+            OR: [
+                { fileName: { contains: query, mode: 'insensitive' as const } },
+                { altText: { contains: query, mode: 'insensitive' as const } },
+                { caption: { contains: query, mode: 'insensitive' as const } },
+                { mimeType: { contains: query, mode: 'insensitive' as const } },
+            ],
+        } : {}),
+        ...(type === 'image' ? { mimeType: { startsWith: 'image/' } } : {}),
+        ...(type === 'file' ? { NOT: { mimeType: { startsWith: 'image/' } } } : {}),
+    };
+
+    const [assets, totalAssets, imageCount, totalBytes] = await Promise.all([
+        prisma.mediaAsset.findMany({ where, orderBy: { createdAt: 'desc' } }),
+        prisma.mediaAsset.count(),
+        prisma.mediaAsset.count({ where: { mimeType: { startsWith: 'image/' } } }),
+        prisma.mediaAsset.aggregate({ _sum: { size: true } }),
+    ]);
     const storageReady = mediaStorageConfigured();
 
     return (
@@ -27,11 +52,36 @@ export default async function MediaLibraryPage() {
                 <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
                     <div>
                         <h2 className="text-4xl font-semibold">Assets</h2>
-                        <p className="mt-2 max-w-2xl text-sm text-white/45">Upload files to Cloudflare R2 or register existing public assets for reuse across the CMS.</p>
+                        <p className="mt-2 max-w-2xl text-sm text-white/45">Upload to Cloudflare R2, register controlled external assets and reuse media across the CMS.</p>
                     </div>
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/45">{assets.length} assets</span>
+                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/45">{assets.length} shown</span>
                 </div>
             </div>
+
+            <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                    ['Total assets', totalAssets],
+                    ['Images', imageCount],
+                    ['Other files', Math.max(0, totalAssets - imageCount)],
+                    ['Stored metadata size', formatBytes(totalBytes._sum.size ?? 0)],
+                ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
+                        <p className="text-xs uppercase tracking-[0.2em] text-white/35">{label}</p>
+                        <p className="mt-3 text-2xl font-semibold">{value}</p>
+                    </div>
+                ))}
+            </section>
+
+            <form className="mb-8 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4 md:flex-row md:items-center">
+                <input name="q" defaultValue={query} placeholder="Search file name, alt text, caption or MIME type..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-white/30" />
+                <select name="type" defaultValue={type} className="rounded-xl border border-white/10 bg-[#101010] px-4 py-3 text-sm">
+                    <option value="all">All types</option>
+                    <option value="image">Images</option>
+                    <option value="file">Other files</option>
+                </select>
+                <button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Filter</button>
+                {(query || type !== 'all') && <Link href="/admin/media" className="rounded-xl border border-white/10 px-4 py-3 text-center text-sm text-white/55 hover:text-white">Reset</Link>}
+            </form>
 
             <section className="mb-10 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -63,7 +113,7 @@ export default async function MediaLibraryPage() {
                 <form action={createMediaAsset} className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                     <label className="text-sm text-white/60">File name<input name="fileName" required placeholder="project-cover.webp" className={input} /></label>
                     <label className="text-sm text-white/60 xl:col-span-2">Public URL<input name="url" type="url" required placeholder="https://cdn.example.com/project-cover.webp" className={input} /></label>
-                    <label className="text-sm text-white/60">Storage key<input name="key" placeholder="projects/project-cover.webp" className={input} /></label>
+                    <label className="text-sm text-white/60">Storage key<input name="key" placeholder="external/project-cover.webp" className={input} /></label>
                     <label className="text-sm text-white/60">MIME type<input name="mimeType" defaultValue="image/webp" className={input} /></label>
                     <label className="text-sm text-white/60">Size in bytes<input name="size" type="number" min="0" defaultValue="0" className={input} /></label>
                     <label className="text-sm text-white/60">Width<input name="width" type="number" min="0" className={input} /></label>
@@ -75,11 +125,12 @@ export default async function MediaLibraryPage() {
             </section>
 
             {assets.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 py-24 text-center text-sm text-white/35">No media assets yet.</div>
+                <div className="rounded-2xl border border-dashed border-white/10 py-24 text-center text-sm text-white/35">No matching media assets.</div>
             ) : (
                 <div className="grid gap-5 lg:grid-cols-2">
                     {assets.map((asset) => {
                         const isImage = asset.mimeType.startsWith('image/');
+                        const managed = isManagedMediaKey(asset.key);
                         return (
                             <article key={asset.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
                                 {isImage ? (
@@ -94,7 +145,10 @@ export default async function MediaLibraryPage() {
                                 <div className="p-5">
                                     <div className="mb-5 flex items-start justify-between gap-4">
                                         <div className="min-w-0">
-                                            <h3 className="truncate font-semibold">{asset.fileName}</h3>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h3 className="truncate font-semibold">{asset.fileName}</h3>
+                                                <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] ${managed ? 'border-emerald-400/20 text-emerald-300/80' : 'border-white/10 text-white/35'}`}>{managed ? 'Managed R2' : 'External'}</span>
+                                            </div>
                                             <p className="mt-1 truncate font-mono text-[10px] text-white/35">{asset.key}</p>
                                             <p className="mt-2 text-xs text-white/40">{asset.width && asset.height ? `${asset.width}×${asset.height} · ` : ''}{formatBytes(asset.size)}</p>
                                         </div>
@@ -113,7 +167,13 @@ export default async function MediaLibraryPage() {
                                         <button className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black">Save metadata</button>
                                     </form>
 
-                                    <form action={deleteMediaAsset.bind(null, asset.id)} className="mt-3">
+                                    <form action={deleteMediaAsset.bind(null, asset.id)} className="mt-4 border-t border-white/10 pt-4">
+                                        {managed && (
+                                            <label className="mb-3 flex items-center gap-2 text-xs text-white/45">
+                                                <input type="checkbox" name="deleteStoredObject" />
+                                                Also permanently delete the R2 object
+                                            </label>
+                                        )}
                                         <button className="rounded-lg border border-red-500/20 px-4 py-2 text-xs text-red-300 hover:bg-red-500/10">Remove from library</button>
                                     </form>
                                 </div>

@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 const accountId = process.env.R2_ACCOUNT_ID;
 const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -11,12 +11,8 @@ function required(value: string | undefined, name: string) {
     return value;
 }
 
-export function mediaStorageConfigured() {
-    return Boolean(accountId && accessKeyId && secretAccessKey && bucket && publicBaseUrl);
-}
-
-export async function uploadMediaFile(file: File, key: string) {
-    const client = new S3Client({
+function client() {
+    return new S3Client({
         region: 'auto',
         endpoint: `https://${required(accountId, 'R2_ACCOUNT_ID')}.r2.cloudflarestorage.com`,
         credentials: {
@@ -24,9 +20,15 @@ export async function uploadMediaFile(file: File, key: string) {
             secretAccessKey: required(secretAccessKey, 'R2_SECRET_ACCESS_KEY'),
         },
     });
+}
 
+export function mediaStorageConfigured() {
+    return Boolean(accountId && accessKeyId && secretAccessKey && bucket && publicBaseUrl);
+}
+
+export async function uploadMediaFile(file: File, key: string) {
     const body = Buffer.from(await file.arrayBuffer());
-    await client.send(new PutObjectCommand({
+    await client().send(new PutObjectCommand({
         Bucket: required(bucket, 'R2_BUCKET'),
         Key: key,
         Body: body,
@@ -35,4 +37,16 @@ export async function uploadMediaFile(file: File, key: string) {
     }));
 
     return `${required(publicBaseUrl, 'R2_PUBLIC_BASE_URL').replace(/\/$/, '')}/${encodeURI(key)}`;
+}
+
+export async function deleteMediaFile(key: string) {
+    if (!mediaStorageConfigured()) throw new Error('R2 storage is not configured.');
+    await client().send(new DeleteObjectCommand({
+        Bucket: required(bucket, 'R2_BUCKET'),
+        Key: key,
+    }));
+}
+
+export function isManagedMediaKey(key: string) {
+    return key.startsWith('media/');
 }
