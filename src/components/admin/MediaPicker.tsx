@@ -19,10 +19,11 @@ type Props = {
 
 export function MediaPicker({ value = '', onChange, inputName, label = 'Media' }: Props) {
     const [assets, setAssets] = useState<MediaAsset[]>([]);
-    const [selected, setSelected] = useState(value);
+    const [internalSelected, setInternalSelected] = useState(value);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [kind, setKind] = useState<'all' | 'image' | 'file'>('all');
+    const selected = onChange ? value : internalSelected;
 
     useEffect(() => {
         fetch('/api/media', { cache: 'no-store' })
@@ -30,8 +31,6 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media' }
             .then((data) => setAssets(Array.isArray(data) ? data : []))
             .catch(() => setAssets([]));
     }, []);
-
-    useEffect(() => setSelected(value), [value]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -47,16 +46,17 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media' }
         });
     }, [assets, kind, query]);
 
-    const choose = (url: string) => {
-        setSelected(url);
+    const setSelection = (url: string) => {
+        if (!onChange) setInternalSelected(url);
         onChange?.(url);
+    };
+
+    const choose = (url: string) => {
+        setSelection(url);
         setOpen(false);
     };
 
-    const clear = () => {
-        setSelected('');
-        onChange?.('');
-    };
+    const clear = () => setSelection('');
 
     return (
         <div className="space-y-2">
