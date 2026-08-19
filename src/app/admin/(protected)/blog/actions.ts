@@ -34,7 +34,7 @@ function fields(form: FormData) {
         seoDescription: String(form.get('seoDescription') || '').trim() || null,
         publishedAt: parseDate(form.get('publishedAt')),
         scheduledAt: parseDate(form.get('scheduledAt')),
-        content: parsePostContent(type, form.get('content')),
+        content: parsePostContent(type, form.get('content'), form.get('featuredImage')),
     };
 }
 
