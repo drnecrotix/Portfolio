@@ -30,29 +30,30 @@ const signature = Alex_Brush({
     display: 'swap',
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
     title: {
-        default: 'Arfazrll | AI & Software Engineer',
-        template: '%s | Portfolio',
+        default: 'Dr Necrotix | Digital Portfolio',
+        template: '%s | Dr Necrotix',
     },
-    description: 'A passionate developer building digital experiences that inspire. Explore my projects, skills, and professional journey.',
-    keywords: ['developer', 'portfolio', 'web development', 'full stack', 'react', 'nextjs'],
-    authors: [{ name: 'Your Name' }],
-    creator: 'Your Name',
-    metadataBase: new URL('https://your-domain.com'),
+    description: 'Personal portfolio of Dr Necrotix - projects, development, design, creative work and digital experiments.',
+    keywords: ['Dr Necrotix', 'Nikola Stoyanov', 'portfolio', 'developer', 'design', 'open source', 'digital creator'],
+    authors: [{ name: 'Nikola Stoyanov' }],
+    creator: 'Dr Necrotix',
+    metadataBase: new URL(siteUrl),
     openGraph: {
         type: 'website',
         locale: 'en_US',
-        url: 'https://your-domain.com',
-        title: 'Arfazrll | AI & Software Engineer',
-        description: 'A passionate developer building digital experiences that inspire.',
-        siteName: 'Portfolio',
+        url: siteUrl,
+        title: 'Dr Necrotix | Digital Portfolio',
+        description: 'Projects, development, design, creative work and digital experiments.',
+        siteName: 'Dr Necrotix',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Arfazrll | AI & Software Engineer',
-        description: 'A passionate developer building digital experiences that inspire.',
-        creator: '@yourusername',
+        title: 'Dr Necrotix | Digital Portfolio',
+        description: 'Projects, development, design, creative work and digital experiments.',
     },
     robots: {
         index: true,
