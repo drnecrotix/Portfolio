@@ -1,7 +1,5 @@
-'use strict';
-
-const http = require('http');
-const next = require('next');
+import http from 'node:http';
+import next from 'next';
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = Number.parseInt(process.env.PORT || '3000', 10);
