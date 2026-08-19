@@ -1,4 +1,5 @@
 import type { Post as PrismaPost, PostType } from '@prisma/client';
+import { safeCmsMediaUrl, sanitizeCmsHtml } from '@/lib/sanitize-cms-html';
 
 export type CmsPostContent = {
     html?: string;
@@ -19,8 +20,17 @@ export type PublicPost = {
     content: CmsPostContent;
 };
 
+function safePublicContent(type: PostType, value: unknown): CmsPostContent {
+    const source = value && typeof value === 'object' && !Array.isArray(value) ? value as CmsPostContent : {};
+    const content: CmsPostContent = type === 'POETRY'
+        ? { text: String(source.text ?? '') }
+        : { html: sanitizeCmsHtml(source.html ?? '') };
+    const featuredImage = safeCmsMediaUrl(source.featuredImage);
+    if (featuredImage) content.featuredImage = featuredImage;
+    return content;
+}
+
 export function cmsPostToPublicPost(post: PrismaPost): PublicPost {
-    const content = (post.content ?? {}) as CmsPostContent;
     return {
         id: post.id,
         slug: post.slug,
@@ -31,7 +41,7 @@ export function cmsPostToPublicPost(post: PrismaPost): PublicPost {
         type: post.type,
         authorName: post.authorName,
         date: (post.publishedAt ?? post.createdAt).toISOString(),
-        content,
+        content: safePublicContent(post.type, post.content),
     };
 }
 
@@ -44,8 +54,8 @@ export function csvToList(value: FormDataEntryValue | null) {
 
 export function parsePostContent(type: PostType, value: FormDataEntryValue | null, featuredImage?: FormDataEntryValue | null): CmsPostContent {
     const raw = String(value ?? '');
-    const image = String(featuredImage ?? '').trim();
-    const content: CmsPostContent = type === 'POETRY' ? { text: raw } : { html: raw };
+    const image = safeCmsMediaUrl(featuredImage);
+    const content: CmsPostContent = type === 'POETRY' ? { text: raw } : { html: sanitizeCmsHtml(raw) };
     if (image) content.featuredImage = image;
     return content;
 }
