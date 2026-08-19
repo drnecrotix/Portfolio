@@ -4,7 +4,15 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { csvToList, safeProjectContent } from '@/lib/cms-projects';
+import {
+    csvToList,
+    normalizeProjectMediaUrl,
+    normalizeProjectUrl,
+    safeProjectContent,
+} from '@/lib/cms-projects';
+
+const PROJECT_STATUSES = ['PLANNED', 'ONGOING', 'COMPLETED', 'ARCHIVED'] as const;
+type ProjectStatusValue = (typeof PROJECT_STATUSES)[number];
 
 async function requireEditor() {
     const session = await auth();
@@ -13,21 +21,33 @@ async function requireEditor() {
     return session.user;
 }
 
-function readProjectForm(formData: FormData) {
-    const title = String(formData.get('title') ?? '').trim();
-    const slug = String(formData.get('slug') ?? '').trim().toLowerCase();
-    const description = String(formData.get('description') ?? '').trim();
-    const longDescription = String(formData.get('longDescription') ?? '').trim() || null;
-    const status = String(formData.get('status') ?? 'PLANNED') as 'PLANNED' | 'ONGOING' | 'COMPLETED' | 'ARCHIVED';
+function text(value: FormDataEntryValue | null, max: number, field: string, required = false) {
+    const result = String(value ?? '').trim();
+    if (required && !result) throw new Error(`${field} is required.`);
+    if (result.length > max) throw new Error(`${field} is too long.`);
+    return result;
+}
 
-    if (!title || !description || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-        throw new Error('Title, description and a valid kebab-case slug are required.');
+function readProjectForm(formData: FormData) {
+    const title = text(formData.get('title'), 160, 'Title', true);
+    const slug = text(formData.get('slug'), 120, 'Slug', true).toLowerCase();
+    const description = text(formData.get('description'), 500, 'Description', true);
+    const longDescription = text(formData.get('longDescription'), 10_000, 'Long description') || null;
+    const rawStatus = String(formData.get('status') ?? 'PLANNED');
+    if (!PROJECT_STATUSES.includes(rawStatus as ProjectStatusValue)) throw new Error('Invalid project status.');
+    const status = rawStatus as ProjectStatusValue;
+
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+        throw new Error('Slug must use kebab-case letters, numbers and hyphens only.');
     }
 
     const content = safeProjectContent(formData.get('content'));
-    const imageUrl = String(formData.get('imageUrl') ?? '').trim();
+    const imageUrl = normalizeProjectMediaUrl(formData.get('imageUrl'));
     if (imageUrl) content.image = imageUrl;
     else delete content.image;
+
+    const rawSortOrder = Number(formData.get('sortOrder') ?? 0);
+    const sortOrder = Number.isFinite(rawSortOrder) ? Math.max(-10_000, Math.min(10_000, Math.trunc(rawSortOrder))) : 0;
 
     return {
         title,
@@ -35,18 +55,18 @@ function readProjectForm(formData: FormData) {
         description,
         longDescription,
         status,
-        category: String(formData.get('category') ?? '').trim() || null,
+        category: text(formData.get('category'), 120, 'Category') || null,
         technologies: csvToList(formData.get('technologies')),
         tools: csvToList(formData.get('tools')),
         highlights: csvToList(formData.get('highlights')),
-        repoUrl: String(formData.get('repoUrl') ?? '').trim() || null,
-        demoUrl: String(formData.get('demoUrl') ?? '').trim() || null,
-        role: String(formData.get('role') ?? '').trim() || null,
-        timeline: String(formData.get('timeline') ?? '').trim() || null,
-        team: String(formData.get('team') ?? '').trim() || null,
-        sortOrder: Number(formData.get('sortOrder') ?? 0) || 0,
-        seoTitle: String(formData.get('seoTitle') ?? '').trim() || null,
-        seoDescription: String(formData.get('seoDescription') ?? '').trim() || null,
+        repoUrl: normalizeProjectUrl(formData.get('repoUrl')),
+        demoUrl: normalizeProjectUrl(formData.get('demoUrl')),
+        role: text(formData.get('role'), 160, 'Role') || null,
+        timeline: text(formData.get('timeline'), 240, 'Timeline') || null,
+        team: text(formData.get('team'), 240, 'Team') || null,
+        sortOrder,
+        seoTitle: text(formData.get('seoTitle'), 180, 'SEO title') || null,
+        seoDescription: text(formData.get('seoDescription'), 320, 'SEO description') || null,
         content,
         publishedAt: status === 'COMPLETED' || status === 'ONGOING' ? new Date() : null,
     };

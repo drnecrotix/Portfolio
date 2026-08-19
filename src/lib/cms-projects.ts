@@ -9,6 +9,9 @@ type ProjectContent = {
     challengesAndSolutions?: { problem: string; solution: string }[];
 };
 
+const MAX_LIST_ITEMS = 50;
+const MAX_LIST_ITEM_LENGTH = 120;
+
 export function cmsProjectToPortfolioProject(project: PrismaProject): Project {
     const content = (project.content ?? {}) as unknown as ProjectContent;
 
@@ -46,16 +49,45 @@ export function csvToList(value: FormDataEntryValue | null) {
     return String(value ?? '')
         .split(',')
         .map((item) => item.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .slice(0, MAX_LIST_ITEMS)
+        .map((item) => item.slice(0, MAX_LIST_ITEM_LENGTH));
+}
+
+export function normalizeProjectUrl(value: FormDataEntryValue | null) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+    if (raw.length > 2048) throw new Error('Project URL is too long.');
+
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('Project URLs must use http or https.');
+    }
+    return parsed.toString();
+}
+
+export function normalizeProjectMediaUrl(value: FormDataEntryValue | null) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    if (raw.startsWith('/')) return raw.slice(0, 2048);
+    return normalizeProjectUrl(raw) ?? '';
 }
 
 export function safeProjectContent(value: FormDataEntryValue | null): ProjectContent {
     const raw = String(value ?? '').trim();
     if (!raw) return {};
+    if (raw.length > 100_000) throw new Error('Project content JSON is too large.');
 
     const parsed = JSON.parse(raw) as ProjectContent;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         throw new Error('Project content must be a JSON object.');
     }
+
+    if (parsed.galleryImages) {
+        if (!Array.isArray(parsed.galleryImages)) throw new Error('Gallery images must be an array.');
+        parsed.galleryImages = parsed.galleryImages.slice(0, 30).map((item) => normalizeProjectMediaUrl(String(item)));
+    }
+
+    if (parsed.image) parsed.image = normalizeProjectMediaUrl(parsed.image);
     return parsed;
 }
