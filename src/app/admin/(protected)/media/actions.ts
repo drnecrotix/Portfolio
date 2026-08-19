@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { uploadMediaFile } from '@/lib/media-storage';
 
 async function requireEditor() {
     const session = await auth();
@@ -24,6 +25,38 @@ function normalizeKey(value: FormDataEntryValue | null, fileName: string) {
     return (key || `external/${Date.now()}-${fileName}`)
         .replace(/^\/+/, '')
         .replace(/\s+/g, '-');
+}
+
+function safeFileName(name: string) {
+    return name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+export async function uploadMediaAsset(formData: FormData) {
+    await requireEditor();
+    const file = formData.get('file');
+    if (!(file instanceof File) || file.size === 0) throw new Error('Choose a file to upload.');
+    if (file.size > 10 * 1024 * 1024) throw new Error('Maximum upload size is 10 MB.');
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'application/pdf'];
+    if (!allowed.includes(file.type)) throw new Error('Unsupported file type.');
+
+    const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
+    const key = `media/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${fileName}`;
+    const url = await uploadMediaFile(file, key);
+
+    await prisma.mediaAsset.create({
+        data: {
+            key,
+            fileName,
+            mimeType: file.type || 'application/octet-stream',
+            size: file.size,
+            altText: String(formData.get('altText') ?? '').trim() || null,
+            caption: String(formData.get('caption') ?? '').trim() || null,
+            url,
+        },
+    });
+
+    revalidatePath('/admin/media');
 }
 
 export async function createMediaAsset(formData: FormData) {
