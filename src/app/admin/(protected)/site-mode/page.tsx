@@ -6,6 +6,16 @@ import { prisma } from '@/lib/prisma';
 import { formatSofiaDateTimeLocal, parseSofiaDateTimeLocal } from '@/lib/sofia-time';
 
 const modes = ['NORMAL', 'MAINTENANCE', 'COMING_SOON', 'PRIVATE', 'ARCHIVE'] as const;
+const MAX_TITLE_LENGTH = 120;
+const MAX_MESSAGE_LENGTH = 1_500;
+const MIN_PRIVATE_PASSWORD_LENGTH = 12;
+const MAX_PRIVATE_PASSWORD_LENGTH = 200;
+
+function boundedText(value: FormDataEntryValue | null, max: number, label: string) {
+    const text = String(value ?? '').trim();
+    if (text.length > max) throw new Error(`${label} is too long.`);
+    return text || null;
+}
 
 async function updateSiteMode(formData: FormData) {
     'use server';
@@ -28,15 +38,20 @@ async function updateSiteMode(formData: FormData) {
     const endsAt = parseDate('endsAt');
     const countdownTarget = parseDate('countdownTarget');
     if (startsAt && endsAt && endsAt <= startsAt) throw new Error('End time must be after start time.');
+    if (countdownTarget && startsAt && countdownTarget < startsAt) throw new Error('Countdown target cannot be before the scheduled start.');
 
     const current = await prisma.siteModeSettings.findUnique({ where: { id: 'default' } });
-    const password = String(formData.get('privatePassword') || '').trim();
+    const password = String(formData.get('privatePassword') || '');
     const clearPassword = formData.get('clearPrivatePassword') === 'on';
-    const passwordHash = clearPassword ? null : password ? await hash(password, 12) : current?.passwordHash ?? null;
 
-    if (mode === 'PRIVATE' && !passwordHash) {
-        throw new Error('Private mode requires an access password.');
+    if (password.length > MAX_PRIVATE_PASSWORD_LENGTH) throw new Error('Private password is too long.');
+    if (password && password.length < MIN_PRIVATE_PASSWORD_LENGTH) {
+        throw new Error(`Private passwords must contain at least ${MIN_PRIVATE_PASSWORD_LENGTH} characters.`);
     }
+    if (clearPassword && password) throw new Error('Choose either a replacement password or clear the existing password.');
+
+    const passwordHash = clearPassword ? null : password ? await hash(password, 12) : current?.passwordHash ?? null;
+    if (mode === 'PRIVATE' && !passwordHash) throw new Error('Private mode requires an access password.');
 
     const data = {
         mode: mode as (typeof modes)[number],
@@ -44,8 +59,8 @@ async function updateSiteMode(formData: FormData) {
         endsAt,
         bypassAdmins: formData.get('bypassAdmins') === 'on',
         passwordHash,
-        title: String(formData.get('title') || '').trim() || null,
-        message: String(formData.get('message') || '').trim() || null,
+        title: boundedText(formData.get('title'), MAX_TITLE_LENGTH, 'Title'),
+        message: boundedText(formData.get('message'), MAX_MESSAGE_LENGTH, 'Message'),
         countdownTarget,
         showSocials: formData.get('showSocials') === 'on',
         showContact: formData.get('showContact') === 'on',
@@ -96,8 +111,8 @@ export default async function SiteModeAdminPage() {
 
                     <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6 space-y-5">
                         <h2 className="text-lg font-semibold">Public message</h2>
-                        <label className="block"><span className="text-sm text-white/50">Title</span><input name="title" defaultValue={settings.title ?? ''} disabled={!canManage} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" placeholder="Temporarily offline" /></label>
-                        <label className="block"><span className="text-sm text-white/50">Message</span><textarea name="message" rows={5} defaultValue={settings.message ?? ''} disabled={!canManage} className="mt-2 w-full resize-y rounded-xl border border-white/10 bg-black/30 px-4 py-3" placeholder="A short message for visitors." /></label>
+                        <label className="block"><span className="text-sm text-white/50">Title</span><input name="title" maxLength={MAX_TITLE_LENGTH} defaultValue={settings.title ?? ''} disabled={!canManage} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" placeholder="Temporarily offline" /></label>
+                        <label className="block"><span className="text-sm text-white/50">Message</span><textarea name="message" maxLength={MAX_MESSAGE_LENGTH} rows={5} defaultValue={settings.message ?? ''} disabled={!canManage} className="mt-2 w-full resize-y rounded-xl border border-white/10 bg-black/30 px-4 py-3" placeholder="A short message for visitors." /></label>
                     </div>
                 </section>
 
@@ -106,7 +121,7 @@ export default async function SiteModeAdminPage() {
                         <h2 className="text-lg font-semibold">Private access</h2>
                         <p className="mt-1 text-xs text-white/35">{settings.passwordHash ? 'A private access password is configured.' : 'No private access password is configured.'}</p>
                     </div>
-                    <label className="block max-w-xl"><span className="text-sm text-white/50">Set / replace password</span><input name="privatePassword" type="password" autoComplete="new-password" disabled={!canManage} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" placeholder="Leave blank to keep current password" /></label>
+                    <label className="block max-w-xl"><span className="text-sm text-white/50">Set / replace password</span><input name="privatePassword" type="password" minLength={MIN_PRIVATE_PASSWORD_LENGTH} maxLength={MAX_PRIVATE_PASSWORD_LENGTH} autoComplete="new-password" disabled={!canManage} className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3" placeholder="Leave blank to keep current password" /></label>
                     <label className="flex items-center gap-3 text-sm text-white/70"><input type="checkbox" name="clearPrivatePassword" disabled={!canManage} /> Clear configured password</label>
                 </section>
 
