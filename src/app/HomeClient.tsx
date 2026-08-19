@@ -6,8 +6,9 @@ import { LoadingScreen } from '@/components/layout';
 import { HeroVisual } from '@/components/sections/HeroVisual';
 import { usePreloadState } from '@/components/ui/arc-preloader-hero';
 import type { HomepageContent } from '@/lib/homepage-content';
+import type { PublicIdentity } from '@/lib/public-identity';
 
-export default function HomeClient({ content }: { content: HomepageContent }) {
+export default function HomeClient({ content, identity }: { content: HomepageContent; identity: PublicIdentity }) {
     const { phase } = usePreloadState();
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialLoadingExit, setIsInitialLoadingExit] = useState(false);
@@ -38,7 +39,7 @@ export default function HomeClient({ content }: { content: HomepageContent }) {
                 transition={{ duration: skipAnimation ? 0 : 1.4, ease: skipAnimation ? 'linear' : [0.16, 1, 0.3, 1], opacity: { duration: skipAnimation ? 0 : 0.8 } }}
                 className="relative h-[100svh] overflow-hidden will-change-transform will-change-opacity"
             >
-                <HeroVisual isExiting={isReadyToAnimate} content={content} />
+                <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
             </motion.main>
         </>
     );
