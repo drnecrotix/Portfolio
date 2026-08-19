@@ -141,7 +141,7 @@ export function HeroVisual({ isExiting = false, content = defaultHomepageContent
         <AnimatePresence>
           {showProfile && (
             <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="pl-4 pointer-events-auto" style={{ width: 'max-content' }}>
-              <ProfileCard name={personal.name} title={content.profileTitle} description={content.profileDescription} imageUrl={personal.avatar} githubUrl={personal.socialLinks.find(s => s.platform === 'GitHub')?.url} linkedinUrl={personal.socialLinks.find(s => s.platform === 'LinkedIn')?.url} instagramUrl={personal.socialLinks.find(s => s.platform === 'Instagram')?.url} className="!max-w-4xl scale-[0.8] origin-left" />
+              <ProfileCard name={personal.name} title={content.profileTitle} description={content.profileDescription} imageUrl={content.profileImage || personal.avatar} githubUrl={personal.socialLinks.find(s => s.platform === 'GitHub')?.url} linkedinUrl={personal.socialLinks.find(s => s.platform === 'LinkedIn')?.url} instagramUrl={personal.socialLinks.find(s => s.platform === 'Instagram')?.url} className="!max-w-4xl scale-[0.8] origin-left" />
             </motion.div>
           )}
         </AnimatePresence>
