@@ -6,6 +6,13 @@ type SiteModePayload = {
     bypassAdmins: boolean;
 };
 
+type RedirectPayload = {
+    redirect: null | {
+        target: string;
+        permanent: boolean;
+    };
+};
+
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
@@ -15,6 +22,27 @@ export async function proxy(request: NextRequest) {
         pathname === '/site-status'
     ) {
         return NextResponse.next();
+    }
+
+    try {
+        const redirectEndpoint = new URL('/api/redirects/resolve', request.url);
+        redirectEndpoint.searchParams.set('path', pathname);
+        const redirectResponse = await fetch(redirectEndpoint, { cache: 'no-store' });
+
+        if (redirectResponse.ok) {
+            const payload = (await redirectResponse.json()) as RedirectPayload;
+            if (payload.redirect) {
+                const target = payload.redirect.target.startsWith('/')
+                    ? new URL(payload.redirect.target, request.url)
+                    : new URL(payload.redirect.target);
+
+                if (target.toString() !== request.nextUrl.toString()) {
+                    return NextResponse.redirect(target, payload.redirect.permanent ? 308 : 307);
+                }
+            }
+        }
+    } catch {
+        // Redirect resolution fails open so routing remains available if storage is down.
     }
 
     try {
