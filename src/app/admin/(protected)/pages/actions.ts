@@ -18,7 +18,7 @@ function fields(form: FormData) {
         slug: String(form.get('slug') ?? '').trim(),
         title: String(form.get('title') ?? '').trim(),
         status: String(form.get('status') ?? 'DRAFT') as ContentStatus,
-        content: formToPageContent(form.get('content')),
+        content: formToPageContent(form.get('content'), form.get('featuredImage')),
         seoTitle: String(form.get('seoTitle') ?? '').trim() || null,
         seoDescription: String(form.get('seoDescription') ?? '').trim() || null,
     };
