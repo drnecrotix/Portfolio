@@ -1,172 +1,374 @@
-<div align="center">
+# Dr Necrotix Portfolio
 
-<img src="public/Arfazrll_light.svg" alt="Project Logo" width="80" height="80" />
+A full-stack personal portfolio and content-management system built with Next.js, PostgreSQL, Prisma and Auth.js. The project combines a protected public visual identity with an administration panel for managing projects, publications, pages, navigation, media, SEO, redirects, site availability and users.
 
-# Syahril Arfian Almazril — Technical Portfolio
+> This repository is a heavily modified derivative of the MIT-licensed **PersonalBlog** project by **Syahril Arfian Almazril (Arfazrll)**. See [License and credits](#license-and-credits) for attribution.
 
-### Engineering AI Systems, Scalable Software, and Data Architectures
+## What this project includes
 
-[![Next.js](https://img.shields.io/badge/Next.js-16.1.6-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19.2.4-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Three.js](https://img.shields.io/badge/Three.js-0.170-000000?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
-[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
+### Public portfolio
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Visit_Portfolio-6366f1?style=for-the-badge)](https://syahrilarfianalmazril.vercel.app)
-[![GitHub](https://img.shields.io/badge/GitHub-Arfazrll-181717?style=for-the-badge&logo=github)](https://github.com/Arfazrll)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=for-the-badge&logo=linkedin)](https://linkedin.com/in/syahril-arfian-almazril)
+- Full-screen visual homepage with CMS-managed identity/content.
+- Projects archive with search and filtering.
+- Individual project pages backed by PostgreSQL.
+- Blog/publications archive with search, categories and incremental loading.
+- Article, thought, poetry, note and project-log publication types.
+- Dynamic CMS pages.
+- Contact page with server-side validation, anti-spam honeypot, rate limiting and SMTP delivery.
+- Day/Night theme support with Night as the default.
+- CMS-managed navigation, social links, contact details and global identity.
+- Global and per-content SEO metadata.
+- Redirect management.
+- AI portfolio assistant backed by CMS data and published projects, with Groq primary and Gemini fallback when configured.
+- GitHub and WakaTime telemetry endpoints with safer caching, timeouts and error handling.
 
----
+### Administration panel
 
-![GitHub last commit](https://img.shields.io/github/last-commit/Arfazrll/PersonalBlog?style=flat-square&color=6366f1)
-![GitHub repo size](https://img.shields.io/github/repo-size/Arfazrll/PersonalBlog?style=flat-square&color=a855f7)
-![GitHub stars](https://img.shields.io/github/stars/Arfazrll/PersonalBlog?style=flat-square&color=f59e0b)
-![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)
+The protected `/admin` area provides:
 
-</div>
+- Dashboard statistics and current Site Mode status.
+- Projects management.
+- Blog/publication management with Tiptap rich-text editing.
+- Pages management.
+- Homepage content management.
+- Navigation management.
+- Media Library with external media registration and Cloudflare R2 upload support.
+- Global SEO settings.
+- Redirect management.
+- General site settings.
+- Site Mode controls.
+- Users & Roles management for the OWNER account.
+- Read-only revision history for Projects, Posts and Pages.
 
----
+### Content workflow
 
-## Executive Summary
+Content supports the following lifecycle where applicable:
 
-A production-grade, highly interactive portfolio application engineered to showcase technical expertise across Artificial Intelligence, Data Science, and Modern Software Engineering. Moving beyond traditional static documentation, this platform delivers an immersive, high-performance user experience powered by WebGL physics simulations, real-time data integrations, and an autonomous AI chatbot assistant.
+`Draft -> Review -> Published -> Archived`
 
----
+Project states are:
 
-## System Architecture & Technologies
+`Planned -> Ongoing -> Completed -> Archived`
 
-The repository is built on a modern, decoupled architecture designed for maximal performance, scalability, and maintainability.
+Revisions are stored as JSON snapshots so changes can be audited later.
 
-### Core Framework
-- **Next.js 16 (App Router):** Leverages server-side rendering (SSR), static site generation (SSG), and advanced caching mechanisms for optimal content delivery.
-- **React 19 & TypeScript:** Enforces strict type safety and modern reactive paradigms across 50+ custom UI components.
+## Site Modes
 
-### 3D Graphics & Physics Simulation
-- **Three.js & React Three Fiber (R3F):** Powers the core WebGL rendering engine.
-- **Rapier Physics:** Integrates real-time, deterministic physics simulations (e.g., interactive 3D Lanyard and structural models).
-- **Custom GLSL Shaders:** Utilized for bespoke background elements, including the Hyperspeed and warp effects.
+The public site can operate in five modes:
 
-### UI/UX Choreography
-- **Framer Motion & GSAP:** Drives complex, timeline-based choreographies, micro-interactions, and fluid page transitions.
-- **Tailwind CSS & Shadcn UI:** Provides a scalable, utility-first design system utilizing robust Radix UI accessibility primitives.
-- **Lenis:** Implements smooth, premium scrolling dynamics.
+- **NORMAL** - normal public operation.
+- **MAINTENANCE** - public maintenance screen.
+- **COMING_SOON** - public coming-soon screen.
+- **PRIVATE** - password-protected visitor access.
+- **ARCHIVE** - public content stays readable while selected public write actions are disabled.
 
-### System Integrations & APIs
-- **Dual-LLM AI Chatbot Architecture:** Integrates Groq (LLaMA 3.1) as the primary provider with an automatic failover to Google Gemini (1.5 Flash), utilizing retrieval-augmented generation context mapped directly from `portfolio.ts`.
-- **GraphQL & REST Pipelines:** Consumes GitHub GraphQL for repository statistics and WakaTime API for real-time code telemetry.
-- **Next-Intl:** Provides a complete bilingual experience (EN/ID) driven by client-side browser header detection.
+Site Modes support optional start/end scheduling using the `Europe/Sofia` timezone, administrator bypass, public status messaging and countdown targets.
 
----
+## Roles and permissions
 
-## Project Structure
+Three CMS roles are available:
 
-```text
-PersonalBlog/
-├── src/
-│   ├── app/                          # Next.js 16 App Router Entry Points
-│   │   ├── api/                      # Backend API Routes (Chatbot, GitHub, WakaTime)
-│   │   ├── projects/                 # Comprehensive Project Directory
-│   │   ├── experience/               # Career Timeline and Analytics
-│   │   ├── skills/                   # Technical Skill Radar
-│   │   ├── resume/                   # Custom PDF Rendering Engine (react-pdf)
-│   │   └── blog/                     # MDX/Markdown Article Renderer
-│   ├── components/
-│   │   ├── three/                    # WebGL & R3F Components (Lanyard, Splash)
-│   │   ├── sections/                 # Primary Page Layout Structures
-│   │   └── ui/                       # 50+ Custom Shadcn & Animated Primitives
-│   ├── data/
-│   │   └── portfolio.ts              # Centralized JSON/TS Data Store
-│   ├── hooks/                        # Custom React Hooks (Performance, Intersection)
-│   └── styles/                       # Global CSS & Tailwind Directives
-├── public/                           # Static Assets (Images, 3D Models, PDFs)
-├── next.config.ts                    # Next.js Optimization Configuration
-└── tailwind.config.ts                # Custom Design System Configurations
-```
+| Role | Purpose |
+| --- | --- |
+| `OWNER` | Full CMS control, including user and role management. |
+| `ADMIN` | Site/content administration except protected owner-only operations. |
+| `EDITOR` | Content-oriented access with restricted destructive/admin operations. |
 
----
+The initial OWNER account is created with the database seed command.
 
-## Key Features
+## Technology stack
 
-### 1. Interactive 3D Environments
-Implements hardware-accelerated 3D models using `@react-three/drei` and `@react-three/fiber`. Features include a physics-simulated identification badge that responds to cursor velocity and window constraints in real time.
+- **Next.js 16** / App Router
+- **React 19**
+- **TypeScript**
+- **PostgreSQL**
+- **Prisma 6**
+- **Auth.js / NextAuth v5**
+- **Tailwind CSS**
+- **Tiptap**
+- **Zod**
+- **sanitize-html**
+- **Cloudflare R2 / S3 API**
+- **Nodemailer / SMTP**
+- **Framer Motion / GSAP / Lenis**
+- **Three.js / React Three Fiber** for retained visual modules
+- **Playwright** for frontend visual smoke tests
+- **GitHub Actions** for CI
 
-### 2. Autonomous Portfolio Chatbot
-An intelligent conversational agent deployed via the `/api/chat` route. The system builds a dynamic context window from the static `portfolio.ts` database and processes natural language queries using a redundant Dual-LLM infrastructure.
+## Requirements
 
-### 3. Real-Time Telemetry
-Dashboards across the platform retrieve and display real-time engineering metrics, utilizing authenticated GraphQL requests to GitHub (activity heatmaps, language breakdown) and WakaTime (coding hours, IDE preferences).
+Recommended local environment:
 
-### 4. Interactive PDF Document Viewer
-A custom-built document rendering engine utilizing `react-pdf`, allowing users to zoom, rotate, search, and download the resume natively within the browser application without relying on external plugins.
+- Node.js 20 or newer
+- npm 10 or newer
+- PostgreSQL database
+- Git
 
-### 5. Performance Diagnostics
-The application implements a `usePerformance` hook to evaluate client hardware capabilities in real time, automatically disabling intensive WebGL shaders and complex GSAP animations on low-power or mobile devices to preserve battery life and maintain stable framerates.
+Optional services are required only for the related features:
 
----
+- Cloudflare R2 for managed media uploads
+- SMTP account for the contact form
+- GitHub token for private/authenticated GitHub statistics
+- WakaTime API key for WakaTime statistics
+- Groq and/or Gemini API key for the portfolio assistant
 
-## Local Development Setup
+## Installation
 
-### Prerequisites
-- Node.js >= 18.0.0
-- npm >= 9.0.0
+### 1. Clone the repository
 
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Arfazrll/PersonalBlog.git
-   cd PersonalBlog
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables:**
-   Create a `.env.local` file in the root directory.
-
-   ```env
-   NEXT_PUBLIC_GITHUB_USERNAME=your_username
-   GITHUB_TOKEN=your_personal_access_token
-   WAKATIME_API_KEY=your_wakatime_key
-   GROQ_API_KEY=your_groq_key
-   GEMINI_API_KEY=your_gemini_key
-   ```
-
-4. **Initialize Development Server:**
-   ```bash
-   npm run dev
-   ```
-   Navigate to `http://localhost:3000` to interact with the application.
-
-### Production Build
-Execute the following to compile and serve the optimized application bundle:
 ```bash
-npm run build
-npm start
+git clone https://github.com/drnecrotix/Portfolio.git
+cd Portfolio
 ```
 
----
+### 2. Install dependencies
 
-## Project Showcase Overview
+```bash
+npm install
+```
 
-The platform currently documents **19 technical projects** spanning multiple engineering disciplines:
+`postinstall` automatically runs `prisma generate`.
 
-| Discipline | Notable Projects | Core Technologies |
-|------------|------------------|-------------------|
-| **Artificial Intelligence** | DocsInsight Engine, NeuroVision, Hand Gesture Recognition | Python, TensorFlow, OpenCV, LangChain |
-| **Data Science & Analytics** | Credit Risk Analysis, MyTelkomsel Sentiment, Data Analyst Dashboard | Python, LSTM, Pandas, Plotly |
-| **Software Engineering** | Donasiaku, POLABDC SaaS, Digilibzx | Laravel, Next.js, Go, PostgreSQL, Prisma |
-| **IoT & Embedded Systems** | TerraFlow Platform, Smart Motion Detection | ESP32, Raspberry Pi, MQTT, C++ |
+### 3. Create the environment file
 
----
+Copy the example configuration:
 
-## License
+```bash
+cp .env.example .env.local
+```
 
-This project is licensed under the [MIT License](LICENSE).
+On Windows PowerShell:
 
-<div align="center">
-  <p>Engineered by Syahril Arfian Almazril</p>
-</div>
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Configure at minimum:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/portfolio?schema=public"
+AUTH_SECRET="replace-with-a-long-random-secret"
+AUTH_TRUST_HOST=true
+
+OWNER_NAME="Your Name"
+OWNER_EMAIL="owner@example.com"
+OWNER_PASSWORD="use-a-strong-password-at-least-12-characters"
+
+NEXT_PUBLIC_SITE_URL="http://localhost:3000"
+```
+
+Generate a strong Auth.js secret before production deployment. Do not commit `.env.local` or real API keys.
+
+### 4. Create/update the database schema
+
+For local development:
+
+```bash
+npm run db:migrate
+```
+
+If you are provisioning a production database, use the Prisma deployment workflow appropriate for your host and migration strategy rather than running interactive development migrations in production.
+
+### 5. Bootstrap the OWNER account
+
+```bash
+npm run db:seed
+```
+
+The seed reads `OWNER_NAME`, `OWNER_EMAIL` and `OWNER_PASSWORD`. The password must contain at least 12 characters.
+
+### 6. Start development mode
+
+```bash
+npm run dev
+```
+
+Open:
+
+- Public site: `http://localhost:3000`
+- Admin panel: `http://localhost:3000/admin`
+
+## Environment variables
+
+### Required core variables
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string. |
+| `AUTH_SECRET` | Signs/authenticates Auth.js sessions and protected visitor state. |
+| `AUTH_TRUST_HOST` | Enables trusted-host handling for Auth.js deployments. |
+| `OWNER_NAME` | Initial CMS owner name used by seed. |
+| `OWNER_EMAIL` | Initial CMS owner login email. |
+| `OWNER_PASSWORD` | Initial CMS owner password, minimum 12 characters. |
+| `NEXT_PUBLIC_SITE_URL` | Canonical public site URL used for metadata/URLs. |
+
+### Contact / SMTP
+
+| Variable | Purpose |
+| --- | --- |
+| `EMAIL_USER` | SMTP sender/login email. |
+| `EMAIL_APP_PASSWORD` | SMTP password/app password. |
+| `SMTP_HOST` | SMTP hostname. |
+| `SMTP_PORT` | SMTP port. |
+| `SMTP_SECURE` | `true` for TLS/SSL mode where required. |
+
+### Cloudflare R2 media storage
+
+| Variable | Purpose |
+| --- | --- |
+| `R2_ACCOUNT_ID` | Cloudflare account ID. |
+| `R2_ACCESS_KEY_ID` | R2 S3 access key. |
+| `R2_SECRET_ACCESS_KEY` | R2 S3 secret. |
+| `R2_BUCKET` | Bucket name. |
+| `R2_PUBLIC_BASE_URL` | Public URL/domain serving uploaded media. |
+
+### Optional external integrations
+
+| Variable | Purpose |
+| --- | --- |
+| `GITHUB_TOKEN` | Authenticated GitHub statistics/language requests. |
+| `WAKATIME_API_KEY` | WakaTime coding statistics. |
+| `GROQ_API_KEY` | Primary AI portfolio assistant provider. |
+| `GEMINI_API_KEY` | AI assistant fallback provider. |
+
+The application should be deployed with secrets stored in the hosting provider's secret/environment-variable system rather than in repository files.
+
+## Database model
+
+The Prisma data layer currently includes:
+
+- `User`
+- `Project`
+- `Post`
+- `Page`
+- `NavigationItem`
+- `SiteSettings`
+- `SiteModeSettings`
+- `MediaAsset`
+- `Redirect`
+- `Revision`
+
+Post types: `ARTICLE`, `POETRY`, `THOUGHT`, `NOTE`, `PROJECT_LOG`.
+
+## Media Library
+
+Media can be registered as external HTTPS assets or uploaded to Cloudflare R2 when R2 is configured. Managed files are stored with generated keys below the `media/` namespace. Admin/Owner deletion can optionally remove a managed R2 object; external media references are database-only and do not delete remote files.
+
+For safety, direct SVG upload is not accepted by the managed upload workflow. Media URLs and metadata are validated server-side.
+
+## SEO and redirects
+
+The CMS supports global defaults for:
+
+- title and title template
+- description and keywords
+- author/creator data
+- Open Graph metadata
+- Twitter/X metadata
+- indexing/follow directives
+- Google verification token
+
+Projects, blog posts and pages also support content-specific SEO metadata. Redirects support internal or absolute destinations with permanent/temporary behavior and validation protecting reserved application paths.
+
+## AI portfolio assistant
+
+`/api/chat` builds its context from current CMS site identity and published projects rather than inherited sample portfolio data.
+
+Security controls include bounded message history/content size, request-size limits, lightweight per-IP throttling, provider timeouts and generic public errors. Provider credentials and upstream error details are not returned to visitors.
+
+Configure at least one of:
+
+```env
+GROQ_API_KEY=""
+GEMINI_API_KEY=""
+```
+
+If both are configured, Groq is attempted first and Gemini is used as fallback.
+
+## Useful commands
+
+```bash
+npm run dev          # Development server
+npm run build        # Production build
+npm run start        # Start production build
+npm run lint         # ESLint
+npm run typecheck    # TypeScript type check
+npm run test:visual  # Playwright frontend visual smoke tests
+npm run db:generate  # Generate Prisma client
+npm run db:migrate   # Development Prisma migration
+npm run db:studio    # Prisma Studio
+npm run db:seed      # Bootstrap/update OWNER account
+```
+
+## CI and design protection
+
+The repository includes GitHub Actions checks for:
+
+- protected frontend design guard
+- TypeScript checks
+- linting of changed source files
+- production build
+- Playwright frontend visual smoke tests on desktop/mobile and theme variants
+
+Important public visual components are treated as a design contract. CMS/backend development is expected to adapt to those components rather than silently redesigning them.
+
+The Playwright checks are currently visual **smoke/evidence tests**, not strict pixel-baseline regression testing.
+
+## Production notes
+
+Before deploying:
+
+1. Configure a production PostgreSQL database and `DATABASE_URL`.
+2. Use strong values for `AUTH_SECRET` and OWNER credentials.
+3. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS URL.
+4. Configure SMTP if the contact form should send email.
+5. Configure R2 if managed media uploads are required.
+6. Configure optional GitHub, WakaTime, Groq and Gemini integrations as needed.
+7. Apply your production database migrations.
+8. Seed the initial OWNER account once the production database is ready.
+9. Run `npm run typecheck`, `npm run lint` and `npm run build` before release.
+
+## Security notes
+
+This project includes role checks, input validation, HTML sanitization, upload restrictions, bounded external requests and protection around sensitive CMS actions. Nevertheless, deployment security also depends on infrastructure configuration. Keep dependencies updated, rotate secrets when necessary, use HTTPS, restrict database/network access and review logs/alerts in production.
+
+In-memory rate limiting is intentionally lightweight and is not a replacement for distributed rate limiting at a reverse proxy, CDN or shared data store when running multiple instances.
+
+## Contributing
+
+Changes should be made through branches and Pull Requests. Avoid altering protected public visuals unless the change is intentionally approved as a design change. CI should be green before merging.
+
+Recommended workflow:
+
+```bash
+git checkout -b feat/my-change
+# make changes
+npm run typecheck
+npm run lint
+npm run build
+git push -u origin feat/my-change
+```
+
+Then open a Pull Request against `main`.
+
+## License and credits
+
+This repository is distributed under the MIT License. See [`LICENSE`](LICENSE).
+
+### Original project / foundation
+
+The original foundation is:
+
+- **Project:** PersonalBlog
+- **Original author:** Syahril Arfian Almazril
+- **GitHub:** `Arfazrll`
+- **Original repository:** `https://github.com/Arfazrll/PersonalBlog`
+- **Original license:** MIT License, copyright (c) 2026 S. A. Almazril
+
+The original MIT copyright and permission notice are preserved in this repository.
+
+### Current derivative
+
+The repository has since been substantially adapted by **Dr Necrotix** into a database-backed portfolio/CMS with authentication, editorial workflows, Site Modes, media management, SEO, redirects, user roles, revisions, hardened API routes and a redesigned content architecture.
+
+Original authorship is credited for the foundation; subsequent changes and project-specific content belong to their respective authors/contributors under the terms of the repository license.
