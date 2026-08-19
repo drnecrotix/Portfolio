@@ -24,13 +24,14 @@ export default function AdminLoginPage() {
             redirect: false,
         });
 
-        setLoading(false);
-
         if (result?.error) {
+            setLoading(false);
             setError('Invalid email or password.');
             return;
         }
 
+        await fetch('/api/admin/bypass', { method: 'POST' });
+        setLoading(false);
         router.push('/admin');
         router.refresh();
     }
