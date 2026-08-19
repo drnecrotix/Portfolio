@@ -11,6 +11,7 @@ const navItems = [
     ['Pages', '/admin/pages'],
     ['Navigation', '/admin/navigation'],
     ['Media', '/admin/media'],
+    ['Revisions', '/admin/revisions'],
     ['Site Mode', '/admin/site-mode'],
     ['SEO', '/admin/seo'],
     ['Redirects', '/admin/redirects'],
