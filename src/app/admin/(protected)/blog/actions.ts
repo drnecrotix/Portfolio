@@ -40,8 +40,7 @@ function fields(form: FormData) {
 
 export async function createPost(form: FormData) {
     await requireEditor();
-    const data = fields(form);
-    const post = await prisma.post.create({ data });
+    const post = await prisma.post.create({ data: fields(form) });
     revalidatePath('/blog');
     redirect(`/admin/blog/${post.id}`);
 }
@@ -51,18 +50,20 @@ export async function updatePost(id: string, form: FormData) {
     const current = await prisma.post.findUnique({ where: { id } });
     if (!current) throw new Error('Post not found');
 
+    const snapshot = JSON.parse(JSON.stringify(current));
     await prisma.revision.create({
         data: {
             entityType: 'post',
             entityId: current.id,
             postId: current.id,
-            snapshot: current as never,
+            snapshot,
             createdBy: user.id,
         },
     });
 
     await prisma.post.update({ where: { id }, data: fields(form) });
     revalidatePath('/blog');
+    revalidatePath(`/blog/${current.slug}`);
     revalidatePath(`/admin/blog/${id}`);
 }
 
