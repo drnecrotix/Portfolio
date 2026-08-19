@@ -5,8 +5,14 @@ import HomeClient from './HomeClient';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-    const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
-    const content = normalizeHomepageContent(settings?.homepageContent);
+    let rawContent: unknown = null;
 
-    return <HomeClient content={content} />;
+    try {
+        const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+        rawContent = settings?.homepageContent;
+    } catch {
+        // Keep the protected public hero available even if the CMS database is temporarily unavailable.
+    }
+
+    return <HomeClient content={normalizeHomepageContent(rawContent)} />;
 }
