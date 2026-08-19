@@ -10,6 +10,7 @@
         "typecheck": "tsc --noEmit",
         "test:visual": "playwright test",
         "postinstall": "prisma generate",
+        "production:preflight": "node scripts/check-production-env.mjs",
         "db:generate": "prisma generate",
         "db:validate": "prisma validate",
         "db:migrate": "prisma migrate dev",
