@@ -28,7 +28,12 @@ function normalizeKey(value: FormDataEntryValue | null, fileName: string) {
 }
 
 function safeFileName(name: string) {
-    return name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+    return name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 160);
+}
+
+function shortText(value: FormDataEntryValue | null, max: number) {
+    const text = String(value ?? '').trim();
+    return text ? text.slice(0, max) : null;
 }
 
 export async function uploadMediaAsset(formData: FormData) {
@@ -37,7 +42,8 @@ export async function uploadMediaAsset(formData: FormData) {
     if (!(file instanceof File) || file.size === 0) throw new Error('Choose a file to upload.');
     if (file.size > 10 * 1024 * 1024) throw new Error('Maximum upload size is 10 MB.');
 
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'application/pdf'];
+    // SVG is intentionally excluded because active content can execute when opened directly from a public bucket.
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
     if (!allowed.includes(file.type)) throw new Error('Unsupported file type.');
 
     const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
@@ -51,8 +57,8 @@ export async function uploadMediaAsset(formData: FormData) {
                 fileName,
                 mimeType: file.type || 'application/octet-stream',
                 size: file.size,
-                altText: String(formData.get('altText') ?? '').trim() || null,
-                caption: String(formData.get('caption') ?? '').trim() || null,
+                altText: shortText(formData.get('altText'), 500),
+                caption: shortText(formData.get('caption'), 2000),
                 url,
             },
         });
@@ -70,19 +76,19 @@ export async function uploadMediaAsset(formData: FormData) {
 
 export async function createMediaAsset(formData: FormData) {
     await requireEditor();
-    const fileName = String(formData.get('fileName') ?? '').trim();
+    const fileName = safeFileName(String(formData.get('fileName') ?? '').trim());
     if (!fileName) throw new Error('File name is required.');
 
     await prisma.mediaAsset.create({
         data: {
             key: normalizeKey(formData.get('key'), fileName),
             fileName,
-            mimeType: String(formData.get('mimeType') ?? 'application/octet-stream').trim() || 'application/octet-stream',
+            mimeType: String(formData.get('mimeType') ?? 'application/octet-stream').trim().slice(0, 120) || 'application/octet-stream',
             size: Math.max(0, Number(formData.get('size') ?? 0) || 0),
             width: Math.max(0, Number(formData.get('width') ?? 0) || 0) || null,
             height: Math.max(0, Number(formData.get('height') ?? 0) || 0) || null,
-            altText: String(formData.get('altText') ?? '').trim() || null,
-            caption: String(formData.get('caption') ?? '').trim() || null,
+            altText: shortText(formData.get('altText'), 500),
+            caption: shortText(formData.get('caption'), 2000),
             url: normalizeUrl(formData.get('url')),
         },
     });
@@ -98,10 +104,10 @@ export async function updateMediaAsset(id: string, formData: FormData) {
     await prisma.mediaAsset.update({
         where: { id },
         data: {
-            fileName: String(formData.get('fileName') ?? current.fileName).trim() || current.fileName,
-            mimeType: String(formData.get('mimeType') ?? current.mimeType).trim() || current.mimeType,
-            altText: String(formData.get('altText') ?? '').trim() || null,
-            caption: String(formData.get('caption') ?? '').trim() || null,
+            fileName: safeFileName(String(formData.get('fileName') ?? current.fileName).trim()) || current.fileName,
+            mimeType: String(formData.get('mimeType') ?? current.mimeType).trim().slice(0, 120) || current.mimeType,
+            altText: shortText(formData.get('altText'), 500),
+            caption: shortText(formData.get('caption'), 2000),
             width: Math.max(0, Number(formData.get('width') ?? 0) || 0) || null,
             height: Math.max(0, Number(formData.get('height') ?? 0) || 0) || null,
         },
