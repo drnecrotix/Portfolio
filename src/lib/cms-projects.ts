@@ -10,7 +10,7 @@ type ProjectContent = {
 };
 
 export function cmsProjectToPortfolioProject(project: PrismaProject): Project {
-    const content = (project.content ?? {}) as ProjectContent;
+    const content = (project.content ?? {}) as unknown as ProjectContent;
 
     return {
         id: project.id,
