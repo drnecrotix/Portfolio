@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { auth, signOut } from '@/auth';
 
 const navItems = [
@@ -48,6 +49,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 <form
                     action={async () => {
                         'use server';
+                        const cookieStore = await cookies();
+                        cookieStore.delete('portfolio-admin-bypass');
                         await signOut({ redirectTo: '/admin/login' });
                     }}
                     className="mt-10"
