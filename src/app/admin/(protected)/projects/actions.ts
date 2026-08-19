@@ -24,6 +24,11 @@ function readProjectForm(formData: FormData) {
         throw new Error('Title, description and a valid kebab-case slug are required.');
     }
 
+    const content = safeProjectContent(formData.get('content'));
+    const imageUrl = String(formData.get('imageUrl') ?? '').trim();
+    if (imageUrl) content.image = imageUrl;
+    else delete content.image;
+
     return {
         title,
         slug,
@@ -42,7 +47,7 @@ function readProjectForm(formData: FormData) {
         sortOrder: Number(formData.get('sortOrder') ?? 0) || 0,
         seoTitle: String(formData.get('seoTitle') ?? '').trim() || null,
         seoDescription: String(formData.get('seoDescription') ?? '').trim() || null,
-        content: safeProjectContent(formData.get('content')),
+        content,
         publishedAt: status === 'COMPLETED' || status === 'ONGOING' ? new Date() : null,
     };
 }
