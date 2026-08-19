@@ -41,11 +41,17 @@ for (const theme of themes) {
       }
 
       if (route === '/projects') {
-        await expect(page.getByRole('heading', { name: /projects/i }).first()).toBeVisible();
+        // The protected archive title is intentionally a paragraph, not a heading.
+        // Assert the existing landmark and list instead of forcing semantic markup
+        // changes into the visual smoke suite.
+        await expect(page.getByText(/Projects Archive/i).first()).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Projects list' })).toBeVisible();
       }
 
       if (route === '/blog') {
-        await expect(page.getByRole('heading', { name: /blog|publications|archive/i }).first()).toBeVisible();
+        // The protected archive title is plain text in the current design.
+        await expect(page.getByText(/Publications Archive/i).first()).toBeVisible();
+        await expect(page.getByRole('searchbox', { name: 'Search publications...' })).toBeVisible();
       }
 
       if (route === '/contact') {
