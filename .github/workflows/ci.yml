@@ -76,8 +76,12 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate Prisma client
         run: npm run db:generate
-      - name: Prepare CI database
-        run: npx prisma db push --skip-generate
+      - name: Validate Prisma schema
+        run: npm run db:validate
+      - name: Deploy migrations to clean CI database
+        run: npm run db:deploy
+      - name: Verify migration status
+        run: npm run db:status
       - name: Typecheck
         run: npm run typecheck
       - name: Lint changed source files
@@ -128,8 +132,8 @@ jobs:
           cache-dependency-path: package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Prepare CI database
-        run: npx prisma db push
+      - name: Deploy migrations to clean CI database
+        run: npm run db:deploy
       - name: Install Chromium
         run: npx playwright install chromium
       - name: Run visual smoke tests
