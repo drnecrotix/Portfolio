@@ -3,6 +3,7 @@ import type { Post as PrismaPost, PostType } from '@prisma/client';
 export type CmsPostContent = {
     html?: string;
     text?: string;
+    featuredImage?: string;
 };
 
 export type PublicPost = {
@@ -41,7 +42,10 @@ export function csvToList(value: FormDataEntryValue | null) {
         .filter(Boolean);
 }
 
-export function parsePostContent(type: PostType, value: FormDataEntryValue | null): CmsPostContent {
+export function parsePostContent(type: PostType, value: FormDataEntryValue | null, featuredImage?: FormDataEntryValue | null): CmsPostContent {
     const raw = String(value ?? '');
-    return type === 'POETRY' ? { text: raw } : { html: raw };
+    const image = String(featuredImage ?? '').trim();
+    const content: CmsPostContent = type === 'POETRY' ? { text: raw } : { html: raw };
+    if (image) content.featuredImage = image;
+    return content;
 }

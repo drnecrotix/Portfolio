@@ -16,6 +16,7 @@ export type HomepageContent = {
     availabilityLabel: string;
     profileTitle: string;
     profileDescription: string;
+    profileImage: string;
 };
 
 export const defaultHomepageContent: HomepageContent = {
@@ -36,6 +37,7 @@ export const defaultHomepageContent: HomepageContent = {
     availabilityLabel: 'AVAILABLE FOR OPPORTUNITY',
     profileTitle: 'Developer, Creator & Community Builder',
     profileDescription: 'Dr Necrotix builds software, digital experiences, creative projects and online communities with a focus on practical execution and distinctive identity.',
+    profileImage: '',
 };
 
 export function normalizeHomepageContent(value: unknown): HomepageContent {

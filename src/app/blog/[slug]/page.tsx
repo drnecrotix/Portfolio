@@ -11,7 +11,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     const cmsPost = await prisma.post.findUnique({ where: { slug } });
 
     if (cmsPost && cmsPost.status === 'PUBLISHED') {
-        const content = (cmsPost.content ?? {}) as { html?: string; text?: string };
+        const content = (cmsPost.content ?? {}) as { html?: string; text?: string; featuredImage?: string };
         return (
             <main className="min-h-screen bg-background text-foreground pb-24 pt-32">
                 <article className="mx-auto w-full max-w-5xl px-6 md:px-12">
@@ -25,6 +25,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                             <time>{(cmsPost.publishedAt ?? cmsPost.createdAt).toLocaleDateString()}</time>
                         </div>
                     </header>
+                    {content.featuredImage && (
+                        <div className="mt-10 overflow-hidden rounded-2xl border border-foreground/10">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={content.featuredImage} alt="" className="max-h-[38rem] w-full object-cover" />
+                        </div>
+                    )}
                     <div className="pt-12"><PostBody type={cmsPost.type} content={content} /></div>
                 </article>
             </main>

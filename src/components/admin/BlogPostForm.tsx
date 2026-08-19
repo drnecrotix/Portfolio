@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ContentStatus, PostType } from '@prisma/client';
 import { PostEditor } from '@/components/admin/PostEditor';
+import { MediaPicker } from '@/components/admin/MediaPicker';
 
 export type BlogPostFormValue = {
     title?: string;
@@ -17,7 +18,7 @@ export type BlogPostFormValue = {
     seoDescription?: string | null;
     publishedAt?: Date | null;
     scheduledAt?: Date | null;
-    content?: { html?: string; text?: string };
+    content?: { html?: string; text?: string; featuredImage?: string };
 };
 
 const inputClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 outline-none focus:border-white/25';
@@ -45,6 +46,10 @@ export function BlogPostForm({ value = {} }: { value?: BlogPostFormValue }) {
                 <label className="block md:col-span-2"><span className="text-sm text-white/55">Excerpt</span><textarea name="excerpt" rows={3} defaultValue={value.excerpt ?? ''} className={inputClass} /></label>
                 <label className="block"><span className="text-sm text-white/55">Published at</span><input name="publishedAt" type="datetime-local" defaultValue={dateValue(value.publishedAt)} className={inputClass} /></label>
                 <label className="block"><span className="text-sm text-white/55">Scheduled at</span><input name="scheduledAt" type="datetime-local" defaultValue={dateValue(value.scheduledAt)} className={inputClass} /></label>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image (optional)" />
             </div>
 
             <div>

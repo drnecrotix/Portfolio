@@ -1,3 +1,4 @@
+import { MediaPicker } from '@/components/admin/MediaPicker';
 import { createPage } from '../actions';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
@@ -16,6 +17,7 @@ export default function NewPagePage() {
                     <label className="text-sm text-white/60">SEO title<input name="seoTitle" className={input} /></label>
                     <label className="text-sm text-white/60">SEO description<input name="seoDescription" className={input} /></label>
                 </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><MediaPicker inputName="featuredImage" label="Featured image (optional)" /></div>
                 <label className="block text-sm text-white/60">Page content (HTML)<textarea name="content" rows={18} className={`${input} font-mono`} placeholder="<p>Your content...</p>" /></label>
                 <button className="rounded-xl bg-white text-black px-5 py-3 font-semibold">Create page</button>
             </form>

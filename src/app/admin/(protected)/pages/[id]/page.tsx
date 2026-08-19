@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { pageContentToHtml } from '@/lib/cms-pages';
+import { pageContentToHtml, pageFeaturedImage } from '@/lib/cms-pages';
+import { MediaPicker } from '@/components/admin/MediaPicker';
 import { deletePage, updatePage } from '../actions';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
@@ -30,6 +31,7 @@ export default async function EditPage({ params }: { params: Promise<{ id: strin
                     <label className="text-sm text-white/60">SEO title<input name="seoTitle" defaultValue={page.seoTitle ?? ''} className={input} /></label>
                     <label className="text-sm text-white/60">SEO description<input name="seoDescription" defaultValue={page.seoDescription ?? ''} className={input} /></label>
                 </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><MediaPicker value={pageFeaturedImage(page.content)} inputName="featuredImage" label="Featured image (optional)" /></div>
                 <label className="block text-sm text-white/60">Page content (HTML)<textarea name="content" rows={20} defaultValue={pageContentToHtml(page.content)} className={`${input} font-mono`} /></label>
                 <button className="rounded-xl bg-white text-black px-5 py-3 font-semibold">Save page</button>
             </form>
