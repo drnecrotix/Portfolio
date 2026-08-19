@@ -1,345 +1,166 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { Menu, X, Moon, Sun, Globe, ChevronDown, Focus } from 'lucide-react';
+import { Globe, Menu, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
-
 import CardNav from '@/components/ui/CardNav';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { usePreloadState } from '@/components/ui/arc-preloader-hero';
 
-function Clock() {
-    const [time, setTime] = useState<string>('');
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-        const updateTime = () => {
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
-            setTime(`${h}:${m}:${s}`);
-        };
-
-        updateTime();
-        const interval = setInterval(updateTime, 1000);
-        return () => clearInterval(interval);
-    }, []);
-
-    if (!mounted) return <span className="font-mono text-xl md:text-2xl font-black opacity-0">00:00:00</span>;
-
-    return (
-        <span className="font-mono text-xl md:text-2xl font-black text-gradient tracking-widest hover:tracking-[0.2em] transition-all duration-300">
-            {time}
-        </span>
-    );
-}
-
-// Sub-links for the "About" dropdown
-// Sub-links for the "About" dropdown
-const useNavItems = () => {
-    const t = useTranslations('navigation.menu');
-    return [
-        {
-            label: "About",
-            links: [
-                { label: t('achievements'), href: "/achievements", description: t('achievementsDesc') },
-                { label: t('skills'), href: "/skills", description: t('skillsDesc') },
-                { label: t('experience'), href: "/experience", description: t('experienceDesc') },
-                { label: t('projects'), href: "/projects", description: t('projectsDesc') },
-                { label: t('blog'), href: "/blog", description: t('blogDesc') },
-            ]
-        }
-    ];
+type NavigationItem = {
+    id: string;
+    label: string;
+    href: string;
+    location: string;
+    sortOrder: number;
+    isVisible: boolean;
+    isExternal: boolean;
 };
 
-export function Navbar() {
-    const t = useTranslations('navigation');
-    const navItems = useNavItems();
-    const { theme, setTheme, resolvedTheme } = useTheme();
-    const pathname = usePathname();
-    const { scrollY } = useScroll();
+const fallbackItems: NavigationItem[] = [
+    { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 0, isVisible: true, isExternal: false },
+    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'about', sortOrder: 10, isVisible: true, isExternal: false },
+    { id: 'skills', label: 'Skills', href: '/skills', location: 'about', sortOrder: 20, isVisible: true, isExternal: false },
+    { id: 'experience', label: 'Experience', href: '/experience', location: 'about', sortOrder: 30, isVisible: true, isExternal: false },
+    { id: 'projects', label: 'Projects', href: '/projects', location: 'about', sortOrder: 40, isVisible: true, isExternal: false },
+    { id: 'blog', label: 'Blog', href: '/blog', location: 'about', sortOrder: 50, isVisible: true, isExternal: false },
+    { id: 'contact', label: 'Contact', href: '/contact', location: 'primary', sortOrder: 100, isVisible: true, isExternal: false },
+];
 
+function Clock() {
+    const [time, setTime] = useState('00:00:00');
+    useEffect(() => {
+        const update = () => setTime(new Date().toLocaleTimeString('en-GB', { hour12: false }));
+        update();
+        const timer = setInterval(update, 1000);
+        return () => clearInterval(timer);
+    }, []);
+    return <span className="font-mono text-xl font-black tracking-widest text-gradient transition-all duration-300 hover:tracking-[0.2em] md:text-2xl">{time}</span>;
+}
+
+export function Navbar() {
+    const pathname = usePathname();
+    const { resolvedTheme } = useTheme();
+    const { scrollY } = useScroll();
+    const { isPreloading } = usePreloadState();
+    const [items, setItems] = useState<NavigationItem[]>(fallbackItems);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [lastScrollY, setLastScrollY] = useState(0);
-    const [mounted, setMounted] = useState(false);
-    const [currentLocale, setCurrentLocale] = useState('en');
-    
-    // Consume preload state directly from context
-    const { isPreloading: isPreloadActive } = usePreloadState();
-
-    const isDark = resolvedTheme === 'dark';
+    const [locale, setLocale] = useState('en');
 
     useEffect(() => {
-        setMounted(true);
-        const locale = document.cookie.split('; ').find(row => row.startsWith('locale='))?.split('=')[1] || 'en';
-        setCurrentLocale(locale);
+        fetch('/api/navigation', { cache: 'no-store' })
+            .then((response) => response.ok ? response.json() : fallbackItems)
+            .then((data) => Array.isArray(data) && data.length ? setItems(data) : setItems(fallbackItems))
+            .catch(() => setItems(fallbackItems));
+        setLocale(document.cookie.split('; ').find((row) => row.startsWith('locale='))?.split('=')[1] || 'en');
     }, []);
 
-    // Lock body scroll when menu is open
     useEffect(() => {
-        if (isMenuOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = '';
-        }
-        return () => {
-            document.body.style.overflow = '';
-        };
+        document.body.style.overflow = isMenuOpen ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
     }, [isMenuOpen]);
 
-    // Close menu on route change
-    useEffect(() => {
-        setIsMenuOpen(false);
-    }, [pathname]);
+    useEffect(() => setIsMenuOpen(false), [pathname]);
 
     useMotionValueEvent(scrollY, 'change', (latest) => {
-        if (isMenuOpen) return; // Don't hide navbar when menu is open
-
-        const direction = latest > lastScrollY ? 'down' : 'up';
+        if (isMenuOpen) return;
         setIsScrolled(latest > 50);
-
-        if (direction === 'down' && latest > 100) {
-            setIsVisible(false);
-        } else {
-            setIsVisible(true);
-        }
-
+        setIsVisible(!(latest > lastScrollY && latest > 100));
         setLastScrollY(latest);
     });
 
-    const toggleMenu = useCallback(() => {
-        setIsMenuOpen((prev) => !prev);
-    }, []);
+    const visibleItems = useMemo(() => items.filter((item) => item.isVisible), [items]);
+    const primary = visibleItems.filter((item) => item.location === 'primary').sort((a, b) => a.sortOrder - b.sortOrder);
+    const about = visibleItems.filter((item) => item.location === 'about').sort((a, b) => a.sortOrder - b.sortOrder);
+    const home = primary.find((item) => item.href === '/') ?? fallbackItems[0];
+    const directPrimary = primary.filter((item) => item.href !== '/');
+    const cardItems = about.length ? [{ label: 'About', links: about.map((item) => ({ label: item.label, href: item.href, description: item.label })) }] : [];
 
     const toggleLocale = useCallback(() => {
-        const newLocale = currentLocale === 'en' ? 'id' : 'en';
-        document.cookie = `locale=${newLocale};path=/;max-age=31536000`;
-        setCurrentLocale(newLocale);
+        const next = locale === 'en' ? 'bg' : 'en';
+        document.cookie = `locale=${next};path=/;max-age=31536000`;
+        setLocale(next);
         window.location.reload();
-    }, [currentLocale]);
+    }, [locale]);
 
-    const closeMenu = useCallback(() => {
-        setIsMenuOpen(false);
-    }, []);
-
-    const handleHomeClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
-        if (pathname === '/') {
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        closeMenu();
-    }, [pathname, closeMenu]);
-
-    // Animation variants
-    const navVariants = {
-        visible: { y: 0, opacity: 1 },
-        hidden: { y: -100, opacity: 0 }
-    };
-
-    const menuVariants = {
-        closed: { opacity: 0 },
-        open: { opacity: 1 }
+    const renderLink = (item: NavigationItem, mobile = false) => {
+        const external = item.isExternal || /^https?:\/\//.test(item.href);
+        return (
+            <Link
+                key={item.id}
+                href={item.href}
+                target={external ? '_blank' : undefined}
+                rel={external ? 'noopener noreferrer' : undefined}
+                className={mobile
+                    ? cn('text-3xl font-black transition-colors', pathname === item.href ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')
+                    : cn('relative rounded-full px-5 py-2 text-sm font-bold transition-all duration-300', pathname === item.href ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}
+            >
+                {item.label}
+            </Link>
+        );
     };
 
     return (
         <>
             <motion.nav
-                variants={navVariants}
                 initial="hidden"
-                animate={!isPreloadActive && (isVisible || isMenuOpen) ? 'visible' : 'hidden'}
+                animate={!isPreloading && (isVisible || isMenuOpen) ? 'visible' : 'hidden'}
+                variants={{ visible: { y: 0, opacity: 1 }, hidden: { y: -100, opacity: 0 } }}
                 transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-                className="fixed top-0 left-0 right-0 z-[100]"
+                className="fixed inset-x-0 top-0 z-[100]"
             >
-                <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-24 py-4 md:py-6">
-                    <motion.div
-                        className={cn(
-                            'flex items-center justify-between transition-all duration-500 rounded-full',
-                            isScrolled ? 'glass-strong px-6 py-3' : 'py-2'
-                        )}
-                        layout
-                    >
-                        {/* Make the Clock a Link to Home */}
-                        <Link href="/" className="relative group min-w-[120px]" onClick={handleHomeClick}>
-                            <Clock />
-                        </Link>
+                <div className="mx-auto max-w-[1600px] px-6 py-4 md:px-12 md:py-6 lg:px-24">
+                    <motion.div layout className={cn('flex items-center justify-between rounded-full transition-all duration-500', isScrolled ? 'glass-strong px-6 py-3' : 'py-2')}>
+                        <Link href={home.href} className="relative min-w-[120px] group"><Clock /></Link>
 
-                        {/* Desktop Navigation with CardNav */}
-                        <div className="hidden lg:flex items-center gap-6">
-                            {/* HOME */}
-                            <Link
-                                href="/"
-                                onClick={handleHomeClick}
-                                className={cn(
-                                    'relative px-5 py-2 text-sm font-bold transition-all duration-300 rounded-full group',
-                                    pathname === '/' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'
-                                )}
-                            >
-                                <span className="relative z-10">{t('home')}</span>
-                            </Link>
-
-                            <CardNav
-                                items={navItems}
-                                theme={isDark ? 'dark' : 'light'}
-                                pathname={pathname}
-                            />
-
-                            {/* CONTACT (Direct Link) */}
-                            <Link
-                                href="/contact"
-                                className={cn(
-                                    'relative px-5 py-2 text-sm font-bold transition-all duration-300 rounded-full group',
-                                    pathname === '/contact' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'
-                                )}
-                            >
-                                <span className="relative z-10">{t('contact')}</span>
-                            </Link>
+                        <div className="hidden items-center gap-6 lg:flex">
+                            {renderLink(home)}
+                            {cardItems.length > 0 && <CardNav items={cardItems} theme={resolvedTheme === 'dark' ? 'dark' : 'light'} pathname={pathname} />}
+                            {directPrimary.map((item) => renderLink(item))}
                         </div>
 
-                        {/* Controls */}
                         <div className="flex items-center gap-2 md:gap-3">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="p-2 md:p-2.5 rounded-full bg-muted/80 hover:bg-muted transition-colors"
-                                aria-label="Focus mode"
-                            >
-                                <Link href="https://arfazrllworkspace.vercel.app/" target="_blank" rel="noopener noreferrer">
-                                    <Focus className="w-4 h-4" />
-                                </Link>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={toggleLocale} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5" aria-label="Toggle language">
+                                <Globe className="h-4 w-4" />
                             </motion.button>
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={toggleLocale}
-                                className="p-2 md:p-2.5 rounded-full bg-muted/80 hover:bg-muted transition-colors"
-                                aria-label="Toggle language"
-                            >
-                                <Globe className="w-4 h-4" />
-                            </motion.button>
-
-                            {mounted && (
-                                <AnimatedThemeToggler />
-                            )}
-
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={toggleMenu}
-                                className="p-2 md:p-2.5 rounded-full bg-muted/80 hover:bg-muted transition-colors lg:hidden"
-                                aria-label="Toggle menu"
-                            >
+                            <AnimatedThemeToggler />
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsMenuOpen((value) => !value)} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5 lg:hidden" aria-label="Toggle menu">
                                 <AnimatePresence mode="wait" initial={false}>
-                                    <motion.div
-                                        key={isMenuOpen ? 'close' : 'menu'}
-                                        initial={{ rotate: -90, opacity: 0 }}
-                                        animate={{ rotate: 0, opacity: 1 }}
-                                        exit={{ rotate: 90, opacity: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                                    <motion.div key={isMenuOpen ? 'close' : 'menu'} initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
+                                        {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                                     </motion.div>
                                 </AnimatePresence>
                             </motion.button>
                         </div>
                     </motion.div>
                 </div>
-            </motion.nav >
+            </motion.nav>
 
-            {/* Mobile Menu Overlay */}
             <AnimatePresence>
-                {
-                    isMenuOpen && (
-                        <motion.div
-                            variants={menuVariants}
-                            initial="closed"
-                            animate="open"
-                            exit="closed"
-                            transition={{ duration: 0.3 }}
-                            className="fixed inset-0 z-[90] lg:hidden"
-                        >
-                            <motion.div
-                                className="absolute inset-0 bg-background"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                            />
-
-                            <div className="relative flex flex-col items-center justify-center h-full overflow-y-auto py-20">
-                                <nav className="flex flex-col items-center gap-6">
-                                    {/* Mobile Home */}
-                                    <Link
-                                        href="/"
-                                        onClick={handleHomeClick}
-                                        className="text-3xl font-black text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        {t('home')}
-                                    </Link>
-
-                                    <Link
-                                        href="/contact"
-                                        onClick={closeMenu}
-                                        className="text-3xl font-black text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        {t('contact')}
-                                    </Link>
-
-                                    {/* Mobile Links grouped by Categories */}
-                                    {navItems.map((category) => (
-                                        <div key={category.label} className="flex flex-col items-center gap-4 py-4 border-b border-white/5 w-full last:border-0 text-center">
-                                            <span className="text-[10px] font-black font-mono text-primary tracking-[0.3em] uppercase opacity-50">
-                                                {category.label}
-                                            </span>
-                                            {category.links.map((link) => (
-                                                <Link
-                                                    key={link.label}
-                                                    href={link.href}
-                                                    onClick={closeMenu}
-                                                    className={cn(
-                                                        'text-2xl font-bold transition-all hover:scale-110 active:scale-95 duration-200',
-                                                        pathname === link.href ? 'text-foreground' : 'text-muted-foreground/60 hover:text-foreground'
-                                                    )}
-                                                >
-                                                    {link.label}
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    ))}
-                                </nav>
-
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 20 }}
-                                    transition={{ delay: 0.5 }}
-                                    className="flex items-center gap-4 mt-12"
-                                >
-                                    <button
-                                        onClick={toggleLocale}
-                                        className="px-6 py-3 rounded-full glass-card text-sm font-medium hover:bg-muted/50 transition-colors"
-                                    >
-                                        {currentLocale === 'en' ? 'English' : 'Indonesia'}
-                                    </button>
-                                    {mounted && (
-                                        <AnimatedThemeToggler
-                                            className="px-6 py-6 glass-card text-sm font-medium hover:bg-muted/50 flex items-center gap-2"
-                                        />
-                                    )}
-                                </motion.div>
-                            </div>
-                        </motion.div >
-                    )
-                }
-            </AnimatePresence >
+                {isMenuOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[90] bg-background lg:hidden">
+                        <div className="flex h-full flex-col items-center justify-center overflow-y-auto py-24">
+                            <nav className="flex flex-col items-center gap-6">
+                                {renderLink(home, true)}
+                                {directPrimary.map((item) => renderLink(item, true))}
+                                {about.length > 0 && (
+                                    <div className="flex w-full flex-col items-center gap-4 border-t border-foreground/10 pt-6 text-center">
+                                        <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">About</span>
+                                        {about.map((item) => renderLink(item, true))}
+                                    </div>
+                                )}
+                            </nav>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </>
     );
 }
