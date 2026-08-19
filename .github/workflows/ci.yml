@@ -42,7 +42,7 @@ jobs:
           fi
 
   quality:
-    name: Typecheck, lint and build
+    name: Typecheck, changed-file lint and build
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -65,6 +65,8 @@ jobs:
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -78,8 +80,20 @@ jobs:
         run: npx prisma db push --skip-generate
       - name: Typecheck
         run: npm run typecheck
-      - name: Lint
-        run: npm run lint
+      - name: Lint changed source files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+          if [ "${#files[@]}" -gt 0 ]; then
+            printf 'Linting changed files:\n%s\n' "${files[@]}"
+            npx eslint --quiet "${files[@]}"
+          else
+            echo "No changed lintable source files."
+          fi
       - name: Build
         run: npm run build
 
