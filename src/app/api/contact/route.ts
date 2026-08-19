@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
+import { isPublicWriteBlocked } from '@/lib/public-write-guard';
 
 export const runtime = 'nodejs';
 
@@ -55,6 +56,13 @@ function isRateLimited(ip: string) {
 }
 
 export async function POST(request: Request) {
+    if (await isPublicWriteBlocked()) {
+        return NextResponse.json(
+            { error: 'This portfolio is in archive mode. Contact submissions are disabled.' },
+            { status: 423, headers: { 'Cache-Control': 'no-store' } },
+        );
+    }
+
     const ip = getClientIp(request);
     if (isRateLimited(ip)) {
         return NextResponse.json({ error: 'Too many messages were submitted. Please try again later.' }, { status: 429 });
