@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { createMediaAsset, deleteMediaAsset, updateMediaAsset } from './actions';
+import { mediaStorageConfigured } from '@/lib/media-storage';
+import { createMediaAsset, deleteMediaAsset, updateMediaAsset, uploadMediaAsset } from './actions';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
 
@@ -17,6 +18,7 @@ function formatBytes(size: number) {
 
 export default async function MediaLibraryPage() {
     const assets = await prisma.mediaAsset.findMany({ orderBy: { createdAt: 'desc' } });
+    const storageReady = mediaStorageConfigured();
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -25,15 +27,39 @@ export default async function MediaLibraryPage() {
                 <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
                     <div>
                         <h2 className="text-4xl font-semibold">Assets</h2>
-                        <p className="mt-2 max-w-2xl text-sm text-white/45">Register reusable images and files once, then use their public URL across projects, posts, pages and homepage content.</p>
+                        <p className="mt-2 max-w-2xl text-sm text-white/45">Upload files to Cloudflare R2 or register existing public assets for reuse across the CMS.</p>
                     </div>
                     <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/45">{assets.length} assets</span>
                 </div>
             </div>
 
             <section className="mb-10 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-                <h3 className="text-lg font-semibold">Add media asset</h3>
-                <p className="mt-1 text-xs text-white/40">Use a public HTTPS URL from Cloudflare R2, S3, CDN or another controlled source.</p>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <h3 className="text-lg font-semibold">Direct upload</h3>
+                        <p className="mt-1 text-xs text-white/40">Uploads JPEG, PNG, WebP, GIF, SVG or PDF directly to the configured R2 bucket. Maximum 10 MB.</p>
+                    </div>
+                    <span className={`rounded-full border px-3 py-1 text-xs ${storageReady ? 'border-emerald-400/20 text-emerald-300' : 'border-amber-400/20 text-amber-300'}`}>
+                        {storageReady ? 'R2 configured' : 'R2 not configured'}
+                    </span>
+                </div>
+                {storageReady ? (
+                    <form action={uploadMediaAsset} className="mt-6 grid gap-5 md:grid-cols-2">
+                        <label className="text-sm text-white/60 md:col-span-2">File<input name="file" type="file" required accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf" className={input} /></label>
+                        <label className="text-sm text-white/60">Alt text<input name="altText" placeholder="Describe the image for accessibility" className={input} /></label>
+                        <label className="text-sm text-white/60">Caption<input name="caption" className={input} /></label>
+                        <div className="md:col-span-2"><button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Upload to R2</button></div>
+                    </form>
+                ) : (
+                    <div className="mt-5 rounded-xl border border-amber-400/10 bg-amber-400/[0.04] p-4 text-xs leading-relaxed text-amber-100/70">
+                        Configure R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET and R2_PUBLIC_BASE_URL to enable direct uploads.
+                    </div>
+                )}
+            </section>
+
+            <section className="mb-10 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                <h3 className="text-lg font-semibold">Register external asset</h3>
+                <p className="mt-1 text-xs text-white/40">Use a public HTTPS URL from an existing CDN, R2 bucket or other controlled source.</p>
                 <form action={createMediaAsset} className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                     <label className="text-sm text-white/60">File name<input name="fileName" required placeholder="project-cover.webp" className={input} /></label>
                     <label className="text-sm text-white/60 xl:col-span-2">Public URL<input name="url" type="url" required placeholder="https://cdn.example.com/project-cover.webp" className={input} /></label>
@@ -44,7 +70,7 @@ export default async function MediaLibraryPage() {
                     <label className="text-sm text-white/60">Height<input name="height" type="number" min="0" className={input} /></label>
                     <label className="text-sm text-white/60 xl:col-span-2">Alt text<input name="altText" placeholder="Describe the image for accessibility" className={input} /></label>
                     <label className="text-sm text-white/60 xl:col-span-3">Caption<textarea name="caption" rows={2} className={input} /></label>
-                    <div className="xl:col-span-3"><button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Add asset</button></div>
+                    <div className="xl:col-span-3"><button className="rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white">Add external asset</button></div>
                 </form>
             </section>
 
@@ -84,9 +110,7 @@ export default async function MediaLibraryPage() {
                                         </div>
                                         <label className="block text-xs text-white/50">Alt text<input name="altText" defaultValue={asset.altText ?? ''} className={input} /></label>
                                         <label className="block text-xs text-white/50">Caption<textarea name="caption" rows={2} defaultValue={asset.caption ?? ''} className={input} /></label>
-                                        <div className="flex flex-wrap gap-3">
-                                            <button className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black">Save metadata</button>
-                                        </div>
+                                        <button className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-black">Save metadata</button>
                                     </form>
 
                                     <form action={deleteMediaAsset.bind(null, asset.id)} className="mt-3">
