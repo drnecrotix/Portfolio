@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const cacheHeaders = { 'Cache-Control': 'public, s-maxage=1800, stale-while-revalidate=300' };
 
 export async function GET() {
   if (!GITHUB_TOKEN) {
-    return NextResponse.json({ error: 'GitHub Token not found' }, { status: 500 });
+    return NextResponse.json({ error: 'GitHub metrics are unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 
   const query = `
@@ -12,21 +13,14 @@ export async function GET() {
       viewer {
         repositories(first: 100, ownerAffiliations: OWNER, isFork: false, orderBy: {field: UPDATED_AT, direction: DESC}) {
           nodes {
-            name
             languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
-              edges {
-                size
-                node {
-                  name
-                  color
-                }
-              }
+              edges { size node { name color } }
             }
           }
         }
       }
     }
-    `;
+  `;
 
   try {
     const res = await fetch('https://api.github.com/graphql', {
@@ -36,52 +30,46 @@ export async function GET() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ query }),
+      signal: AbortSignal.timeout(8000),
     });
 
-    const json = await res.json();
-
-    if (json.errors) {
-      console.error('GitHub API Errors:', json.errors);
-      return NextResponse.json({ error: json.errors[0].message }, { status: 500 });
+    if (!res.ok) {
+      console.warn('[GitHub languages] Upstream request failed with status', res.status);
+      return NextResponse.json({ error: 'GitHub metrics are temporarily unavailable.' }, { status: 502, headers: { 'Cache-Control': 'no-store' } });
     }
 
-    const repos = json.data.viewer.repositories.nodes;
-    const languageStats: Record<string, { size: number, color: string }> = {};
+    const json = await res.json();
+    const repos = json?.data?.viewer?.repositories?.nodes;
+    if (!Array.isArray(repos) || Array.isArray(json?.errors)) {
+      console.warn('[GitHub languages] Unexpected upstream response');
+      return NextResponse.json({ error: 'GitHub metrics are temporarily unavailable.' }, { status: 502, headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    const languageStats: Record<string, { size: number; color: string }> = {};
     let totalSize = 0;
 
-    repos.forEach((repo: any) => {
-      if (repo.languages.edges) {
-        repo.languages.edges.forEach((edge: any) => {
-          const { size, node } = edge;
-          const { name, color } = node;
-
-          if (!languageStats[name]) {
-            languageStats[name] = { size: 0, color };
-          }
-          languageStats[name].size += size;
-          totalSize += size;
-        });
+    for (const repo of repos) {
+      const edges = repo?.languages?.edges;
+      if (!Array.isArray(edges)) continue;
+      for (const edge of edges) {
+        const size = Number(edge?.size ?? 0);
+        const name = String(edge?.node?.name ?? '').trim();
+        const color = String(edge?.node?.color ?? '#888888');
+        if (!name || !Number.isFinite(size) || size <= 0) continue;
+        if (!languageStats[name]) languageStats[name] = { size: 0, color };
+        languageStats[name].size += size;
+        totalSize += size;
       }
-    });
+    }
 
     const languages = Object.entries(languageStats)
-      .map(([name, { size, color }]) => ({
-        name,
-        size,
-        color,
-        percent: totalSize > 0 ? (size / totalSize) * 100 : 0
-      }))
+      .map(([name, { size, color }]) => ({ name, size, color, percent: totalSize > 0 ? Math.round((size / totalSize) * 10000) / 100 : 0 }))
       .sort((a, b) => b.size - a.size)
-      .slice(0, 6) // Top 6 languages
-      .map(lang => ({
-        ...lang,
-        percent: Math.round(lang.percent * 100) / 100 // Round to 2 decimals
-      }));
+      .slice(0, 6);
 
-    return NextResponse.json({ data: languages });
-
+    return NextResponse.json({ data: languages }, { headers: cacheHeaders });
   } catch (error) {
-    console.error('Error fetching GitHub languages:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('[GitHub languages] Request failed:', error instanceof Error ? error.message : 'unknown error');
+    return NextResponse.json({ error: 'GitHub metrics are temporarily unavailable.' }, { status: 502, headers: { 'Cache-Control': 'no-store' } });
   }
 }
