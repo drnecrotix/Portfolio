@@ -1,6 +1,12 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { pageContentToHtml } from '@/lib/cms-pages';
+
+export const metadata: Metadata = {
+    title: 'Page preview',
+    robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function PagePreview({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
