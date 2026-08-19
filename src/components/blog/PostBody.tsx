@@ -1,4 +1,5 @@
 import type { CmsPostContent } from '@/lib/cms-posts';
+import { sanitizeCmsHtml } from '@/lib/sanitize-cms-html';
 
 export function PostBody({ type, content }: { type: string; content: CmsPostContent }) {
     if (type === 'POETRY') {
@@ -12,7 +13,7 @@ export function PostBody({ type, content }: { type: string; content: CmsPostCont
     return (
         <div
             className="prose prose-lg max-w-none prose-headings:tracking-tight dark:prose-invert prose-p:leading-8 prose-blockquote:border-primary"
-            dangerouslySetInnerHTML={{ __html: content.html ?? '' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeCmsHtml(content.html ?? '') }}
         />
     );
 }
