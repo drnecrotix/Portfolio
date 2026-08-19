@@ -131,7 +131,7 @@ jobs:
       - name: Prepare CI database
         run: npx prisma db push
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Run visual smoke tests
         run: npm run test:visual
       - name: Upload visual evidence
