@@ -1,5 +1,8 @@
-import http from 'node:http';
-import next from 'next';
+/* eslint-disable @typescript-eslint/no-require-imports */
+'use strict';
+
+const http = require('http');
+const next = require('next');
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = Number.parseInt(process.env.PORT || '3000', 10);
