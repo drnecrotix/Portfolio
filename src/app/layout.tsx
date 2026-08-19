@@ -54,12 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
             },
         },
         verification: seo.googleVerification ? { google: seo.googleVerification } : undefined,
-        icons: {
-            icon: [
-                { url: '/Arfazrll_light.svg', media: '(prefers-color-scheme: light)' },
-                { url: '/Arfazrll_dark.svg', media: '(prefers-color-scheme: dark)' },
-            ],
-        },
+        icons: { icon: '/dr-necrotix-mark.svg' },
     };
 }
 
