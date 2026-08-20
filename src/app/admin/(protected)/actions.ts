@@ -9,7 +9,8 @@ import { auth } from '@/auth';
 import { installedPortfolioVersion } from '@/lib/installed-version';
 
 const appRoot = process.cwd();
-const portfolioPackageUrl = 'https://raw.githubusercontent.com/drnecrotix/Portfolio/main/package.json';
+const portfolioPackageApiUrl = 'https://api.github.com/repos/drnecrotix/Portfolio/contents/package.json?ref=main';
+const portfolioPackageRawUrl = 'https://raw.githubusercontent.com/drnecrotix/Portfolio/main/package.json';
 
 async function requireAdmin(ownerOnly = false) {
     const session = await auth();
@@ -17,12 +18,43 @@ async function requireAdmin(ownerOnly = false) {
     if (!session?.user || !allowed) throw new Error('Forbidden');
 }
 
-async function latestPortfolioVersion() {
-    const response = await fetch(portfolioPackageUrl, { cache: 'no-store', signal: AbortSignal.timeout(10_000) });
+async function readRemotePackage(url: string, headers?: HeadersInit) {
+    const separator = url.includes('?') ? '&' : '?';
+    const response = await fetch(`${url}${separator}_=${Date.now()}`, {
+        cache: 'no-store',
+        headers,
+        signal: AbortSignal.timeout(10_000),
+    });
     if (!response.ok) throw new Error(`GitHub returned HTTP ${response.status}`);
-    const remote = await response.json() as { version?: string };
-    if (!remote.version) throw new Error('GitHub package version is missing.');
-    return remote.version;
+    return await response.json() as { version?: string };
+}
+
+async function latestPortfolioVersion() {
+    let lastError: unknown;
+
+    try {
+        const remote = await readRemotePackage(portfolioPackageApiUrl, {
+            Accept: 'application/vnd.github.raw+json',
+            'User-Agent': 'Dr-Necrotix-Portfolio-Updater',
+        });
+        if (remote.version) return remote.version;
+        throw new Error('GitHub API package version is missing.');
+    } catch (error) {
+        lastError = error;
+    }
+
+    try {
+        const remote = await readRemotePackage(portfolioPackageRawUrl, {
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
+        });
+        if (remote.version) return remote.version;
+        throw new Error('GitHub raw package version is missing.');
+    } catch (error) {
+        lastError = error;
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('Unable to read the latest Portfolio version from GitHub.');
 }
 
 export async function purgeApplicationCache() {
@@ -40,8 +72,10 @@ export async function purgeApplicationCache() {
 export async function checkForPortfolioUpdate() {
     try {
         await requireAdmin();
-        const remoteVersion = await latestPortfolioVersion();
-        const localVersion = installedPortfolioVersion();
+        const [remoteVersion, localVersion] = await Promise.all([
+            latestPortfolioVersion(),
+            Promise.resolve(installedPortfolioVersion()),
+        ]);
         const available = localVersion !== remoteVersion;
         return {
             ok: true,
