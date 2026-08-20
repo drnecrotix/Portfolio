@@ -155,6 +155,7 @@ model SiteSettings {
 model SiteModeSettings {
   id              String   @id @default("default")
   mode            SiteMode @default(NORMAL)
+  template        String   @default("hero")
   startsAt        DateTime?
   endsAt          DateTime?
   bypassAdmins    Boolean  @default(true)
