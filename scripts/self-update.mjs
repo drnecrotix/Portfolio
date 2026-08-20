@@ -160,7 +160,7 @@ try {
     throw new Error('Next.js CLI is not installed in the active N0C Node environment.');
   }
 
-  const wasmSwc = resolvePackageFile('@next/swc-wasm-nodejs/wasm.js');
+  const wasmSwc = resolvePackageFile('@next/swc-wasm-nodejs');
   if (!wasmSwc) {
     throw new Error('WASM SWC is not installed. Retry the update so N0C installs @next/swc-wasm-nodejs before building.');
   }
