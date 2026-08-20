@@ -69,9 +69,12 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
 
     useEffect(() => {
         if (!isUpdating) return;
-        void pollStatus();
+        const firstPoll = setTimeout(() => void pollStatus(), 0);
         const timer = setInterval(() => void pollStatus(), 2000);
-        return () => clearInterval(timer);
+        return () => {
+            clearTimeout(firstPoll);
+            clearInterval(timer);
+        };
     }, [isUpdating, pollStatus]);
 
     useEffect(() => () => {
@@ -145,7 +148,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
             </div>
 
             {noticeVisible && (
-                <div className="fixed bottom-5 right-5 z-[100] w-[min(92vw,380px)] animate-[fadeIn_.2s_ease-out] rounded-2xl border border-white/15 bg-[#111]/95 p-4 shadow-2xl backdrop-blur-xl" role="status" aria-live="polite">
+                <div className="fixed bottom-5 right-5 z-[100] w-[min(92vw,380px)] rounded-2xl border border-white/15 bg-[#111]/95 p-4 shadow-2xl backdrop-blur-xl" role="status" aria-live="polite">
                     <div className="flex items-start gap-3">
                         <span className={`mt-1 size-2.5 shrink-0 rounded-full ${failed ? 'bg-red-400' : complete ? 'bg-emerald-400' : 'bg-white animate-pulse'}`} />
                         <div className="min-w-0">
