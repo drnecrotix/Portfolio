@@ -165,7 +165,7 @@ try {
     throw new Error('WASM SWC is not installed. Retry the update so N0C installs @next/swc-wasm-nodejs before building.');
   }
 
-  run(process.execPath, [nextCli, 'build', '--webpack'], { env: buildEnv });
+  run(process.execPath, [nextCli, 'build', '--webpack', '--experimental-next-config-strip-types'], { env: buildEnv });
 
   if (dependenciesReplaced && modulesBackup && existsSync(modulesBackup)) {
     rmSync(modulesBackup, { recursive: true, force: true });
