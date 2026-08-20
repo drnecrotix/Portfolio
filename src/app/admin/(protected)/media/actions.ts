@@ -90,24 +90,24 @@ export async function uploadMediaAsset(formData: FormData) {
         if (!uploadTypeAllowed(file)) throw new Error('Unsupported file type. Use an image, PDF, text/CSV/JSON, ZIP, DOCX, XLSX or PPTX file.');
 
         const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
-        const key = `media/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${fileName}`;
-        const url = await uploadMediaFile(file, key);
+        const requestedKey = `media/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${fileName}`;
+        const stored = await uploadMediaFile(file, requestedKey);
 
         try {
             await prisma.mediaAsset.create({
                 data: {
-                    key,
+                    key: stored.key,
                     fileName,
                     mimeType: file.type || 'application/octet-stream',
                     size: file.size,
                     altText: shortText(formData.get('altText'), 500),
                     caption: shortText(formData.get('caption'), 2000),
-                    url,
+                    url: stored.url,
                 },
             });
         } catch (error) {
             try {
-                await deleteMediaFile(key);
+                await deleteMediaFile(stored.key);
             } catch {
                 // Best-effort cleanup if DB registration fails after a successful upload.
             }
@@ -194,7 +194,7 @@ export async function deleteMediaAsset(id: string, formData: FormData) {
             const deleteStoredObject = formData.get('deleteStoredObject') === 'on';
             if (deleteStoredObject) {
                 if (!isManagedMediaKey(asset.key)) {
-                    throw new Error('Only files uploaded by this CMS can be deleted from R2. External assets are library references only.');
+                    throw new Error('Only files uploaded by this CMS can be deleted from managed storage. External assets are library references only.');
                 }
                 await deleteMediaFile(asset.key);
             }
