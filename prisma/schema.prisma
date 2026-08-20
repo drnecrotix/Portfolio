@@ -181,6 +181,7 @@ model SiteSettings {
   homepageContent       Json?
   profileCardContent    Json?
   footerContent         Json?
+  galleryContent        Json?
   seoDefaults           Json?
   assistantSettings     Json?
   createdAt             DateTime @default(now())
