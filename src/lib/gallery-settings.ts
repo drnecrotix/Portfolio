@@ -1,3 +1,15 @@
+export type GalleryItemSetting = {
+  id: string;
+  mediaUrl: string;
+  thumbnailUrl: string;
+  title: string;
+  description: string;
+  category: string;
+  type: 'image' | 'video';
+  isVisible: boolean;
+  order: number;
+};
+
 export type GallerySettings = {
   heroEyebrow: string;
   heroTitlePrefix: string;
@@ -23,6 +35,7 @@ export type GallerySettings = {
   infiniteViewTitle: string;
   minimizeTitle: string;
   maximizeTitle: string;
+  items: GalleryItemSetting[];
 };
 
 export const defaultGallerySettings: GallerySettings = {
@@ -50,6 +63,7 @@ export const defaultGallerySettings: GallerySettings = {
   infiniteViewTitle: 'Infinite Preview',
   minimizeTitle: 'Minimize',
   maximizeTitle: 'Maximize',
+  items: [],
 };
 
 function text(value: unknown, fallback: string, max = 500) {
@@ -58,8 +72,47 @@ function text(value: unknown, fallback: string, max = 500) {
   return trimmed ? trimmed.slice(0, max) : fallback;
 }
 
+function safeId(value: unknown, fallback: string) {
+  const normalized = String(value ?? '').trim().replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 80);
+  return normalized || fallback;
+}
+
+function normalizeUrl(value: unknown) {
+  const url = String(value ?? '').trim().slice(0, 1200);
+  if (!url) return '';
+  if (url.startsWith('/')) return url;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescription: string): GalleryItemSetting[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 250).map((entry, index) => {
+    const raw = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry as Record<string, unknown> : {};
+    const mediaUrl = normalizeUrl(raw.mediaUrl ?? raw.url);
+    const thumbnailUrl = normalizeUrl(raw.thumbnailUrl ?? raw.thumbnail) || mediaUrl;
+    return {
+      id: safeId(raw.id, `gallery-item-${index + 1}`),
+      mediaUrl,
+      thumbnailUrl,
+      title: text(raw.title, `Gallery item ${index + 1}`, 160),
+      description: text(raw.description, fallbackDescription, 1200),
+      category: text(raw.category, fallbackCategory, 120),
+      type: raw.type === 'video' ? 'video' : 'image',
+      isVisible: raw.isVisible !== false,
+      order: Number.isFinite(Number(raw.order)) ? Math.max(0, Math.min(100000, Number(raw.order))) : index,
+    };
+  }).filter((item) => item.mediaUrl).sort((a, b) => a.order - b.order);
+}
+
 export function normalizeGallerySettings(value: unknown): GallerySettings {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const galleryCategoryLabel = text(source.galleryCategoryLabel, defaultGallerySettings.galleryCategoryLabel, 80);
+  const defaultImageDescription = text(source.defaultImageDescription, defaultGallerySettings.defaultImageDescription, 180);
   return {
     heroEyebrow: text(source.heroEyebrow, defaultGallerySettings.heroEyebrow, 40),
     heroTitlePrefix: typeof source.heroTitlePrefix === 'string' ? source.heroTitlePrefix.trim().slice(0, 60) : defaultGallerySettings.heroTitlePrefix,
@@ -78,12 +131,13 @@ export function normalizeGallerySettings(value: unknown): GallerySettings {
     viewLabel: text(source.viewLabel, defaultGallerySettings.viewLabel, 40),
     loadMoreLabel: text(source.loadMoreLabel, defaultGallerySettings.loadMoreLabel, 60),
     emptyLabel: text(source.emptyLabel, defaultGallerySettings.emptyLabel, 180),
-    galleryCategoryLabel: text(source.galleryCategoryLabel, defaultGallerySettings.galleryCategoryLabel, 80),
-    defaultImageDescription: text(source.defaultImageDescription, defaultGallerySettings.defaultImageDescription, 180),
+    galleryCategoryLabel,
+    defaultImageDescription,
     rowsViewTitle: text(source.rowsViewTitle, defaultGallerySettings.rowsViewTitle, 60),
     gridViewTitle: text(source.gridViewTitle, defaultGallerySettings.gridViewTitle, 60),
     infiniteViewTitle: text(source.infiniteViewTitle, defaultGallerySettings.infiniteViewTitle, 60),
     minimizeTitle: text(source.minimizeTitle, defaultGallerySettings.minimizeTitle, 60),
     maximizeTitle: text(source.maximizeTitle, defaultGallerySettings.maximizeTitle, 60),
+    items: normalizeItems(source.items, galleryCategoryLabel, defaultImageDescription),
   };
 }
