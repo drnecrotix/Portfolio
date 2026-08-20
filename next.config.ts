@@ -6,6 +6,14 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
     reactStrictMode: true,
     transpilePackages: ['three'],
+    experimental: {
+        serverActions: {
+            // Media uploads allow files up to 10 MB. Leave headroom for multipart form overhead.
+            bodySizeLimit: '12mb',
+        },
+        // Proxy still sees admin Server Action requests before the route handles them.
+        proxyClientMaxBodySize: '12mb',
+    },
     images: {
         remotePatterns: [
             { protocol: 'https', hostname: 'cdn.jsdelivr.net' },
