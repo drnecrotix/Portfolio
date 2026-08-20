@@ -47,7 +47,7 @@ async function parentIdFrom(form: FormData, currentId?: string) {
     return parent.id;
 }
 
-function done(kind: string, error?: unknown) {
+function done(kind: string, error?: unknown): never {
     const query = error ? `error=${encodeURIComponent(error instanceof Error ? error.message : 'Navigation operation failed.')}` : `saved=${kind}`;
     redirect(`/admin/navigation?${query}`);
 }
@@ -87,16 +87,18 @@ export async function deleteNavigationItem(id: string) {
 export async function seedDefaultNavigation() {
     try {
         await requireAdmin();
-        if (await prisma.navigationItem.count()) return done('seeded');
-        await prisma.$transaction(async (tx) => {
-            await tx.navigationItem.create({ data: { label: 'Home', href: '/', sortOrder: 0 } });
-            const about = await tx.navigationItem.create({ data: { label: 'About', href: '/about', sortOrder: 50 } });
-            for (const [label, href, sortOrder] of [
-                ['Achievements', '/achievements', 10], ['Skills', '/skills', 20], ['Experience', '/experience', 30], ['Projects', '/projects', 40], ['Blog', '/blog', 50],
-            ] as const) await tx.navigationItem.create({ data: { label, href, sortOrder, parentId: about.id } });
-            await tx.navigationItem.create({ data: { label: 'Contact', href: '/contact', sortOrder: 100 } });
-        });
-        revalidatePath('/admin/navigation'); revalidatePath('/', 'layout');
+        const count = await prisma.navigationItem.count();
+        if (count === 0) {
+            await prisma.$transaction(async (tx) => {
+                await tx.navigationItem.create({ data: { label: 'Home', href: '/', sortOrder: 0 } });
+                const about = await tx.navigationItem.create({ data: { label: 'About', href: '/about', sortOrder: 50 } });
+                for (const [label, href, sortOrder] of [
+                    ['Achievements', '/achievements', 10], ['Skills', '/skills', 20], ['Experience', '/experience', 30], ['Projects', '/projects', 40], ['Blog', '/blog', 50],
+                ] as const) await tx.navigationItem.create({ data: { label, href, sortOrder, parentId: about.id } });
+                await tx.navigationItem.create({ data: { label: 'Contact', href: '/contact', sortOrder: 100 } });
+            });
+            revalidatePath('/admin/navigation'); revalidatePath('/', 'layout');
+        }
     } catch (error) { done('seeded', error); }
     done('seeded');
 }
