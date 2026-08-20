@@ -188,18 +188,20 @@ export async function deleteMediaAsset(id: string, formData: FormData) {
         if (user.role === 'EDITOR') throw new Error('Editors cannot delete media assets.');
 
         const asset = await prisma.mediaAsset.findUnique({ where: { id } });
-        if (!asset) redirect('/admin/media');
-
-        const deleteStoredObject = formData.get('deleteStoredObject') === 'on';
-        if (deleteStoredObject) {
-            if (!isManagedMediaKey(asset.key)) {
-                throw new Error('Only files uploaded by this CMS can be deleted from R2. External assets are library references only.');
+        if (!asset) {
+            destination = '/admin/media';
+        } else {
+            const deleteStoredObject = formData.get('deleteStoredObject') === 'on';
+            if (deleteStoredObject) {
+                if (!isManagedMediaKey(asset.key)) {
+                    throw new Error('Only files uploaded by this CMS can be deleted from R2. External assets are library references only.');
+                }
+                await deleteMediaFile(asset.key);
             }
-            await deleteMediaFile(asset.key);
-        }
 
-        await prisma.mediaAsset.delete({ where: { id } });
-        revalidatePath('/admin/media');
+            await prisma.mediaAsset.delete({ where: { id } });
+            revalidatePath('/admin/media');
+        }
     } catch (error) {
         destination = mediaDestination('removed', error);
     }
