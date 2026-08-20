@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { StatusToast } from '@/components/admin/StatusToast';
 import { PortfolioUpdater, type PortfolioUpdateStatus } from '@/components/admin/PortfolioUpdater';
 import { normalizeAssistantSettings } from '@/lib/assistant-settings';
+import { installedPortfolioVersion } from '@/lib/installed-version';
 import { purgeApplicationCache } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -14,10 +15,6 @@ function readUpdateStatus(): PortfolioUpdateStatus | null {
         const file = join(process.cwd(), 'tmp', 'update-status.json');
         return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as PortfolioUpdateStatus : null;
     } catch { return null; }
-}
-
-function localVersion() {
-    try { return (JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as { version?: string }).version || 'unknown'; } catch { return 'unknown'; }
 }
 
 export default async function AdminDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -34,7 +31,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     const cards = [['Projects', projects], ['Posts', posts], ['Pages', pages], ['Media', media], ['Draft posts', drafts], ['Published', publishedPosts], ['Active users', activeUsers], ['Revisions', revisions]];
     const assistant = normalizeAssistantSettings(settings?.assistantSettings);
     const updateStatus = readUpdateStatus();
-    const currentVersion = localVersion();
+    const currentVersion = installedPortfolioVersion();
     const error = typeof params.error === 'string' ? params.error : undefined;
     const toastMessage = error
         ? error
