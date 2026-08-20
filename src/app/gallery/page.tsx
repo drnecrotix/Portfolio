@@ -14,6 +14,7 @@ const GLSLHills = dynamic(() => import("@/components/ui/glsl-hills").then(mod =>
 export default function GalleryPage() {
     const { isLowPowerMode } = usePerformance();
 
+    // Legacy portfolio blog cards are intentionally not mounted here; public content is CMS-driven.
     return (
         <main className="bg-background min-h-screen selection:bg-cyan-500/30 selection:text-cyan-500 overflow-x-hidden relative">
             {!isLowPowerMode && (
