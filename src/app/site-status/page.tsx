@@ -32,7 +32,8 @@ export default async function SiteStatusPage() {
         Spotify: generalSettings.socialLinks.spotify,
     }).filter(([, url]) => Boolean(url));
 
-    const effective = resolveSiteMode(settings);
+    const now = new Date();
+    const effective = resolveSiteMode(settings, now);
     const mode = effective.mode === 'MAINTENANCE' || effective.mode === 'COMING_SOON' || effective.mode === 'PRIVATE' ? effective.mode : 'MAINTENANCE';
     const copy = defaults[mode];
 
@@ -45,7 +46,7 @@ export default async function SiteStatusPage() {
                     <p className="mt-8 max-w-2xl text-base md:text-lg leading-relaxed text-white/55">{settings.message || copy.message}</p>
 
                     {settings.endsAt && (
-                        <SiteModeCountdown startsAt={settings.startsAt?.toISOString() ?? null} endsAt={settings.endsAt.toISOString()} />
+                        <SiteModeCountdown startsAt={settings.startsAt?.toISOString() ?? null} endsAt={settings.endsAt.toISOString()} initialNow={now.getTime()} />
                     )}
 
                     {mode === 'PRIVATE' && settings.passwordHash && (
