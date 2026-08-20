@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { portfolioData } from '@/data/portfolio';
 import { ProjectPageContent } from '@/components/projects/ProjectPageContent';
 import { getProjectImages } from '@/app/actions/getProjectImages';
 import { prisma } from '@/lib/prisma';
@@ -11,12 +10,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     const { slug } = await params;
 
     const cmsProject = await prisma.project.findUnique({ where: { slug } });
-    const project = cmsProject && cmsProject.status !== 'ARCHIVED'
-        ? cmsProjectToPortfolioProject(cmsProject)
-        : portfolioData.projects.find((item) => item.slug === slug);
+    if (!cmsProject || cmsProject.status === 'ARCHIVED') notFound();
 
-    if (!project) notFound();
-
+    const project = cmsProjectToPortfolioProject(cmsProject);
     const galleryImages = await getProjectImages(slug, project.title);
     const updatedProject = {
         ...project,
