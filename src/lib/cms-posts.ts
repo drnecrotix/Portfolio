@@ -13,11 +13,19 @@ export type PublicPost = {
     title: string;
     excerpt: string;
     category: string;
+    categorySlug: string;
     tags: string[];
     type: PostType;
+    typeLabel: string;
+    typeSlug: string;
     authorName: string;
     date: string;
     content: CmsPostContent;
+};
+
+type CmsPostRecord = PrismaPost & {
+    postType?: { name: string; slug: string } | null;
+    categoryRef?: { name: string; slug: string } | null;
 };
 
 function safePublicContent(type: PostType, value: unknown): CmsPostContent {
@@ -30,15 +38,20 @@ function safePublicContent(type: PostType, value: unknown): CmsPostContent {
     return content;
 }
 
-export function cmsPostToPublicPost(post: PrismaPost): PublicPost {
+export function cmsPostToPublicPost(post: CmsPostRecord): PublicPost {
+    const fallbackType = post.type.toLowerCase().replaceAll('_', '-');
+    const categoryName = post.categoryRef?.name ?? post.category ?? 'Publication';
     return {
         id: post.id,
         slug: post.slug,
         title: post.title,
         excerpt: post.excerpt ?? '',
-        category: post.category ?? post.type.toLowerCase().replaceAll('_', '-'),
+        category: categoryName,
+        categorySlug: post.categoryRef?.slug ?? categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
         tags: post.tags,
         type: post.type,
+        typeLabel: post.postType?.name ?? post.type.replaceAll('_', ' '),
+        typeSlug: post.postType?.slug ?? fallbackType,
         authorName: post.authorName,
         date: (post.publishedAt ?? post.createdAt).toISOString(),
         content: safePublicContent(post.type, post.content),
