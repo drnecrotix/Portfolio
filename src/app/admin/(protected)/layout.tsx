@@ -11,6 +11,7 @@ const navItems = [
     ['Blog', '/admin/blog'],
     ['Pages', '/admin/pages'],
     ['Navigation', '/admin/navigation'],
+    ['Footer', '/admin/footer'],
     ['Media', '/admin/media'],
     ['AI Assistant', '/admin/assistant'],
     ['Revisions', '/admin/revisions'],
