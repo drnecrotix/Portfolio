@@ -149,7 +149,6 @@ try {
   status('running', 'Building the production application with WASM SWC compatibility mode…', { targetVersion: remotePackage.version || null });
   const existingNodeOptions = (process.env.NODE_OPTIONS || '').trim().split(/\s+/).filter(Boolean);
   const buildNodeOptions = [...existingNodeOptions];
-  if (!buildNodeOptions.includes('--no-addons')) buildNodeOptions.push('--no-addons');
   if (!buildNodeOptions.some((option) => option.startsWith('--max-old-space-size='))) buildNodeOptions.push('--max-old-space-size=6144');
   const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions.join(' ') };
   delete buildEnv.TURBOPACK;
