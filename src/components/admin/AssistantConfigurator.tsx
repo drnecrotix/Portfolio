@@ -11,18 +11,12 @@ import {
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
 const panel = 'rounded-2xl border border-white/10 bg-white/[0.025] p-6';
 
-function nextId(prefix: string) {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function clonePreset(template: AssistantResponseTemplate): AssistantResponseTemplate {
-    return { ...template, id: nextId('template'), triggers: [...template.triggers] };
-}
+function nextId(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
+function clonePreset(template: AssistantResponseTemplate): AssistantResponseTemplate { return { ...template, id: nextId('template'), triggers: [...template.triggers] }; }
 
 export function AssistantConfigurator({ settings }: { settings: AssistantSettings }) {
     const [providers, setProviders] = useState<CustomAssistantProvider[]>(settings.customProviders);
     const [templates, setTemplates] = useState<AssistantResponseTemplate[]>(settings.responseTemplates);
-
     const serializedProviders = useMemo(() => JSON.stringify(providers), [providers]);
     const serializedTemplates = useMemo(() => JSON.stringify(templates), [templates]);
 
@@ -30,21 +24,12 @@ export function AssistantConfigurator({ settings }: { settings: AssistantSetting
         id: nextId('provider'), name: 'Custom AI', enabled: true, baseUrl: 'https://api.example.com/v1', model: '',
         apiKeyEnv: 'CUSTOM_AI_API_KEY', priority: 100 + current.length * 10, timeoutMs: 20000,
     }]);
-
-    const addTemplate = () => setTemplates((current) => [...current, {
-        id: nextId('template'), name: 'New response template', enabled: true, matchMode: 'contains', triggers: [], response: '',
-    }]);
-
-    const addPreset = (preset: AssistantResponseTemplate) => {
-        setTemplates((current) => [...current, clonePreset(preset)]);
-    };
-
-    const addAllPresets = () => {
-        setTemplates((current) => {
-            const existingNames = new Set(current.map((item) => item.name));
-            return [...current, ...assistantTemplateLibrary.filter((preset) => !existingNames.has(preset.name)).map(clonePreset)];
-        });
-    };
+    const addTemplate = () => setTemplates((current) => [...current, { id: nextId('template'), name: 'New response template', enabled: true, matchMode: 'contains', triggers: [], response: '' }]);
+    const addPreset = (preset: AssistantResponseTemplate) => setTemplates((current) => [...current, clonePreset(preset)]);
+    const addAllPresets = () => setTemplates((current) => {
+        const existingNames = new Set(current.map((item) => item.name));
+        return [...current, ...assistantTemplateLibrary.filter((preset) => !existingNames.has(preset.name)).map(clonePreset)];
+    });
 
     return (
         <>
@@ -64,7 +49,6 @@ export function AssistantConfigurator({ settings }: { settings: AssistantSetting
                 <label className="text-sm text-white/60">Input placeholder<input name="inputPlaceholder" defaultValue={settings.inputPlaceholder} className={input} /></label>
                 <label className="text-sm text-white/60">Input hint<input name="inputHint" defaultValue={settings.inputHint} className={input} /></label>
                 <label className="text-sm text-white/60 md:col-span-2">Suggested questions — one per line<textarea name="suggestedQuestions" rows={5} defaultValue={settings.suggestedQuestions.join('\n')} className={input} /></label>
-
                 <div className="md:col-span-2 rounded-xl border border-white/10 bg-black/10 p-5">
                     <label className="flex items-center gap-3 text-sm text-white/70"><input type="checkbox" name="proactiveEnabled" defaultChecked={settings.proactiveEnabled} /> Enable proactive follow-up message</label>
                     <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px]">
@@ -73,7 +57,6 @@ export function AssistantConfigurator({ settings }: { settings: AssistantSetting
                     </div>
                     <p className="mt-3 text-xs text-white/30">Shown only if the visitor has opened the chat and has not sent a message yet.</p>
                 </div>
-
                 <label className="text-sm text-white/60">Personality<textarea name="personality" rows={5} defaultValue={settings.personality} className={input} /></label>
                 <label className="text-sm text-white/60">Tone<textarea name="tone" rows={5} defaultValue={settings.tone} className={input} /></label>
                 <label className="text-sm text-white/60">Response style<textarea name="responseStyle" rows={5} defaultValue={settings.responseStyle} className={input} /></label>
@@ -85,12 +68,17 @@ export function AssistantConfigurator({ settings }: { settings: AssistantSetting
                     <div>
                         <p className="text-xs uppercase tracking-[0.25em] text-white/35">AI integrations</p>
                         <h3 className="mt-2 text-xl font-semibold">Provider routing</h3>
-                        <p className="mt-2 max-w-3xl text-sm text-white/40">Lower priority numbers are tried first. Custom integrations use an OpenAI-compatible chat-completions endpoint. Secrets stay in hosting environment variables.</p>
+                        <p className="mt-2 max-w-3xl text-sm text-white/40">OpenAI GPT, Groq, Gemini and custom OpenAI-compatible providers are tried by priority. Secrets stay in hosting environment variables.</p>
                     </div>
                     <button type="button" onClick={addProvider} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/75 hover:bg-white/[0.05]">+ Add integration</button>
                 </div>
 
-                <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                    <div className="rounded-xl border border-white/10 p-4">
+                        <div className="flex items-center justify-between gap-2"><p className="text-sm font-medium">OpenAI / GPT</p><span className="text-[10px] uppercase tracking-wider text-white/30">OPENAI_API_KEY</span></div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px]"><label className="text-xs text-white/45">Model<input name="openaiModel" defaultValue={settings.openaiModel} className={input} /></label><label className="text-xs text-white/45">Priority<input name="openaiPriority" type="number" min="0" max="10000" defaultValue={settings.openaiPriority} className={input} /></label></div>
+                        <p className="mt-3 text-[11px] leading-5 text-white/30">Uses the official OpenAI Chat Completions API. Add the secret as OPENAI_API_KEY in the hosting environment.</p>
+                    </div>
                     <div className="rounded-xl border border-white/10 p-4"><p className="text-sm font-medium">Groq</p><div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px]"><label className="text-xs text-white/45">Model<input name="groqModel" defaultValue={settings.groqModel} className={input} /></label><label className="text-xs text-white/45">Priority<input name="groqPriority" type="number" min="0" max="10000" defaultValue={settings.groqPriority} className={input} /></label></div></div>
                     <div className="rounded-xl border border-white/10 p-4"><p className="text-sm font-medium">Gemini</p><div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px]"><label className="text-xs text-white/45">Model<input name="geminiModel" defaultValue={settings.geminiModel} className={input} /></label><label className="text-xs text-white/45">Priority<input name="geminiPriority" type="number" min="0" max="10000" defaultValue={settings.geminiPriority} className={input} /></label></div></div>
                 </div>
@@ -109,7 +97,7 @@ export function AssistantConfigurator({ settings }: { settings: AssistantSetting
                             </div>
                         </div>
                     ))}
-                    {providers.length === 0 && <div className="rounded-xl border border-dashed border-white/10 p-6 text-sm text-white/35">No custom providers yet. Groq and Gemini remain available as built-in integrations.</div>}
+                    {providers.length === 0 && <div className="rounded-xl border border-dashed border-white/10 p-6 text-sm text-white/35">No custom providers yet. OpenAI GPT, Groq and Gemini remain available as built-in integrations.</div>}
                 </div>
             </section>
 
@@ -122,14 +110,10 @@ export function AssistantConfigurator({ settings }: { settings: AssistantSetting
                     </div>
                     <div className="flex gap-2"><button type="button" onClick={addTemplate} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/75 hover:bg-white/[0.05]">+ Blank template</button><button type="button" onClick={addAllPresets} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black">Add all presets</button></div>
                 </div>
-
                 <div className="mt-6 rounded-xl border border-white/10 bg-black/10 p-5">
                     <p className="text-xs uppercase tracking-[0.2em] text-white/35">Preset library</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                        {assistantTemplateLibrary.map((preset) => <button key={preset.id} type="button" onClick={() => addPreset(preset)} className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/65 hover:border-white/25 hover:text-white">+ {preset.name}</button>)}
-                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">{assistantTemplateLibrary.map((preset) => <button key={preset.id} type="button" onClick={() => addPreset(preset)} className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/65 hover:border-white/25 hover:text-white">+ {preset.name}</button>)}</div>
                 </div>
-
                 <div className="mt-6 space-y-4">
                     {templates.map((template, index) => (
                         <div key={template.id} className="rounded-xl border border-white/10 p-5">
