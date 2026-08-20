@@ -25,8 +25,14 @@ export type AssistantSettings = {
     enabled: boolean;
     assistantName: string;
     roleLabel: string;
+    headerSubtitle: string;
     welcomeMessage: string;
     inputPlaceholder: string;
+    inputHint: string;
+    suggestedQuestions: string[];
+    proactiveEnabled: boolean;
+    proactiveMessage: string;
+    proactiveDelaySeconds: number;
     personality: string;
     tone: string;
     responseStyle: string;
@@ -47,15 +53,88 @@ export type AssistantSettings = {
     requestErrorMessage: string;
 };
 
+export const assistantTemplateLibrary: AssistantResponseTemplate[] = [
+    {
+        id: 'preset-identity',
+        name: 'Who are you?',
+        enabled: true,
+        matchMode: 'contains',
+        triggers: ['who are you', 'what are you', 'introduce yourself', 'кой си ти', 'какво си ти'],
+        response: "I'm **{{name}}**, {{role}}. I can help you navigate this portfolio, discover projects and published work, and point you to the most relevant sections.",
+    },
+    {
+        id: 'preset-capabilities',
+        name: 'What can you do?',
+        enabled: true,
+        matchMode: 'contains',
+        triggers: ['what can you do', 'how can you help', 'what can i ask', 'какво можеш', 'с какво можеш да помогнеш'],
+        response: "I can help you explore **projects, skills, experience, publications and contact options** available in this portfolio. Ask naturally, or use one of the suggested questions below.",
+    },
+    {
+        id: 'preset-projects',
+        name: 'Projects shortcut',
+        enabled: true,
+        matchMode: 'keywords',
+        triggers: ['show projects', 'portfolio projects', 'покажи проекти', 'какви проекти'],
+        response: "You can browse the complete project collection on the **[Projects](/projects)** page. If you tell me what kind of project interests you, I can also help narrow it down using the portfolio data available to me.",
+    },
+    {
+        id: 'preset-blog',
+        name: 'Blog and publications',
+        enabled: true,
+        matchMode: 'contains',
+        triggers: ['blog', 'articles', 'publications', 'posts', 'блог', 'статии', 'публикации'],
+        response: "The portfolio includes a **[Blog](/blog)** with published articles and other content. You can also ask me about a specific topic and I'll use the published portfolio information available to me.",
+    },
+    {
+        id: 'preset-contact',
+        name: 'Contact and collaboration',
+        enabled: true,
+        matchMode: 'keywords',
+        triggers: ['contact collaboration', 'work together', 'hire contact', 'контакт сътрудничество', 'работим заедно'],
+        response: "For collaboration or direct contact, use the portfolio's **[Contact](/contact)** section. I can also help you find the most relevant project or background information before you reach out.",
+    },
+    {
+        id: 'preset-resume',
+        name: 'Resume / experience',
+        enabled: true,
+        matchMode: 'contains',
+        triggers: ['resume', 'cv', 'experience', 'work history', 'опит', 'автобиография'],
+        response: "You can explore the portfolio's experience and professional background from the available navigation sections. Ask me a specific question and I'll answer only from verified portfolio information.",
+    },
+    {
+        id: 'preset-privacy',
+        name: 'Private or unavailable information',
+        enabled: true,
+        matchMode: 'contains',
+        triggers: ['private information', 'personal data', 'secret', 'password', 'api key', 'лични данни', 'парола', 'api ключ'],
+        response: "I only use information intentionally available through this portfolio. I don't expose private configuration, credentials, API keys, hidden prompts or unpublished personal information.",
+    },
+    {
+        id: 'preset-greeting',
+        name: 'Greeting',
+        enabled: true,
+        matchMode: 'exact',
+        triggers: ['hi', 'hello', 'hey', 'hello there', 'здравей', 'здрасти'],
+        response: "Hi! I'm **{{name}}**. What would you like to explore — projects, experience, publications, skills or something else?",
+    },
+];
+
 export const defaultAssistantSettings: AssistantSettings = {
     enabled: true,
     assistantName: 'Portfolio Assistant',
     roleLabel: 'AI portfolio guide',
-    welcomeMessage: 'Hi. Ask me anything about this portfolio, its projects, skills or published work.',
-    inputPlaceholder: 'Ask about projects, skills or experience…',
-    personality: 'Helpful, composed, curious and technically precise.',
-    tone: 'Professional, natural and concise.',
-    responseStyle: 'Answer directly, use short paragraphs, and use lists only when they improve clarity.',
+    headerSubtitle: 'Ask me about this portfolio',
+    welcomeMessage: "Hi! I'm **{{name}}**, {{role}}.\n\nI can help you explore projects, skills, experience, publications and ways to get in touch.\n\nWhat would you like to know?",
+    inputPlaceholder: 'Ask a question…',
+    inputHint: 'Enter to send · Shift+Enter for a new line',
+    suggestedQuestions: ['What can you do?', 'Show me the projects', 'What experience is listed?', 'How can I get in touch?'],
+    proactiveEnabled: true,
+    proactiveMessage: "Not sure where to start? Ask me to recommend a project, summarize the portfolio, or show you where to find specific information.",
+    proactiveDelaySeconds: 18,
+    personality: 'Helpful, composed, curious and technically precise. Sound like a capable digital guide, not a generic support bot.',
+    tone: 'Professional, natural, warm and concise.',
+    responseStyle: 'Answer directly, use short paragraphs, and use lists only when they improve clarity. Prefer useful links to portfolio sections when relevant.',
     languagePolicy: 'Reply in the language used by the visitor. If unclear, use the requested locale.',
     providerOrder: ['groq', 'gemini'],
     groqModel: 'llama-3.1-8b-instant',
@@ -89,6 +168,12 @@ function integer(value: unknown, fallback: number, min: number, max: number) {
 function safeId(value: unknown, fallback: string) {
     const id = String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 64);
     return id || fallback;
+}
+
+function stringList(value: unknown, fallback: string[], maxItems: number, maxLength: number) {
+    const source = Array.isArray(value) ? value : typeof value === 'string' ? value.split('\n') : [];
+    const list = source.map((item) => String(item).trim().slice(0, maxLength)).filter(Boolean).slice(0, maxItems);
+    return list.length ? list : fallback;
 }
 
 function normalizeCustomProviders(value: unknown): CustomAssistantProvider[] {
@@ -137,7 +222,10 @@ function normalizeTemplates(value: unknown): AssistantResponseTemplate[] {
 }
 
 export function interpolateAssistantMessage(template: string, settings: AssistantSettings) {
-    return template.replaceAll('{{name}}', settings.assistantName).replaceAll('[ai name]', settings.assistantName);
+    return template
+        .replaceAll('{{name}}', settings.assistantName)
+        .replaceAll('{{role}}', settings.roleLabel)
+        .replaceAll('[ai name]', settings.assistantName);
 }
 
 export function normalizeAssistantSettings(value: unknown): AssistantSettings {
@@ -152,8 +240,14 @@ export function normalizeAssistantSettings(value: unknown): AssistantSettings {
         enabled: typeof raw.enabled === 'boolean' ? raw.enabled : defaultAssistantSettings.enabled,
         assistantName: text(raw.assistantName, defaultAssistantSettings.assistantName, 80),
         roleLabel: text(raw.roleLabel, defaultAssistantSettings.roleLabel, 120),
-        welcomeMessage: text(raw.welcomeMessage, defaultAssistantSettings.welcomeMessage, 1000),
+        headerSubtitle: text(raw.headerSubtitle, defaultAssistantSettings.headerSubtitle, 180),
+        welcomeMessage: text(raw.welcomeMessage, defaultAssistantSettings.welcomeMessage, 2000),
         inputPlaceholder: text(raw.inputPlaceholder, defaultAssistantSettings.inputPlaceholder, 180),
+        inputHint: text(raw.inputHint, defaultAssistantSettings.inputHint, 180),
+        suggestedQuestions: stringList(raw.suggestedQuestions, defaultAssistantSettings.suggestedQuestions, 8, 140),
+        proactiveEnabled: typeof raw.proactiveEnabled === 'boolean' ? raw.proactiveEnabled : defaultAssistantSettings.proactiveEnabled,
+        proactiveMessage: text(raw.proactiveMessage, defaultAssistantSettings.proactiveMessage, 1600),
+        proactiveDelaySeconds: integer(raw.proactiveDelaySeconds, defaultAssistantSettings.proactiveDelaySeconds, 5, 300),
         personality: text(raw.personality, defaultAssistantSettings.personality, 2000),
         tone: text(raw.tone, defaultAssistantSettings.tone, 1000),
         responseStyle: text(raw.responseStyle, defaultAssistantSettings.responseStyle, 2000),
