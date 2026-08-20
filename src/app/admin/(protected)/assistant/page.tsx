@@ -13,14 +13,10 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
     ]);
     const settings = normalizeAssistantSettings(site?.assistantSettings);
     const providers = [
+        { name: 'OpenAI / GPT', configured: Boolean(process.env.OPENAI_API_KEY), model: settings.openaiModel, priority: settings.openaiPriority },
         { name: 'Groq', configured: Boolean(process.env.GROQ_API_KEY), model: settings.groqModel, priority: settings.groqPriority },
         { name: 'Gemini', configured: Boolean(process.env.GEMINI_API_KEY), model: settings.geminiModel, priority: settings.geminiPriority },
-        ...settings.customProviders.map((provider) => ({
-            name: provider.name,
-            configured: Boolean(process.env[provider.apiKeyEnv]),
-            model: provider.model,
-            priority: provider.priority,
-        })),
+        ...settings.customProviders.map((provider) => ({ name: provider.name, configured: Boolean(process.env[provider.apiKeyEnv]), model: provider.model, priority: provider.priority })),
     ].sort((a, b) => a.priority - b.priority);
 
     return (
@@ -30,7 +26,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/35">AI Assistant</p>
                     <h2 className="mt-2 text-4xl font-semibold">Assistant studio</h2>
-                    <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Personalize identity and behavior, route between multiple AI providers, add API integrations and define deterministic answers for common questions. API secrets remain server-side environment variables.</p>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Personalize the complete chat experience, route between OpenAI GPT, Groq, Gemini and custom AI providers, and define deterministic automatic answers. API secrets remain server-side environment variables.</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-sm text-white/55">
                     {settings.enabled ? <span className="text-emerald-300">● Public assistant enabled</span> : <span className="text-amber-300">● Public assistant disabled</span>}
