@@ -87,6 +87,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
         return status || { state: 'ready', message: 'Updater is ready.' };
     }, [checkResult, isChecking, status]);
 
+    // Installation is enabled only after a fresh check confirms a newer version.
     const canInstall = checkResult?.ok === true && checkResult.state === 'available' && !isUpdating && !isChecking;
 
     function handleCheck() {
