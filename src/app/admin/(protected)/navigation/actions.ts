@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
+const DROPDOWN_STYLES = new Set(['auto', 'compact', 'standard', 'mega']);
+
 async function requireAdmin() {
     const session = await auth();
     if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) throw new Error('Insufficient permissions');
@@ -36,6 +38,8 @@ function readBase(form: FormData) {
     if (!Number.isInteger(sortOrder) || sortOrder < -10000 || sortOrder > 10000) throw new Error('Sort order must be an integer between -10000 and 10000.');
     const isDropdown = form.get('itemType') === 'dropdown';
     const isExternal = !isDropdown && form.get('isExternal') === 'on';
+    const requestedStyle = String(form.get('dropdownStyle') || 'auto').trim().toLowerCase();
+    const dropdownStyle = isDropdown && DROPDOWN_STYLES.has(requestedStyle) ? requestedStyle : 'auto';
     return {
         label,
         href: normalizeHref(form.get('href'), isExternal, isDropdown),
@@ -44,6 +48,7 @@ function readBase(form: FormData) {
         isVisible: form.get('isVisible') === 'on',
         isExternal,
         isDropdown,
+        dropdownStyle,
     };
 }
 
@@ -138,7 +143,7 @@ export async function seedDefaultNavigation() {
         if (count === 0) {
             await prisma.$transaction(async (tx) => {
                 await tx.navigationItem.create({ data: { label: 'Home', href: '/', sortOrder: 10 } });
-                const about = await tx.navigationItem.create({ data: { label: 'About', href: '#', sortOrder: 20, isDropdown: true } });
+                const about = await tx.navigationItem.create({ data: { label: 'About', href: '#', sortOrder: 20, isDropdown: true, dropdownStyle: 'auto' } });
                 for (const [label, href, sortOrder] of [
                     ['Achievements', '/achievements', 10], ['Skills', '/skills', 20], ['Experience', '/experience', 30], ['Projects', '/projects', 40], ['Blog', '/blog', 50],
                 ] as const) await tx.navigationItem.create({ data: { label, href, sortOrder, parentId: about.id } });
