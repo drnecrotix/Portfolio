@@ -137,6 +137,7 @@ model SiteSettings {
   id                    String   @id @default("default")
   siteName              String   @default("Dr Necrotix")
   siteDescription       String?
+  faviconUrl            String?
   defaultTheme          String   @default("dark")
   allowDayMode          Boolean  @default(true)
   accentColor           String?
