@@ -18,11 +18,16 @@ function readUpdateStatus(): PortfolioUpdateStatus | null {
 }
 
 export default async function AdminDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-    const [params, projects, posts, pages, media, drafts, publishedPosts, activeUsers, revisions, settings, siteMode, recentRevisions] = await Promise.all([
-        searchParams,
-        prisma.project.count(), prisma.post.count(), prisma.page.count(), prisma.mediaAsset.count(),
-        prisma.post.count({ where: { status: 'DRAFT' } }), prisma.post.count({ where: { status: 'PUBLISHED' } }),
-        prisma.user.count({ where: { isActive: true } }), prisma.revision.count(),
+    const params = await searchParams;
+    const [projects, posts, pages, media, drafts, publishedPosts, activeUsers, revisions, settings, siteMode, recentRevisions] = await prisma.$transaction([
+        prisma.project.count(),
+        prisma.post.count(),
+        prisma.page.count(),
+        prisma.mediaAsset.count(),
+        prisma.post.count({ where: { status: 'DRAFT' } }),
+        prisma.post.count({ where: { status: 'PUBLISHED' } }),
+        prisma.user.count({ where: { isActive: true } }),
+        prisma.revision.count(),
         prisma.siteSettings.findUnique({ where: { id: 'default' } }),
         prisma.siteModeSettings.findUnique({ where: { id: 'default' } }),
         prisma.revision.findMany({ take: 6, orderBy: { createdAt: 'desc' }, include: { user: { select: { name: true, email: true } } } }),
