@@ -31,6 +31,35 @@ async function hasValidPrivateAccess(request: NextRequest) {
     return bytesToBase64Url(new Uint8Array(signed)) === signature;
 }
 
+async function fetchSiteMode(request: NextRequest): Promise<SiteModePayload | null> {
+    const bases = [process.env.NEXT_PUBLIC_SITE_URL, request.nextUrl.origin]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => value.replace(/\/$/, ''));
+    const uniqueBases = [...new Set(bases)];
+
+    for (const base of uniqueBases) {
+        try {
+            const endpoint = new URL('/api/site-mode', base);
+            endpoint.searchParams.set('_siteModeCheck', Date.now().toString());
+            const response = await fetch(endpoint, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, max-age=0',
+                    Pragma: 'no-cache',
+                    Accept: 'application/json',
+                },
+                signal: AbortSignal.timeout(5_000),
+            });
+            if (!response.ok) continue;
+            return await response.json() as SiteModePayload;
+        } catch {
+            // Try the next origin. Some Passenger/N0C setups cannot loop back through request.url reliably.
+        }
+    }
+
+    return null;
+}
+
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
@@ -53,32 +82,28 @@ export async function proxy(request: NextRequest) {
         // Redirect resolution fails open so routing remains available if storage is down.
     }
 
-    try {
-        const endpoint = new URL('/api/site-mode', request.url);
-        const response = await fetch(endpoint, { cache: 'no-store' });
-        if (!response.ok) return NextResponse.next();
-
-        const settings = (await response.json()) as SiteModePayload;
-        const adminBypassRevision = request.cookies.get('portfolio-admin-bypass')?.value;
-        const hasAdminBypass = Boolean(adminBypassRevision && adminBypassRevision === settings.updatedAt);
-        if (settings.bypassAdmins && hasAdminBypass) return NextResponse.next();
-
-        if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return NextResponse.next();
-
-        if (settings.mode === 'MAINTENANCE' || settings.mode === 'COMING_SOON' || settings.mode === 'PRIVATE') {
-            const target = request.nextUrl.clone();
-            target.pathname = '/site-status';
-            target.search = '';
-            return NextResponse.redirect(target);
-        }
-
-        const next = NextResponse.next();
-        if (settings.mode === 'ARCHIVE') next.headers.set('x-portfolio-archive-mode', '1');
-        return next;
-    } catch {
-        // Site mode must fail open if the database is temporarily unavailable.
+    const settings = await fetchSiteMode(request);
+    if (!settings) {
+        // Keep the site reachable if both the configured public origin and request origin cannot resolve Site Mode.
         return NextResponse.next();
     }
+
+    const adminBypassRevision = request.cookies.get('portfolio-admin-bypass')?.value;
+    const hasAdminBypass = Boolean(adminBypassRevision && adminBypassRevision === settings.updatedAt);
+    if (settings.bypassAdmins && hasAdminBypass) return NextResponse.next();
+
+    if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return NextResponse.next();
+
+    if (settings.mode === 'MAINTENANCE' || settings.mode === 'COMING_SOON' || settings.mode === 'PRIVATE') {
+        const target = request.nextUrl.clone();
+        target.pathname = '/site-status';
+        target.search = '';
+        return NextResponse.redirect(target);
+    }
+
+    const next = NextResponse.next();
+    if (settings.mode === 'ARCHIVE') next.headers.set('x-portfolio-archive-mode', '1');
+    return next;
 }
 
 export const config = {
