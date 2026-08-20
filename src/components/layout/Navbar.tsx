@@ -19,18 +19,19 @@ type NavigationItem = {
     sortOrder: number;
     isVisible: boolean;
     isExternal: boolean;
+    isDropdown: boolean;
     parentId: string | null;
 };
 
 const fallbackItems: NavigationItem[] = [
-    { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 0, isVisible: true, isExternal: false, parentId: null },
-    { id: 'about', label: 'About', href: '/about', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, parentId: null },
-    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, parentId: 'about' },
-    { id: 'skills', label: 'Skills', href: '/skills', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, parentId: 'about' },
-    { id: 'experience', label: 'Experience', href: '/experience', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, parentId: 'about' },
-    { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, parentId: 'about' },
-    { id: 'blog', label: 'Blog', href: '/blog', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, parentId: 'about' },
-    { id: 'contact', label: 'Contact', href: '/contact', location: 'primary', sortOrder: 100, isVisible: true, isExternal: false, parentId: null },
+    { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, parentId: null },
+    { id: 'about', label: 'About', href: '#', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: true, parentId: null },
+    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
+    { id: 'skills', label: 'Skills', href: '/skills', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
+    { id: 'experience', label: 'Experience', href: '/experience', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
+    { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
+    { id: 'blog', label: 'Blog', href: '/blog', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
+    { id: 'contact', label: 'Contact', href: '/contact', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, parentId: null },
 ];
 
 function Clock() {
@@ -91,7 +92,7 @@ export function Navbar() {
         return map;
     }, [visibleItems]);
 
-    const home = topLevel.find((item) => item.href === '/') ?? fallbackItems[0];
+    const home = topLevel.find((item) => item.href === '/' && !item.isDropdown) ?? fallbackItems[0];
     const desktopTopLevel = topLevel.filter((item) => item.id !== home.id);
 
     const toggleLocale = useCallback(() => {
@@ -135,18 +136,21 @@ export function Navbar() {
                             {renderLink(home)}
                             {desktopTopLevel.map((item) => {
                                 const children = childrenByParent.get(item.id) || [];
-                                if (!children.length) return renderLink(item);
-                                return (
-                                    <CardNav
-                                        key={item.id}
-                                        items={[{
-                                            label: item.label,
-                                            links: children.map((child) => ({ id: child.id, label: child.label, href: child.href, description: child.href, isExternal: child.isExternal })),
-                                        }]}
-                                        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
-                                        pathname={pathname}
-                                    />
-                                );
+                                if (item.isDropdown) {
+                                    if (!children.length) return null;
+                                    return (
+                                        <CardNav
+                                            key={item.id}
+                                            items={[{
+                                                label: item.label,
+                                                links: children.map((child) => ({ id: child.id, label: child.label, href: child.href, description: child.href, isExternal: child.isExternal })),
+                                            }]}
+                                            theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                                            pathname={pathname}
+                                        />
+                                    );
+                                }
+                                return renderLink(item);
                             })}
                         </div>
 
@@ -173,13 +177,16 @@ export function Navbar() {
                                 {renderLink(home, true)}
                                 {desktopTopLevel.map((item) => {
                                     const children = childrenByParent.get(item.id) || [];
-                                    if (!children.length) return renderLink(item, true);
-                                    return (
-                                        <div key={item.id} className="flex w-full flex-col items-center gap-4 border-t border-foreground/10 pt-6 text-center">
-                                            <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">{item.label}</span>
-                                            {children.map((child) => renderLink(child, true))}
-                                        </div>
-                                    );
+                                    if (item.isDropdown) {
+                                        if (!children.length) return null;
+                                        return (
+                                            <div key={item.id} className="flex w-full flex-col items-center gap-4 border-t border-foreground/10 pt-6 text-center">
+                                                <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">{item.label}</span>
+                                                {children.map((child) => renderLink(child, true))}
+                                            </div>
+                                        );
+                                    }
+                                    return renderLink(item, true);
                                 })}
                             </nav>
                         </div>
