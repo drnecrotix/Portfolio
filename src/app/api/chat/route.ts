@@ -235,14 +235,22 @@ export async function GET() {
                 ? Boolean(process.env.GEMINI_API_KEY)
                 : Boolean(process.env[provider.custom.apiKeyEnv]),
     }));
+    const assistantConfigured = providers.some((provider) => provider.configured) || settings.responseTemplates.some((template) => template.enabled);
+
     return NextResponse.json({
-        status: 'ok',
+        status: settings.enabled && assistantConfigured ? 'ready' : settings.enabled ? 'limited' : 'disabled',
         enabled: settings.enabled,
         assistantName: settings.assistantName,
         roleLabel: settings.roleLabel,
-        welcomeMessage: settings.welcomeMessage,
+        headerSubtitle: settings.headerSubtitle,
+        welcomeMessage: interpolateAssistantMessage(settings.welcomeMessage, settings),
         inputPlaceholder: settings.inputPlaceholder,
-        assistantConfigured: providers.some((provider) => provider.configured) || settings.responseTemplates.some((template) => template.enabled),
+        inputHint: settings.inputHint,
+        suggestedQuestions: settings.suggestedQuestions,
+        proactiveEnabled: settings.proactiveEnabled,
+        proactiveMessage: interpolateAssistantMessage(settings.proactiveMessage, settings),
+        proactiveDelaySeconds: settings.proactiveDelaySeconds,
+        assistantConfigured,
         providers,
         responseTemplateCount: settings.responseTemplates.filter((template) => template.enabled).length,
     }, { headers: { 'Cache-Control': 'no-store' } });
