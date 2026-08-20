@@ -66,7 +66,18 @@ function resolvePackageFile(path) {
 
 let workDir;
 let modulesBackup;
+let buildBackup;
 let dependenciesReplaced = false;
+let targetVersion = null;
+
+function restorePreviousBuild() {
+  if (!buildBackup || !existsSync(buildBackup)) return false;
+  const buildDir = join(appRoot, '.next');
+  rmSync(buildDir, { recursive: true, force: true });
+  renameSync(buildBackup, buildDir);
+  buildBackup = undefined;
+  return true;
+}
 
 try {
   const currentPackagePath = join(appRoot, 'package.json');
@@ -82,11 +93,10 @@ try {
   const currentDependencySignature = dependencySignature(currentPackagePath);
   const remoteDependencySignature = dependencySignature(remotePackagePath);
   const remotePackage = JSON.parse(readFileSync(remotePackagePath, 'utf8'));
+  targetVersion = remotePackage.version || null;
   const dependenciesChanged = currentDependencySignature !== remoteDependencySignature;
 
-  status('running', `Installing Portfolio ${remotePackage.version || 'latest'}…`, {
-    targetVersion: remotePackage.version || null,
-  });
+  status('running', `Installing Portfolio ${targetVersion || 'latest'}…`, { targetVersion });
 
   run('rsync', [
     '-a',
@@ -100,9 +110,16 @@ try {
     `${appRoot}/`,
   ]);
 
+  // rsync intentionally does not use --delete because user-managed files may live beside the app.
+  // Remove only obsolete framework files that are known to conflict with the current release.
+  const obsoleteNextConfig = join(appRoot, 'next.config.ts');
+  if (existsSync(join(appRoot, 'next.config.mjs')) && !existsSync(join(checkout, 'next.config.ts')) && existsSync(obsoleteNextConfig)) {
+    rmSync(obsoleteNextConfig, { force: true });
+  }
+
   const modulesPath = join(appRoot, 'node_modules');
   if (dependenciesChanged || !existsSync(modulesPath)) {
-    status('running', 'Installing dependencies for N0C…', { targetVersion: remotePackage.version || null });
+    status('running', 'Installing dependencies for N0C…', { targetVersion });
 
     const cloudLinuxSymlink = existsSync(modulesPath) && lstatSync(modulesPath).isSymbolicLink();
     if (existsSync(modulesPath) && !cloudLinuxSymlink) {
@@ -124,9 +141,7 @@ try {
       throw error;
     }
   } else {
-    status('running', 'Dependencies unchanged; using the installed N0C modules…', {
-      targetVersion: remotePackage.version || null,
-    });
+    status('running', 'Dependencies unchanged; using the installed N0C modules…', { targetVersion });
   }
 
   const prismaCli = resolvePackageFile('prisma/build/index.js');
@@ -140,13 +155,19 @@ try {
     PRISMA_CLI_QUERY_ENGINE_TYPE: 'binary',
   };
 
-  status('running', 'Generating the Prisma client…', { targetVersion: remotePackage.version || null });
+  status('running', 'Generating the Prisma client…', { targetVersion });
   run(process.execPath, [prismaCli, 'generate'], { env: prismaEnv });
 
-  status('running', 'Applying database migrations…', { targetVersion: remotePackage.version || null });
+  status('running', 'Applying database migrations…', { targetVersion });
   run(process.execPath, [prismaCli, 'migrate', 'deploy'], { env: prismaEnv });
 
-  status('running', 'Building the production application with WASM SWC compatibility mode…', { targetVersion: remotePackage.version || null });
+  status('running', 'Preparing a clean production build…', { targetVersion });
+  const buildDir = join(appRoot, '.next');
+  if (existsSync(buildDir)) {
+    buildBackup = join(dirname(appRoot), `.necrotixlab-next-backup-${Date.now()}`);
+    renameSync(buildDir, buildBackup);
+  }
+
   const existingNodeOptions = (process.env.NODE_OPTIONS || '').trim().split(/\s+/).filter(Boolean);
   const buildNodeOptions = [...existingNodeOptions];
   if (!buildNodeOptions.some((option) => option.startsWith('--max-old-space-size='))) buildNodeOptions.push('--max-old-space-size=6144');
@@ -164,20 +185,25 @@ try {
     throw new Error('WASM SWC is not installed. Retry the update so N0C installs @next/swc-wasm-nodejs before building.');
   }
 
+  status('running', 'Building the production application with WASM SWC compatibility mode…', { targetVersion });
   run(process.execPath, [nextCli, 'build', '--webpack'], { env: buildEnv });
+
+  if (buildBackup && existsSync(buildBackup)) {
+    rmSync(buildBackup, { recursive: true, force: true });
+    buildBackup = undefined;
+  }
 
   if (dependenciesReplaced && modulesBackup && existsSync(modulesBackup)) {
     rmSync(modulesBackup, { recursive: true, force: true });
     modulesBackup = undefined;
   }
 
-  writeInstalledVersion(remotePackage.version || 'latest');
-  status('success', `Portfolio ${remotePackage.version || 'latest'} installed. Passenger restart requested.`, {
-    targetVersion: remotePackage.version || null,
-  });
+  writeInstalledVersion(targetVersion || 'latest');
+  status('success', `Portfolio ${targetVersion || 'latest'} installed. Passenger restart requested.`, { targetVersion });
   writeFileSync(join(statusDir, 'restart.txt'), `${Date.now()}\n`);
 } catch (error) {
-  status('error', error instanceof Error ? error.message : 'Unknown update error');
+  const restoredBuild = restorePreviousBuild();
+  status('error', `${error instanceof Error ? error.message : 'Unknown update error'}${restoredBuild ? ' Previous production build restored.' : ''}`, { targetVersion });
   process.exitCode = 1;
 } finally {
   if (workDir) rmSync(workDir, { recursive: true, force: true });
