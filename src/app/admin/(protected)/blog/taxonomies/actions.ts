@@ -61,6 +61,11 @@ export async function updateBlogType(id: string, form: FormData) {
         await requireAdmin();
         const editorMode = String(form.get('editorMode') || 'ARTICLE') as PostType;
         if (!editorModes.has(editorMode)) throw new Error('Invalid editor mode.');
+        const current = await prisma.blogPostType.findUnique({ where: { id }, include: { _count: { select: { posts: true } } } });
+        if (!current) throw new Error('Post type not found.');
+        if (current.editorMode !== editorMode && current._count.posts > 0) {
+            throw new Error(`Editor mode cannot be changed while this type is used by ${current._count.posts} post(s). Reassign those posts first.`);
+        }
         const data = {
             name: bounded(form.get('name'), 80, 'Type name', true),
             slug: slug(form.get('slug')),
@@ -69,10 +74,7 @@ export async function updateBlogType(id: string, form: FormData) {
             sortOrder: order(form.get('sortOrder')),
             isActive: form.get('isActive') === 'on',
         };
-        await prisma.$transaction(async (tx) => {
-            await tx.blogPostType.update({ where: { id }, data });
-            await tx.post.updateMany({ where: { postTypeId: id }, data: { type: editorMode } });
-        });
+        await prisma.blogPostType.update({ where: { id }, data });
         revalidatePath('/blog'); revalidatePath('/admin/blog'); revalidatePath('/admin/blog/taxonomies');
     } catch (error) { done('type-updated', error); }
     done('type-updated');
