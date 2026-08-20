@@ -145,9 +145,10 @@ try {
   const buildNodeOptions = nodeOptions?.includes('--max-old-space-size=')
     ? nodeOptions
     : `${nodeOptions ? `${nodeOptions} ` : ''}--max-old-space-size=6144`;
-  run(npmCommand, ['run', 'build:n0c'], {
-    env: { ...process.env, NODE_OPTIONS: buildNodeOptions },
-  });
+  const buildEnv = { ...process.env, NODE_OPTIONS: buildNodeOptions };
+  delete buildEnv.TURBOPACK;
+  delete buildEnv.NEXT_TURBOPACK;
+  run(npmCommand, ['run', 'build:n0c'], { env: buildEnv });
 
   if (dependenciesReplaced && modulesBackup && existsSync(modulesBackup)) {
     rmSync(modulesBackup, { recursive: true, force: true });
