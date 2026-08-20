@@ -147,6 +147,7 @@ model SiteSettings {
   contactDetails        Json?
   homepageContent       Json?
   profileCardContent    Json?
+  footerContent         Json?
   seoDefaults           Json?
   assistantSettings     Json?
   createdAt             DateTime @default(now())
