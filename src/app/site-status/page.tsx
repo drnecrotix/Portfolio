@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { resolveSiteMode } from '@/lib/site-mode';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
+import { SiteModeCountdown } from '@/components/site/SiteModeCountdown';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +32,7 @@ export default async function SiteStatusPage() {
         Spotify: generalSettings.socialLinks.spotify,
     }).filter(([, url]) => Boolean(url));
 
-    const now = new Date();
-    const effective = resolveSiteMode(settings, now);
+    const effective = resolveSiteMode(settings);
     const mode = effective.mode === 'MAINTENANCE' || effective.mode === 'COMING_SOON' || effective.mode === 'PRIVATE' ? effective.mode : 'MAINTENANCE';
     const copy = defaults[mode];
 
@@ -44,8 +44,8 @@ export default async function SiteStatusPage() {
                     <h1 className="mt-6 max-w-3xl text-5xl md:text-7xl font-semibold tracking-[-0.04em] leading-[0.95]">{settings.title || copy.title}</h1>
                     <p className="mt-8 max-w-2xl text-base md:text-lg leading-relaxed text-white/55">{settings.message || copy.message}</p>
 
-                    {settings.countdownTarget && settings.countdownTarget > now && (
-                        <p className="mt-8 font-mono text-sm uppercase tracking-[0.2em] text-white/40">Target: {settings.countdownTarget.toLocaleString('en-GB', { timeZone: 'Europe/Sofia' })}</p>
+                    {settings.endsAt && (
+                        <SiteModeCountdown startsAt={settings.startsAt?.toISOString() ?? null} endsAt={settings.endsAt.toISOString()} />
                     )}
 
                     {mode === 'PRIVATE' && settings.passwordHash && (
