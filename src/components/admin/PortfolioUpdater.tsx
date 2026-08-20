@@ -20,7 +20,7 @@ type CheckResult = {
 
 type StartResult = {
     ok: boolean;
-    state: 'starting' | 'error';
+    state: 'starting' | 'current' | 'error';
     message: string;
 };
 
@@ -87,6 +87,9 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
         return status || { state: 'ready', message: 'Updater is ready.' };
     }, [checkResult, isChecking, status]);
 
+    // Installation is enabled only after a fresh check confirms a newer version.
+    const canInstall = checkResult?.ok === true && checkResult.state === 'available' && !isUpdating && !isChecking;
+
     function handleCheck() {
         setCheckResult(null);
         startCheck(async () => {
@@ -97,10 +100,14 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     }
 
     function handleInstall() {
+        if (!canInstall) return;
         setCheckResult(null);
         startInstall(async () => {
             const result = await installPortfolioUpdate() as StartResult;
             setStatus({ state: result.state, message: result.message, updatedAt: new Date().toISOString() });
+            if (result.state === 'current') {
+                setCheckResult({ ok: true, state: 'current', message: result.message, localVersion: currentVersion, remoteVersion: currentVersion });
+            }
             showNotice();
         });
     }
@@ -108,6 +115,15 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     const animated = ['checking', 'starting', 'running'].includes(displayStatus.state || '');
     const failed = displayStatus.state === 'error';
     const complete = displayStatus.state === 'success' || displayStatus.state === 'current';
+    const installLabel = isUpdating
+        ? 'Update running…'
+        : isStarting
+            ? 'Starting…'
+            : checkResult?.state === 'current'
+                ? 'Up to date'
+                : checkResult?.state === 'available'
+                    ? 'Install update'
+                    : 'Check update first';
 
     return (
         <>
@@ -141,8 +157,8 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
                     <button type="button" onClick={handleCheck} disabled={isChecking || isUpdating} className="rounded-xl border border-white/15 px-4 py-2 text-sm transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">
                         {isChecking ? 'Checking…' : 'Check update'}
                     </button>
-                    <button type="button" onClick={handleInstall} disabled={isStarting || isUpdating} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40">
-                        {isUpdating ? 'Update running…' : isStarting ? 'Starting…' : 'Install update'}
+                    <button type="button" onClick={handleInstall} disabled={!canInstall} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40">
+                        {installLabel}
                     </button>
                 </div>
             </div>
