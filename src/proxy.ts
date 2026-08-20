@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 type SiteModePayload = {
     mode: 'NORMAL' | 'MAINTENANCE' | 'COMING_SOON' | 'PRIVATE' | 'ARCHIVE';
     bypassAdmins: boolean;
+    updatedAt: string;
 };
 
 type RedirectPayload = {
@@ -58,7 +59,8 @@ export async function proxy(request: NextRequest) {
         if (!response.ok) return NextResponse.next();
 
         const settings = (await response.json()) as SiteModePayload;
-        const hasAdminBypass = request.cookies.get('portfolio-admin-bypass')?.value === '1';
+        const adminBypassRevision = request.cookies.get('portfolio-admin-bypass')?.value;
+        const hasAdminBypass = Boolean(adminBypassRevision && adminBypassRevision === settings.updatedAt);
         if (settings.bypassAdmins && hasAdminBypass) return NextResponse.next();
 
         if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return NextResponse.next();
