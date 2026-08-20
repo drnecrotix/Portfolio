@@ -51,7 +51,7 @@ SELECT
     'legacy-' || md5("category"),
     "category",
     trim(both '-' from regexp_replace(lower("category"), '[^a-z0-9]+', '-', 'g')) || '-' || substr(md5("category"), 1, 6),
-    row_number() OVER (ORDER BY "category") * 10
+    (row_number() OVER (ORDER BY "category") * 10)::integer
 FROM (SELECT DISTINCT "category" FROM "Post" WHERE "category" IS NOT NULL AND btrim("category") <> '') existing
 ON CONFLICT ("slug") DO NOTHING;
 
