@@ -8,29 +8,36 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditBlogPostPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const post = await prisma.post.findUnique({
-        where: { id },
-        include: { revisions: { orderBy: { createdAt: 'desc' }, take: 10 } },
-    });
+    const [post, postTypes, categories] = await Promise.all([
+        prisma.post.findUnique({
+            where: { id },
+            include: { revisions: { orderBy: { createdAt: 'desc' }, take: 10 } },
+        }),
+        prisma.blogPostType.findMany({ orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }], select: { id: true, name: true, slug: true, editorMode: true, isActive: true } }),
+        prisma.blogCategory.findMany({ orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }], select: { id: true, name: true, slug: true, isActive: true } }),
+    ]);
     if (!post) notFound();
 
-    const content = (post.content ?? {}) as { html?: string; text?: string };
+    const content = (post.content ?? {}) as { html?: string; text?: string; featuredImage?: string };
+    const availableTypes = postTypes.filter((item) => item.isActive || item.id === post.postTypeId).map(({ isActive: _isActive, ...item }) => item);
+    const availableCategories = categories.filter((item) => item.isActive || item.id === post.categoryId).map(({ isActive: _isActive, ...item }) => item);
 
     return (
-        <div className="mx-auto max-w-5xl">
-            <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="mx-auto max-w-7xl">
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/35">Blog</p>
-                    <h2 className="mt-2 text-4xl font-semibold">Edit publication</h2>
+                    <h2 className="mt-2 text-4xl font-semibold">Edit post</h2>
+                    <p className="mt-2 text-sm text-white/40">Update content, publishing state, media and taxonomy from one writing workspace.</p>
                 </div>
-                <Link href={`/admin/blog/${post.id}/preview`} className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60 hover:text-white">Preview</Link>
+                <div className="flex gap-2">
+                    <Link href="/admin/blog/taxonomies" className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60 hover:text-white">Types & Categories</Link>
+                    <Link href={`/admin/blog/${post.id}/preview`} className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60 hover:text-white">Preview</Link>
+                </div>
             </div>
 
-            <form action={updatePost.bind(null, post.id)} className="space-y-8">
-                <BlogPostForm value={{ ...post, content }} />
-                <div className="flex justify-end">
-                    <button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Save changes</button>
-                </div>
+            <form action={updatePost.bind(null, post.id)}>
+                <BlogPostForm value={{ ...post, content }} postTypes={availableTypes} categories={availableCategories} submitLabel="Update post" />
             </form>
 
             <section className="mt-12 border-t border-white/10 pt-8">
