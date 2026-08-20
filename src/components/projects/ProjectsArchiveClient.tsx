@@ -76,6 +76,8 @@ export function ProjectsArchiveClient({ projects }: { projects: Project[] }) {
         });
     }, [projects, searchQuery, statusFilter, categoryFilter]);
 
+    const hasProjects = projects.length > 0;
+
     return (
         <main className="min-h-screen bg-background text-foreground">
             <section className="mx-auto w-full max-w-[110rem] px-4 pb-20 pt-28 sm:px-6 md:px-12 md:pt-32">
@@ -87,41 +89,52 @@ export function ProjectsArchiveClient({ projects }: { projects: Project[] }) {
                                 <p className="font-mono text-xs uppercase tracking-[0.35em] text-muted-foreground sm:text-sm">Projects Archive</p>
                                 <span className="rounded-md border border-black/10 px-2 py-1 font-mono text-[10px] text-muted-foreground dark:border-white/10">{projects.length}</span>
                             </div>
-                            <nav className="flex max-w-5xl flex-wrap gap-x-7 gap-y-3" aria-label="Project categories">
-                                {categories.map((category) => (
-                                    <button key={category} type="button" onClick={() => setCategoryFilter(category)} className={cn('border-b pb-2 text-sm transition-colors', categoryFilter === category ? 'border-foreground font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
-                                        {category === 'all' ? 'All Projects' : category}
-                                    </button>
-                                ))}
-                            </nav>
+                            {hasProjects && (
+                                <nav className="flex max-w-5xl flex-wrap gap-x-7 gap-y-3" aria-label="Project categories">
+                                    {categories.map((category) => (
+                                        <button key={category} type="button" onClick={() => setCategoryFilter(category)} className={cn('border-b pb-2 text-sm transition-colors', categoryFilter === category ? 'border-foreground font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground')}>
+                                            {category === 'all' ? 'All Projects' : category}
+                                        </button>
+                                    ))}
+                                </nav>
+                            )}
                         </div>
 
-                        <div className="flex w-full flex-col gap-4 lg:w-auto lg:min-w-[420px]">
-                            <label className="relative block">
-                                <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search projects..." className="w-full border-b border-black/10 bg-transparent py-3 pl-7 pr-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground dark:border-white/10 lg:min-w-[320px]" />
-                            </label>
-                            <div className="flex flex-wrap rounded-xl border border-black/10 p-1 dark:border-white/10">
-                                {(['all', 'ongoing', 'completed'] as FilterType[]).map((filter) => (
-                                    <button key={filter} type="button" onClick={() => setStatusFilter(filter)} className={cn('rounded-lg px-4 py-2 text-xs font-medium capitalize transition-colors sm:text-sm', statusFilter === filter ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
-                                        {filter}
-                                    </button>
-                                ))}
+                        {hasProjects && (
+                            <div className="flex w-full flex-col gap-4 lg:w-auto lg:min-w-[420px]">
+                                <label className="relative block">
+                                    <Search className="pointer-events-none absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search projects..." className="w-full border-b border-black/10 bg-transparent py-3 pl-7 pr-2 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground dark:border-white/10 lg:min-w-[320px]" />
+                                </label>
+                                <div className="flex flex-wrap rounded-xl border border-black/10 p-1 dark:border-white/10">
+                                    {(['all', 'ongoing', 'completed'] as FilterType[]).map((filter) => (
+                                        <button key={filter} type="button" onClick={() => setStatusFilter(filter)} className={cn('rounded-lg px-4 py-2 text-xs font-medium capitalize transition-colors sm:text-sm', statusFilter === filter ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
+                                            {filter}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </header>
 
-                <section aria-label="Projects list" className="border-t border-black/10 dark:border-white/10">
-                    {filteredProjects.length > 0 ? filteredProjects.map((project, index) => (
-                        <ProjectListItem key={project.id} project={project} index={index} onClick={() => router.push(`/projects/${project.slug}`)} />
-                    )) : (
-                        <div className="py-24 text-center">
-                            <p className="text-lg font-medium text-foreground">No projects found</p>
-                            <p className="mt-2 text-sm text-muted-foreground">Try another search term or filter.</p>
-                        </div>
-                    )}
-                </section>
+                {hasProjects ? (
+                    <section aria-label="Projects list" className="border-t border-black/10 dark:border-white/10">
+                        {filteredProjects.length > 0 ? filteredProjects.map((project, index) => (
+                            <ProjectListItem key={project.id} project={project} index={index} onClick={() => router.push(`/projects/${project.slug}`)} />
+                        )) : (
+                            <div className="py-24 text-center">
+                                <p className="text-lg font-medium text-foreground">No projects found</p>
+                                <p className="mt-2 text-sm text-muted-foreground">Try another search term or filter.</p>
+                            </div>
+                        )}
+                    </section>
+                ) : (
+                    <section aria-label="Projects list" className="border-y border-black/10 py-24 text-center dark:border-white/10">
+                        <p className="text-lg font-medium text-foreground">No projects yet</p>
+                        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Projects created in the CMS will appear here automatically. No demo or static projects are shown.</p>
+                    </section>
+                )}
             </section>
         </main>
     );
