@@ -95,6 +95,7 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
     const raw = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry as Record<string, unknown> : {};
     const mediaUrl = normalizeUrl(raw.mediaUrl ?? raw.url);
     const thumbnailUrl = normalizeUrl(raw.thumbnailUrl ?? raw.thumbnail) || mediaUrl;
+    const type: GalleryItemSetting['type'] = raw.type === 'video' ? 'video' : 'image';
     return {
       id: safeId(raw.id, `gallery-item-${index + 1}`),
       mediaUrl,
@@ -102,7 +103,7 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
       title: text(raw.title, `Gallery item ${index + 1}`, 160),
       description: text(raw.description, fallbackDescription, 1200),
       category: text(raw.category, fallbackCategory, 120),
-      type: raw.type === 'video' ? 'video' : 'image',
+      type,
       isVisible: raw.isVisible !== false,
       order: Number.isFinite(Number(raw.order)) ? Math.max(0, Math.min(100000, Number(raw.order))) : index,
     };
