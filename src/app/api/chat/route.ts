@@ -20,9 +20,9 @@ type RateEntry = { count: number; resetAt: number };
 const rateLimitStore = new Map<string, RateEntry>();
 
 type ProviderCandidate =
-    | { id: 'groq'; name: 'Groq'; priority: number }
-    | { id: 'gemini'; name: 'Gemini'; priority: number }
-    | { id: string; name: string; priority: number; custom: CustomAssistantProvider };
+    | { kind: 'groq'; id: 'groq'; name: 'Groq'; priority: number }
+    | { kind: 'gemini'; id: 'gemini'; name: 'Gemini'; priority: number }
+    | { kind: 'custom'; id: string; name: string; priority: number; custom: CustomAssistantProvider };
 
 function clientKey(req: NextRequest) {
     return req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -123,6 +123,25 @@ ${context.projectList}
 ${settings.extraInstructions ? `\n## Owner instructions\n${settings.extraInstructions}` : ''}`;
 }
 
+async function callOpenAICompatible(baseUrl: string, apiKey: string, model: string, messages: Message[], systemPrompt: string, settings: AssistantSettings, timeoutMs: number) {
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+            model,
+            messages: [{ role: 'system', content: systemPrompt }, ...messages],
+            max_tokens: settings.maxTokens,
+            temperature: settings.temperature,
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) throw new Error(`provider-${response.status}`);
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) throw new Error('provider-empty');
+    return content.trim();
+}
+
 async function callGroq(messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) throw new Error('provider-unavailable');
@@ -149,25 +168,6 @@ async function callGemini(messages: Message[], systemPrompt: string, settings: A
     return content;
 }
 
-async function callOpenAICompatible(baseUrl: string, apiKey: string, model: string, messages: Message[], systemPrompt: string, settings: AssistantSettings, timeoutMs: number) {
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-            model,
-            messages: [{ role: 'system', content: systemPrompt }, ...messages],
-            max_tokens: settings.maxTokens,
-            temperature: settings.temperature,
-        }),
-        signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!response.ok) throw new Error(`provider-${response.status}`);
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
-    if (typeof content !== 'string' || !content.trim()) throw new Error('provider-empty');
-    return content.trim();
-}
-
 async function callCustom(provider: CustomAssistantProvider, messages: Message[], systemPrompt: string, settings: AssistantSettings) {
     const apiKey = process.env[provider.apiKeyEnv];
     if (!apiKey) throw new Error('provider-unavailable');
@@ -175,11 +175,12 @@ async function callCustom(provider: CustomAssistantProvider, messages: Message[]
 }
 
 function providerCandidates(settings: AssistantSettings): ProviderCandidate[] {
-    return [
-        { id: 'groq', name: 'Groq', priority: settings.groqPriority } as const,
-        { id: 'gemini', name: 'Gemini', priority: settings.geminiPriority } as const,
-        ...settings.customProviders.filter((provider) => provider.enabled).map((provider) => ({ id: provider.id, name: provider.name, priority: provider.priority, custom: provider })),
-    ].sort((a, b) => a.priority - b.priority);
+    const providers: ProviderCandidate[] = [
+        { kind: 'groq', id: 'groq', name: 'Groq', priority: settings.groqPriority },
+        { kind: 'gemini', id: 'gemini', name: 'Gemini', priority: settings.geminiPriority },
+        ...settings.customProviders.filter((provider) => provider.enabled).map((provider): ProviderCandidate => ({ kind: 'custom', id: provider.id, name: provider.name, priority: provider.priority, custom: provider })),
+    ];
+    return providers.sort((a, b) => a.priority - b.priority);
 }
 
 export async function POST(req: NextRequest) {
@@ -204,9 +205,9 @@ export async function POST(req: NextRequest) {
         const systemPrompt = await buildSystemPrompt(normalizeLocale(body.locale), settings);
         for (const provider of providerCandidates(settings)) {
             try {
-                const reply = provider.id === 'groq'
+                const reply = provider.kind === 'groq'
                     ? await callGroq(messages, systemPrompt, settings)
-                    : provider.id === 'gemini'
+                    : provider.kind === 'gemini'
                         ? await callGemini(messages, systemPrompt, settings)
                         : await callCustom(provider.custom, messages, systemPrompt, settings);
                 return NextResponse.json({ reply, provider: provider.id, providerName: provider.name, assistantName: settings.assistantName }, { headers: { 'Cache-Control': 'no-store' } });
@@ -228,9 +229,9 @@ export async function GET() {
         id: provider.id,
         name: provider.name,
         priority: provider.priority,
-        configured: provider.id === 'groq'
+        configured: provider.kind === 'groq'
             ? Boolean(process.env.GROQ_API_KEY)
-            : provider.id === 'gemini'
+            : provider.kind === 'gemini'
                 ? Boolean(process.env.GEMINI_API_KEY)
                 : Boolean(process.env[provider.custom.apiKeyEnv]),
     }));
