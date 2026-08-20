@@ -12,7 +12,11 @@ async function requireEditor() {
 }
 
 function value(form: FormData, key: keyof typeof defaultGallerySettings, max = 700) {
-  return String(form.get(key) ?? '').trim().slice(0, max);
+  return String(form.get(String(key)) ?? '').trim().slice(0, max);
+}
+
+function parseJson(value: FormDataEntryValue | null, fallback: unknown) {
+  try { return JSON.parse(String(value ?? '')) as unknown; } catch { return fallback; }
 }
 
 function done(error?: unknown): never {
@@ -48,6 +52,7 @@ export async function saveGallerySettings(form: FormData) {
       infiniteViewTitle: value(form, 'infiniteViewTitle', 60),
       minimizeTitle: value(form, 'minimizeTitle', 60),
       maximizeTitle: value(form, 'maximizeTitle', 60),
+      items: parseJson(form.get('galleryItems'), []),
     });
 
     await prisma.siteSettings.upsert({
