@@ -19,27 +19,18 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
     const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
     const sentinelRef = useRef<HTMLDivElement>(null);
 
-    const categories = useMemo(
-        () => ['all', ...Array.from(new Set(posts.map((post) => post.category)))],
-        [posts],
-    );
+    const categories = useMemo(() => ['all', ...Array.from(new Set(posts.map((post) => post.category)))], [posts]);
 
     useEffect(() => {
         const q = searchParams.get('q');
-        if (q) {
-            setSearchQuery(q);
-            setSelectedCategory('all');
-        }
+        if (q) { setSearchQuery(q); setSelectedCategory('all'); }
     }, [searchParams]);
 
     const filteredPosts = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
         return posts
             .filter((post) => {
-                const matchesSearch = !query ||
-                    post.title.toLowerCase().includes(query) ||
-                    post.excerpt.toLowerCase().includes(query) ||
-                    post.tags.some((tag) => tag.toLowerCase().includes(query));
+                const matchesSearch = !query || post.title.toLowerCase().includes(query) || post.excerpt.toLowerCase().includes(query) || post.tags.some((tag) => tag.toLowerCase().includes(query));
                 const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
                 return matchesSearch && matchesCategory;
             })
@@ -56,9 +47,7 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
         const sentinel = sentinelRef.current;
         if (!sentinel) return;
         const observer = new IntersectionObserver((entries) => {
-            if (entries[0]?.isIntersecting) {
-                setVisibleCount((current) => Math.min(current + LOAD_MORE_BATCH, filteredPosts.length));
-            }
+            if (entries[0]?.isIntersecting) setVisibleCount((current) => Math.min(current + LOAD_MORE_BATCH, filteredPosts.length));
         }, { rootMargin: '500px 0px' });
         observer.observe(sentinel);
         return () => observer.disconnect();
@@ -80,9 +69,9 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                         <div className="flex flex-wrap gap-x-8 gap-y-4">
                             {categories.map((category) => {
                                 const active = selectedCategory === category;
-                                const label = category === 'all' ? 'All Publications' : category.replaceAll('-', ' ');
+                                const label = category === 'all' ? 'All Publications' : category;
                                 return (
-                                    <button key={category} type="button" onClick={() => setSelectedCategory(category)} className={cn('relative py-1 text-sm font-medium capitalize transition-colors', active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                                    <button key={category} type="button" onClick={() => setSelectedCategory(category)} className={cn('relative py-1 text-sm font-medium transition-colors', active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
                                         {label}
                                         {active && <motion.span layoutId="active-blog-category" className="absolute -bottom-2 left-0 h-px w-full bg-foreground" />}
                                     </button>
@@ -108,11 +97,12 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                         <motion.article key={post.id} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.45, delay: Math.min(index, 5) * 0.035 }}>
                             <Link href={`/blog/${post.slug}`} className="group grid min-h-32 grid-cols-1 gap-5 py-7 transition-colors hover:bg-foreground/[0.02] md:grid-cols-[1fr_auto] md:items-center md:px-4 md:py-9">
                                 <div className="min-w-0">
+                                    <div className="mb-2 flex flex-wrap items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/70"><span>{post.typeLabel}</span><span>·</span><span>{post.category}</span></div>
                                     <h2 className="text-xl font-medium tracking-tight transition-transform duration-300 group-hover:translate-x-1 md:text-2xl lg:text-3xl">{post.title}</h2>
                                     {post.excerpt && <p className="mt-2 max-w-4xl text-sm leading-relaxed text-muted-foreground md:text-base">{post.excerpt}</p>}
                                 </div>
                                 <div className="flex shrink-0 items-end gap-5 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:flex-col md:gap-1">
-                                    <span>{post.category.replaceAll('-', ' ')}</span>
+                                    <span>{post.category}</span>
                                     <time dateTime={post.date}>{new Intl.DateTimeFormat('en', { month: 'short', day: '2-digit', year: 'numeric' }).format(new Date(post.date))}</time>
                                 </div>
                             </Link>
