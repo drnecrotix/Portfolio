@@ -87,6 +87,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
         return status || { state: 'ready', message: 'Updater is ready.' };
     }, [checkResult, isChecking, status]);
 
+    const isCurrent = checkResult?.ok === true && checkResult.state === 'current';
     // Installation is enabled only after a fresh check confirms a newer version.
     const canInstall = checkResult?.ok === true && checkResult.state === 'available' && !isUpdating && !isChecking;
 
@@ -119,11 +120,9 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
         ? 'Update running…'
         : isStarting
             ? 'Starting…'
-            : checkResult?.state === 'current'
-                ? 'Up to date'
-                : checkResult?.state === 'available'
-                    ? 'Install update'
-                    : 'Check update first';
+            : checkResult?.state === 'available'
+                ? 'Install update'
+                : 'Check update first';
 
     return (
         <>
@@ -157,9 +156,15 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
                     <button type="button" onClick={handleCheck} disabled={isChecking || isUpdating} className="rounded-xl border border-white/15 px-4 py-2 text-sm transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40">
                         {isChecking ? 'Checking…' : 'Check update'}
                     </button>
-                    <button type="button" onClick={handleInstall} disabled={!canInstall} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40">
-                        {installLabel}
-                    </button>
+                    {isCurrent ? (
+                        <span aria-disabled="true" className="inline-flex cursor-not-allowed items-center rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300/80">
+                            Up to date
+                        </span>
+                    ) : (
+                        <button type="button" onClick={handleInstall} disabled={!canInstall} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40">
+                            {installLabel}
+                        </button>
+                    )}
                 </div>
             </div>
 

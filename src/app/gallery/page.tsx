@@ -3,7 +3,6 @@
 import CleanFilmGrid from "@/components/sections/gallery/CleanFilmGrid";
 import ManifestoHero from "@/components/sections/gallery/ManifestoHero";
 import dynamic from "next/dynamic";
-import ImpactSection from "@/components/ui/impact-section";
 import { usePerformance } from "@/hooks/usePerformance";
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { DeferredMount } from '@/components/ui/DeferredMount';
@@ -15,6 +14,7 @@ const GLSLHills = dynamic(() => import("@/components/ui/glsl-hills").then(mod =>
 export default function GalleryPage() {
     const { isLowPowerMode } = usePerformance();
 
+    // Legacy portfolio blog cards are intentionally not mounted here; public content is CMS-driven.
     return (
         <main className="bg-background min-h-screen selection:bg-cyan-500/30 selection:text-cyan-500 overflow-x-hidden relative">
             {!isLowPowerMode && (
@@ -30,10 +30,8 @@ export default function GalleryPage() {
                     <ErrorBoundary fallback={<div className="container mx-auto py-20 text-center">Gallery Grid Unavailable</div>}>
                         <CleanFilmGrid isLowPowerMode={isLowPowerMode} />
                     </ErrorBoundary>
-                    <ImpactSection />
                 </DeferredMount>
             </div>
         </main>
     );
 }
-
