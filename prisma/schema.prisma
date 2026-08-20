@@ -84,36 +84,68 @@ model Project {
 }
 
 model Post {
-  id             String        @id @default(cuid())
-  slug           String        @unique
+  id             String            @id @default(cuid())
+  slug           String            @unique
   title          String
   excerpt        String?
   content        Json
-  type           PostType      @default(ARTICLE)
-  status         ContentStatus @default(DRAFT)
+  type           PostType          @default(ARTICLE)
+  postTypeId     String?
+  postType       BlogPostType?     @relation(fields: [postTypeId], references: [id], onDelete: SetNull)
+  status         ContentStatus     @default(DRAFT)
   category       String?
+  categoryId     String?
+  categoryRef    BlogCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags           String[]
   authorName     String
   seoTitle       String?
   seoDescription String?
   publishedAt    DateTime?
   scheduledAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
   revisions      Revision[]
+
+  @@index([postTypeId])
+  @@index([categoryId])
+}
+
+model BlogPostType {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  editorMode  PostType @default(ARTICLE)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
+}
+
+model BlogCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
 }
 
 model Page {
   id             String        @id @default(cuid())
   slug           String        @unique
-  title          String
-  status         ContentStatus @default(DRAFT)
-  content        Json
-  seoTitle       String?
-  seoDescription String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  revisions      Revision[]
+  title           String
+  status          ContentStatus @default(DRAFT)
+  content         Json
+  seoTitle        String?
+  seoDescription  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  revisions       Revision[]
 }
 
 model NavigationItem {
