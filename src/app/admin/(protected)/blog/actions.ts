@@ -2,12 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import type { ContentStatus, PostType } from '@prisma/client';
+import type { ContentStatus } from '@prisma/client';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { csvToList, parsePostContent } from '@/lib/cms-posts';
 
-const postTypes = new Set<PostType>(['ARTICLE', 'POETRY', 'THOUGHT', 'NOTE', 'PROJECT_LOG']);
 const contentStatuses = new Set<ContentStatus>(['DRAFT', 'REVIEW', 'PUBLISHED', 'ARCHIVED']);
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -33,16 +32,22 @@ function parseDate(value: FormDataEntryValue | null, field: string) {
     return date;
 }
 
-function fields(form: FormData) {
-    const rawType = String(form.get('type') || 'ARTICLE');
+async function fields(form: FormData) {
     const rawStatus = String(form.get('status') || 'DRAFT');
-    if (!postTypes.has(rawType as PostType)) throw new Error('Invalid publication type.');
     if (!contentStatuses.has(rawStatus as ContentStatus)) throw new Error('Invalid publication status.');
-
-    const type = rawType as PostType;
     const status = rawStatus as ContentStatus;
+
     const slug = boundedText(form.get('slug'), 120, 'Slug', true).toLowerCase();
     if (!slugPattern.test(slug)) throw new Error('Slug must use lowercase kebab-case.');
+
+    const postTypeId = boundedText(form.get('postTypeId'), 191, 'Post type', true);
+    const categoryId = boundedText(form.get('categoryId'), 191, 'Category') || null;
+    const [postType, category] = await Promise.all([
+        prisma.blogPostType.findUnique({ where: { id: postTypeId } }),
+        categoryId ? prisma.blogCategory.findUnique({ where: { id: categoryId } }) : Promise.resolve(null),
+    ]);
+    if (!postType || !postType.isActive) throw new Error('Selected post type is unavailable.');
+    if (categoryId && (!category || !category.isActive)) throw new Error('Selected category is unavailable.');
 
     const tags = csvToList(form.get('tags')).slice(0, 30).map((tag) => tag.slice(0, 50));
     const publishedAt = parseDate(form.get('publishedAt'), 'Published date');
@@ -52,23 +57,26 @@ function fields(form: FormData) {
         slug,
         title: boundedText(form.get('title'), 180, 'Title', true),
         excerpt: boundedText(form.get('excerpt'), 500, 'Excerpt') || null,
-        type,
+        type: postType.editorMode,
+        postTypeId: postType.id,
         status,
-        category: boundedText(form.get('category'), 80, 'Category') || null,
+        category: category?.name ?? null,
+        categoryId: category?.id ?? null,
         tags,
         authorName: boundedText(form.get('authorName'), 120, 'Author name', true),
         seoTitle: boundedText(form.get('seoTitle'), 180, 'SEO title') || null,
         seoDescription: boundedText(form.get('seoDescription'), 500, 'SEO description') || null,
         publishedAt,
         scheduledAt,
-        content: parsePostContent(type, form.get('content'), form.get('featuredImage')),
+        content: parsePostContent(postType.editorMode, form.get('content'), form.get('featuredImage')),
     };
 }
 
 export async function createPost(form: FormData) {
     await requireEditor();
-    const post = await prisma.post.create({ data: fields(form) });
+    const post = await prisma.post.create({ data: await fields(form) });
     revalidatePath('/blog');
+    revalidatePath('/admin/blog');
     redirect(`/admin/blog/${post.id}`);
 }
 
@@ -78,6 +86,7 @@ export async function updatePost(id: string, form: FormData) {
     if (!current) throw new Error('Post not found');
 
     const snapshot = JSON.parse(JSON.stringify(current));
+    const nextFields = await fields(form);
     await prisma.$transaction(async (tx) => {
         await tx.revision.create({
             data: {
@@ -88,11 +97,12 @@ export async function updatePost(id: string, form: FormData) {
                 createdBy: user.id,
             },
         });
-        await tx.post.update({ where: { id }, data: fields(form) });
+        await tx.post.update({ where: { id }, data: nextFields });
     });
 
     revalidatePath('/blog');
     revalidatePath(`/blog/${current.slug}`);
+    if (current.slug !== nextFields.slug) revalidatePath(`/blog/${nextFields.slug}`);
     revalidatePath(`/admin/blog/${id}`);
 }
 
