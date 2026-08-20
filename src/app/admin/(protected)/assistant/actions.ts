@@ -6,26 +6,40 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { normalizeAssistantSettings } from '@/lib/assistant-settings';
 
+function parseJson(value: FormDataEntryValue | null, fallback: unknown) {
+    try { return JSON.parse(String(value ?? '')) as unknown; } catch { return fallback; }
+}
+
 export async function updateAssistantSettings(form: FormData) {
     let destination = '/admin/assistant?saved=1';
     try {
         const session = await auth();
         if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) throw new Error('Forbidden');
 
-        const providerOrder = String(form.get('providerOrder') || 'groq,gemini')
-            .split(',')
-            .map((item) => item.trim())
-            .filter((item) => item === 'groq' || item === 'gemini');
-
         const settings = normalizeAssistantSettings({
             enabled: form.has('enabled'),
             assistantName: String(form.get('assistantName') || ''),
-            providerOrder,
+            roleLabel: String(form.get('roleLabel') || ''),
+            welcomeMessage: String(form.get('welcomeMessage') || ''),
+            inputPlaceholder: String(form.get('inputPlaceholder') || ''),
+            personality: String(form.get('personality') || ''),
+            tone: String(form.get('tone') || ''),
+            responseStyle: String(form.get('responseStyle') || ''),
+            languagePolicy: String(form.get('languagePolicy') || ''),
+            providerOrder: ['groq', 'gemini'],
             groqModel: String(form.get('groqModel') || ''),
             geminiModel: String(form.get('geminiModel') || ''),
+            groqPriority: Number(form.get('groqPriority')),
+            geminiPriority: Number(form.get('geminiPriority')),
+            customProviders: parseJson(form.get('customProviders'), []),
+            responseTemplates: parseJson(form.get('responseTemplates'), []),
             temperature: Number(form.get('temperature')),
             maxTokens: Number(form.get('maxTokens')),
             extraInstructions: String(form.get('extraInstructions') || ''),
+            unknownAnswer: String(form.get('unknownAnswer') || ''),
+            disabledMessage: String(form.get('disabledMessage') || ''),
+            unavailableMessage: String(form.get('unavailableMessage') || ''),
+            requestErrorMessage: String(form.get('requestErrorMessage') || ''),
         });
 
         await prisma.siteSettings.upsert({
@@ -35,6 +49,7 @@ export async function updateAssistantSettings(form: FormData) {
         });
         revalidatePath('/admin/assistant');
         revalidatePath('/', 'layout');
+        revalidatePath('/api/chat');
     } catch (error) {
         destination = `/admin/assistant?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unable to save assistant settings.')}`;
     }
