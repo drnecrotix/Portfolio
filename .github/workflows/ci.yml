@@ -42,7 +42,7 @@ jobs:
           fi
 
   quality:
-    name: Typecheck, changed-file lint and build
+    name: Typecheck, lint and builds
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -98,8 +98,12 @@ jobs:
           else
             echo "No changed lintable source files."
           fi
-      - name: Build
+      - name: Standard build
         run: npm run build
+      - name: N0C WASM compatibility build
+        run: |
+          rm -rf .next
+          npm run build:n0c
 
   visual-smoke:
     name: Frontend visual smoke
