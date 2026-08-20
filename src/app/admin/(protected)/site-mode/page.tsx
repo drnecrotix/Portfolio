@@ -2,6 +2,7 @@ import { hash } from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
+import { StatusToast } from '@/components/admin/StatusToast';
 import { prisma } from '@/lib/prisma';
 import { formatSofiaDateTimeLocal, parseSofiaDateTimeLocal } from '@/lib/sofia-time';
 
@@ -23,62 +24,80 @@ async function updateSiteMode(formData: FormData) {
     const session = await auth();
     if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) redirect('/admin');
 
-    const mode = String(formData.get('mode') || 'NORMAL');
-    if (!modes.includes(mode as (typeof modes)[number])) throw new Error('Invalid site mode.');
+    let destination = '/admin/site-mode?saved=1';
 
-    const parseDate = (key: string) => {
-        const raw = String(formData.get(key) || '').trim();
-        if (!raw) return null;
-        const parsed = parseSofiaDateTimeLocal(raw);
-        if (!parsed || Number.isNaN(parsed.getTime())) throw new Error(`Invalid ${key} date.`);
-        return parsed;
-    };
+    try {
+        const mode = String(formData.get('mode') || 'NORMAL');
+        if (!modes.includes(mode as (typeof modes)[number])) throw new Error('Invalid site mode.');
 
-    const startsAt = parseDate('startsAt');
-    const endsAt = parseDate('endsAt');
-    const countdownTarget = parseDate('countdownTarget');
-    if (startsAt && endsAt && endsAt <= startsAt) throw new Error('End time must be after start time.');
-    if (countdownTarget && startsAt && countdownTarget < startsAt) throw new Error('Countdown target cannot be before the scheduled start.');
+        const parseDate = (key: string) => {
+            const raw = String(formData.get(key) || '').trim();
+            if (!raw) return null;
+            const parsed = parseSofiaDateTimeLocal(raw);
+            if (!parsed || Number.isNaN(parsed.getTime())) throw new Error(`Invalid ${key} date.`);
+            return parsed;
+        };
 
-    const current = await prisma.siteModeSettings.findUnique({ where: { id: 'default' } });
-    const password = String(formData.get('privatePassword') || '');
-    const clearPassword = formData.get('clearPrivatePassword') === 'on';
+        const startsAt = parseDate('startsAt');
+        const endsAt = parseDate('endsAt');
+        const countdownTarget = parseDate('countdownTarget');
+        if (startsAt && endsAt && endsAt <= startsAt) throw new Error('End time must be after start time.');
+        if (countdownTarget && startsAt && countdownTarget < startsAt) throw new Error('Countdown target cannot be before the scheduled start.');
 
-    if (password.length > MAX_PRIVATE_PASSWORD_LENGTH) throw new Error('Private password is too long.');
-    if (password && password.length < MIN_PRIVATE_PASSWORD_LENGTH) {
-        throw new Error(`Private passwords must contain at least ${MIN_PRIVATE_PASSWORD_LENGTH} characters.`);
+        const current = await prisma.siteModeSettings.findUnique({ where: { id: 'default' } });
+        const password = String(formData.get('privatePassword') || '');
+        const clearPassword = formData.get('clearPrivatePassword') === 'on';
+
+        if (password.length > MAX_PRIVATE_PASSWORD_LENGTH) throw new Error('Private password is too long.');
+        if (password && password.length < MIN_PRIVATE_PASSWORD_LENGTH) {
+            throw new Error(`Private passwords must contain at least ${MIN_PRIVATE_PASSWORD_LENGTH} characters.`);
+        }
+        if (clearPassword && password) throw new Error('Choose either a replacement password or clear the existing password.');
+
+        const passwordHash = clearPassword ? null : password ? await hash(password, 12) : current?.passwordHash ?? null;
+        if (mode === 'PRIVATE' && !passwordHash) throw new Error('Private mode requires an access password.');
+
+        const data = {
+            mode: mode as (typeof modes)[number],
+            startsAt,
+            endsAt,
+            bypassAdmins: formData.get('bypassAdmins') === 'on',
+            passwordHash,
+            title: boundedText(formData.get('title'), MAX_TITLE_LENGTH, 'Title'),
+            message: boundedText(formData.get('message'), MAX_MESSAGE_LENGTH, 'Message'),
+            countdownTarget,
+            showSocials: formData.get('showSocials') === 'on',
+            showContact: formData.get('showContact') === 'on',
+        };
+
+        await prisma.siteModeSettings.upsert({ where: { id: 'default' }, update: data, create: { id: 'default', ...data } });
+        revalidatePath('/', 'layout');
+        revalidatePath('/admin/site-mode');
+        revalidatePath('/site-status');
+    } catch (error) {
+        destination = `/admin/site-mode?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unable to apply Site Mode settings.')}`;
     }
-    if (clearPassword && password) throw new Error('Choose either a replacement password or clear the existing password.');
 
-    const passwordHash = clearPassword ? null : password ? await hash(password, 12) : current?.passwordHash ?? null;
-    if (mode === 'PRIVATE' && !passwordHash) throw new Error('Private mode requires an access password.');
-
-    const data = {
-        mode: mode as (typeof modes)[number],
-        startsAt,
-        endsAt,
-        bypassAdmins: formData.get('bypassAdmins') === 'on',
-        passwordHash,
-        title: boundedText(formData.get('title'), MAX_TITLE_LENGTH, 'Title'),
-        message: boundedText(formData.get('message'), MAX_MESSAGE_LENGTH, 'Message'),
-        countdownTarget,
-        showSocials: formData.get('showSocials') === 'on',
-        showContact: formData.get('showContact') === 'on',
-    };
-
-    await prisma.siteModeSettings.upsert({ where: { id: 'default' }, update: data, create: { id: 'default', ...data } });
-    revalidatePath('/admin/site-mode');
-    revalidatePath('/site-status');
-    revalidatePath('/');
+    redirect(destination);
 }
 
-export default async function SiteModeAdminPage() {
+type SearchParams = Promise<{ saved?: string; error?: string }>;
+
+export default async function SiteModeAdminPage({ searchParams }: { searchParams: SearchParams }) {
     const session = await auth();
     const canManage = !!session?.user && ['OWNER', 'ADMIN'].includes(session.user.role);
-    const settings = await prisma.siteModeSettings.upsert({ where: { id: 'default' }, update: {}, create: { id: 'default' } });
+    const [settings, params] = await Promise.all([
+        prisma.siteModeSettings.upsert({ where: { id: 'default' }, update: {}, create: { id: 'default' } }),
+        searchParams,
+    ]);
 
     return (
         <div className="max-w-5xl">
+            <StatusToast
+                type={params.error ? 'error' : params.saved ? 'success' : undefined}
+                message={params.error || (params.saved ? 'Site Mode settings saved and applied.' : undefined)}
+            />
+
             <div className="mb-10">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/40 mb-3">Site control</p>
                 <h1 className="text-4xl font-semibold">Site Mode</h1>
