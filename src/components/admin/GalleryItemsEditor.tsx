@@ -11,8 +11,8 @@ function nextId() {
 }
 
 export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItemSetting[] }) {
-  const [items, setItems] = useState<GalleryItemSetting[]>(initialItems);
-  const serialized = useMemo(() => JSON.stringify(items.map((item, index) => ({ ...item, order: index }))), [items]);
+  const [items, setItems] = useState<GalleryItemSetting[]>(initialItems.map((item) => ({ ...item, type: 'image' })));
+  const serialized = useMemo(() => JSON.stringify(items.map((item, index) => ({ ...item, type: 'image', order: index }))), [items]);
 
   const addItem = () => setItems((current) => [...current, {
     id: nextId(),
@@ -27,7 +27,7 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
   }]);
 
   const update = (index: number, patch: Partial<GalleryItemSetting>) => {
-    setItems((current) => current.map((item, i) => i === index ? { ...item, ...patch } : item));
+    setItems((current) => current.map((item, i) => i === index ? { ...item, ...patch, type: 'image' } : item));
   };
 
   const move = (index: number, direction: -1 | 1) => {
@@ -45,11 +45,11 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
       <input type="hidden" name="galleryItems" value={serialized} readOnly />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-white/35">Gallery media</p>
-          <h3 className="mt-2 text-xl font-semibold">Selected items</h3>
-          <p className="mt-2 max-w-3xl text-sm text-white/40">Choose each image or video individually from Media Library. Each item has its own title, description, collection and display order.</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-white/35">Gallery images</p>
+          <h3 className="mt-2 text-xl font-semibold">Selected images</h3>
+          <p className="mt-2 max-w-3xl text-sm text-white/40">Choose each image individually from Media Library. Every image can have its own title, description, collection, visibility and display order.</p>
         </div>
-        <button type="button" onClick={addItem} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black">+ Add gallery item</button>
+        <button type="button" onClick={addItem} className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black">+ Add image</button>
       </div>
 
       <div className="mt-6 space-y-5">
@@ -58,7 +58,7 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="flex size-8 items-center justify-center rounded-full border border-white/10 text-xs text-white/45">{index + 1}</span>
-                <div><p className="text-sm font-medium">{item.title || 'Untitled item'}</p><p className="text-xs text-white/30">{item.category || 'Gallery'} · {item.type}</p></div>
+                <div><p className="text-sm font-medium">{item.title || 'Untitled image'}</p><p className="text-xs text-white/30">{item.category || 'Gallery'} · image</p></div>
               </div>
               <div className="flex items-center gap-2">
                 <button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs disabled:opacity-25">↑</button>
@@ -70,19 +70,18 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
 
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
               <div className="space-y-4">
-                <MediaPicker value={item.mediaUrl} onChange={(url) => update(index, { mediaUrl: url, thumbnailUrl: item.thumbnailUrl || url })} label="Main media" initialKind="image" />
-                <MediaPicker value={item.thumbnailUrl} onChange={(url) => update(index, { thumbnailUrl: url })} label="Thumbnail (optional)" initialKind="image" />
+                <MediaPicker value={item.mediaUrl} onChange={(url) => update(index, { mediaUrl: url, thumbnailUrl: item.thumbnailUrl || url })} label="Gallery image" initialKind="image" lockKind />
+                <MediaPicker value={item.thumbnailUrl} onChange={(url) => update(index, { thumbnailUrl: url })} label="Thumbnail override (optional)" initialKind="image" lockKind />
               </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
                 <label className="text-xs text-white/45">Title<input value={item.title} onChange={(e) => update(index, { title: e.target.value })} className={input} /></label>
                 <label className="text-xs text-white/45">Collection / category<input value={item.category} onChange={(e) => update(index, { category: e.target.value })} className={input} /></label>
-                <label className="text-xs text-white/45">Type<select value={item.type} onChange={(e) => update(index, { type: e.target.value === 'video' ? 'video' : 'image' })} className={input}><option value="image">Image</option><option value="video">Video</option></select></label>
-                <label className="text-xs text-white/45 md:col-span-2 lg:col-span-1">Description<textarea rows={4} value={item.description} onChange={(e) => update(index, { description: e.target.value })} className={input} /></label>
+                <label className="text-xs text-white/45 md:col-span-2 lg:col-span-1">Description<textarea rows={5} value={item.description} onChange={(e) => update(index, { description: e.target.value })} className={input} /></label>
               </div>
             </div>
           </article>
         ))}
-        {items.length === 0 && <div className="rounded-xl border border-dashed border-white/10 py-14 text-center text-sm text-white/35">No manually selected gallery items yet. Add one to start building the gallery from Media Library.</div>}
+        {items.length === 0 && <div className="rounded-xl border border-dashed border-white/10 py-14 text-center text-sm text-white/35">No manually selected gallery images yet. Add one to start building the gallery from Media Library.</div>}
       </div>
     </section>
   );
