@@ -17,6 +17,7 @@ export type ContactSettings = {
 export type GeneralSiteSettings = {
     siteName: string;
     siteDescription: string;
+    faviconUrl: string;
     defaultTheme: 'dark' | 'light';
     allowDayMode: boolean;
     accentColor: string;
@@ -29,6 +30,7 @@ export type GeneralSiteSettings = {
 export const defaultGeneralSiteSettings: GeneralSiteSettings = {
     siteName: 'Dr Necrotix',
     siteDescription: 'Digital portfolio, publications and creative projects by Dr Necrotix.',
+    faviconUrl: '/dr-necrotix-mark.svg',
     defaultTheme: 'dark',
     allowDayMode: true,
     accentColor: '',
@@ -61,6 +63,7 @@ function text(value: unknown, fallback = '') {
 export function normalizeGeneralSiteSettings(value?: {
     siteName?: string | null;
     siteDescription?: string | null;
+    faviconUrl?: string | null;
     defaultTheme?: string | null;
     allowDayMode?: boolean | null;
     accentColor?: string | null;
@@ -75,6 +78,7 @@ export function normalizeGeneralSiteSettings(value?: {
     return {
         siteName: value?.siteName || defaultGeneralSiteSettings.siteName,
         siteDescription: value?.siteDescription || defaultGeneralSiteSettings.siteDescription,
+        faviconUrl: value?.faviconUrl || defaultGeneralSiteSettings.faviconUrl,
         defaultTheme: value?.defaultTheme === 'light' ? 'light' : 'dark',
         allowDayMode: value?.allowDayMode ?? defaultGeneralSiteSettings.allowDayMode,
         accentColor: value?.accentColor || defaultGeneralSiteSettings.accentColor,
