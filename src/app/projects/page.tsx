@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { portfolioData } from '@/data/portfolio';
 import { cmsProjectToPortfolioProject } from '@/lib/cms-projects';
 import { ProjectsArchiveClient } from '@/components/projects/ProjectsArchiveClient';
 
@@ -13,9 +12,5 @@ export default async function ProjectsPage() {
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
     });
 
-    const projects = cmsProjects.length > 0
-        ? cmsProjects.map(cmsProjectToPortfolioProject)
-        : portfolioData.projects;
-
-    return <ProjectsArchiveClient projects={projects} />;
+    return <ProjectsArchiveClient projects={cmsProjects.map(cmsProjectToPortfolioProject)} />;
 }
