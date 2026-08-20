@@ -20,6 +20,7 @@ type RateEntry = { count: number; resetAt: number };
 const rateLimitStore = new Map<string, RateEntry>();
 
 type ProviderCandidate =
+    | { kind: 'openai'; id: 'openai'; name: 'OpenAI'; priority: number }
     | { kind: 'groq'; id: 'groq'; name: 'Groq'; priority: number }
     | { kind: 'gemini'; id: 'gemini'; name: 'Gemini'; priority: number }
     | { kind: 'custom'; id: string; name: string; priority: number; custom: CustomAssistantProvider };
@@ -127,18 +128,33 @@ async function callOpenAICompatible(baseUrl: string, apiKey: string, model: stri
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-            model,
-            messages: [{ role: 'system', content: systemPrompt }, ...messages],
-            max_tokens: settings.maxTokens,
-            temperature: settings.temperature,
-        }),
+        body: JSON.stringify({ model, messages: [{ role: 'system', content: systemPrompt }, ...messages], max_tokens: settings.maxTokens, temperature: settings.temperature }),
         signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) throw new Error(`provider-${response.status}`);
     const data = await response.json();
     const content = data?.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim()) throw new Error('provider-empty');
+    return content.trim();
+}
+
+async function callOpenAI(messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error('provider-unavailable');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+            model: settings.openaiModel,
+            messages: [{ role: 'developer', content: systemPrompt }, ...messages],
+            max_completion_tokens: settings.maxTokens,
+        }),
+        signal: AbortSignal.timeout(25_000),
+    });
+    if (!response.ok) throw new Error(`openai-${response.status}`);
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) throw new Error('openai-empty');
     return content.trim();
 }
 
@@ -176,6 +192,7 @@ async function callCustom(provider: CustomAssistantProvider, messages: Message[]
 
 function providerCandidates(settings: AssistantSettings): ProviderCandidate[] {
     const providers: ProviderCandidate[] = [
+        { kind: 'openai', id: 'openai', name: 'OpenAI', priority: settings.openaiPriority },
         { kind: 'groq', id: 'groq', name: 'Groq', priority: settings.groqPriority },
         { kind: 'gemini', id: 'gemini', name: 'Gemini', priority: settings.geminiPriority },
         ...settings.customProviders.filter((provider) => provider.enabled).map((provider): ProviderCandidate => ({ kind: 'custom', id: provider.id, name: provider.name, priority: provider.priority, custom: provider })),
@@ -198,18 +215,18 @@ export async function POST(req: NextRequest) {
 
         const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
         const template = matchTemplate(latestUserMessage, settings);
-        if (template) {
-            return NextResponse.json({ reply: template.response, provider: 'template', template: template.name, assistantName: settings.assistantName }, { headers: { 'Cache-Control': 'no-store' } });
-        }
+        if (template) return NextResponse.json({ reply: template.response, provider: 'template', template: template.name, assistantName: settings.assistantName }, { headers: { 'Cache-Control': 'no-store' } });
 
         const systemPrompt = await buildSystemPrompt(normalizeLocale(body.locale), settings);
         for (const provider of providerCandidates(settings)) {
             try {
-                const reply = provider.kind === 'groq'
-                    ? await callGroq(messages, systemPrompt, settings)
-                    : provider.kind === 'gemini'
-                        ? await callGemini(messages, systemPrompt, settings)
-                        : await callCustom(provider.custom, messages, systemPrompt, settings);
+                const reply = provider.kind === 'openai'
+                    ? await callOpenAI(messages, systemPrompt, settings)
+                    : provider.kind === 'groq'
+                        ? await callGroq(messages, systemPrompt, settings)
+                        : provider.kind === 'gemini'
+                            ? await callGemini(messages, systemPrompt, settings)
+                            : await callCustom(provider.custom, messages, systemPrompt, settings);
                 return NextResponse.json({ reply, provider: provider.id, providerName: provider.name, assistantName: settings.assistantName }, { headers: { 'Cache-Control': 'no-store' } });
             } catch (error) {
                 console.warn(`[Chat] ${provider.name} failed:`, error instanceof Error ? error.message : 'unknown');
@@ -229,11 +246,13 @@ export async function GET() {
         id: provider.id,
         name: provider.name,
         priority: provider.priority,
-        configured: provider.kind === 'groq'
-            ? Boolean(process.env.GROQ_API_KEY)
-            : provider.kind === 'gemini'
-                ? Boolean(process.env.GEMINI_API_KEY)
-                : Boolean(process.env[provider.custom.apiKeyEnv]),
+        configured: provider.kind === 'openai'
+            ? Boolean(process.env.OPENAI_API_KEY)
+            : provider.kind === 'groq'
+                ? Boolean(process.env.GROQ_API_KEY)
+                : provider.kind === 'gemini'
+                    ? Boolean(process.env.GEMINI_API_KEY)
+                    : Boolean(process.env[provider.custom.apiKeyEnv]),
     }));
     const assistantConfigured = providers.some((provider) => provider.configured) || settings.responseTemplates.some((template) => template.enabled);
 
