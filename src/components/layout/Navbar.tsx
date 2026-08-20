@@ -19,16 +19,18 @@ type NavigationItem = {
     sortOrder: number;
     isVisible: boolean;
     isExternal: boolean;
+    parentId: string | null;
 };
 
 const fallbackItems: NavigationItem[] = [
-    { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 0, isVisible: true, isExternal: false },
-    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'about', sortOrder: 10, isVisible: true, isExternal: false },
-    { id: 'skills', label: 'Skills', href: '/skills', location: 'about', sortOrder: 20, isVisible: true, isExternal: false },
-    { id: 'experience', label: 'Experience', href: '/experience', location: 'about', sortOrder: 30, isVisible: true, isExternal: false },
-    { id: 'projects', label: 'Projects', href: '/projects', location: 'about', sortOrder: 40, isVisible: true, isExternal: false },
-    { id: 'blog', label: 'Blog', href: '/blog', location: 'about', sortOrder: 50, isVisible: true, isExternal: false },
-    { id: 'contact', label: 'Contact', href: '/contact', location: 'primary', sortOrder: 100, isVisible: true, isExternal: false },
+    { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 0, isVisible: true, isExternal: false, parentId: null },
+    { id: 'about', label: 'About', href: '/about', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, parentId: null },
+    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, parentId: 'about' },
+    { id: 'skills', label: 'Skills', href: '/skills', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, parentId: 'about' },
+    { id: 'experience', label: 'Experience', href: '/experience', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, parentId: 'about' },
+    { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, parentId: 'about' },
+    { id: 'blog', label: 'Blog', href: '/blog', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, parentId: 'about' },
+    { id: 'contact', label: 'Contact', href: '/contact', location: 'primary', sortOrder: 100, isVisible: true, isExternal: false, parentId: null },
 ];
 
 function Clock() {
@@ -66,7 +68,6 @@ export function Navbar() {
         document.body.style.overflow = isMenuOpen ? 'hidden' : '';
         return () => { document.body.style.overflow = ''; };
     }, [isMenuOpen]);
-
     useEffect(() => setIsMenuOpen(false), [pathname]);
 
     useMotionValueEvent(scrollY, 'change', (latest) => {
@@ -77,11 +78,21 @@ export function Navbar() {
     });
 
     const visibleItems = useMemo(() => items.filter((item) => item.isVisible), [items]);
-    const primary = visibleItems.filter((item) => item.location === 'primary').sort((a, b) => a.sortOrder - b.sortOrder);
-    const about = visibleItems.filter((item) => item.location === 'about').sort((a, b) => a.sortOrder - b.sortOrder);
-    const home = primary.find((item) => item.href === '/') ?? fallbackItems[0];
-    const directPrimary = primary.filter((item) => item.href !== '/');
-    const cardItems = about.length ? [{ label: 'About', links: about.map((item) => ({ label: item.label, href: item.href, description: item.label })) }] : [];
+    const topLevel = useMemo(() => visibleItems.filter((item) => !item.parentId).sort((a, b) => a.sortOrder - b.sortOrder), [visibleItems]);
+    const childrenByParent = useMemo(() => {
+        const map = new Map<string, NavigationItem[]>();
+        for (const item of visibleItems) {
+            if (!item.parentId) continue;
+            const list = map.get(item.parentId) || [];
+            list.push(item);
+            map.set(item.parentId, list);
+        }
+        for (const list of map.values()) list.sort((a, b) => a.sortOrder - b.sortOrder);
+        return map;
+    }, [visibleItems]);
+
+    const home = topLevel.find((item) => item.href === '/') ?? fallbackItems[0];
+    const desktopTopLevel = topLevel.filter((item) => item.id !== home.id);
 
     const toggleLocale = useCallback(() => {
         const next = locale === 'en' ? 'id' : 'en';
@@ -122,14 +133,25 @@ export function Navbar() {
 
                         <div className="hidden items-center gap-6 lg:flex">
                             {renderLink(home)}
-                            {cardItems.length > 0 && <CardNav items={cardItems} theme={resolvedTheme === 'dark' ? 'dark' : 'light'} pathname={pathname} />}
-                            {directPrimary.map((item) => renderLink(item))}
+                            {desktopTopLevel.map((item) => {
+                                const children = childrenByParent.get(item.id) || [];
+                                if (!children.length) return renderLink(item);
+                                return (
+                                    <CardNav
+                                        key={item.id}
+                                        items={[{
+                                            label: item.label,
+                                            links: children.map((child) => ({ id: child.id, label: child.label, href: child.href, description: child.href, isExternal: child.isExternal })),
+                                        }]}
+                                        theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
+                                        pathname={pathname}
+                                    />
+                                );
+                            })}
                         </div>
 
                         <div className="flex items-center gap-2 md:gap-3">
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={toggleLocale} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5" aria-label="Toggle language">
-                                <Globe className="h-4 w-4" />
-                            </motion.button>
+                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={toggleLocale} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5" aria-label="Toggle language"><Globe className="h-4 w-4" /></motion.button>
                             <AnimatedThemeToggler />
                             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsMenuOpen((value) => !value)} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5 lg:hidden" aria-label="Toggle menu">
                                 <AnimatePresence mode="wait" initial={false}>
@@ -147,15 +169,18 @@ export function Navbar() {
                 {isMenuOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[90] bg-background lg:hidden">
                         <div className="flex h-full flex-col items-center justify-center overflow-y-auto py-24">
-                            <nav className="flex flex-col items-center gap-6">
+                            <nav className="flex w-full max-w-md flex-col items-center gap-6 px-6">
                                 {renderLink(home, true)}
-                                {directPrimary.map((item) => renderLink(item, true))}
-                                {about.length > 0 && (
-                                    <div className="flex w-full flex-col items-center gap-4 border-t border-foreground/10 pt-6 text-center">
-                                        <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">About</span>
-                                        {about.map((item) => renderLink(item, true))}
-                                    </div>
-                                )}
+                                {desktopTopLevel.map((item) => {
+                                    const children = childrenByParent.get(item.id) || [];
+                                    if (!children.length) return renderLink(item, true);
+                                    return (
+                                        <div key={item.id} className="flex w-full flex-col items-center gap-4 border-t border-foreground/10 pt-6 text-center">
+                                            <span className="font-mono text-[10px] font-black uppercase tracking-[0.3em] text-primary/60">{item.label}</span>
+                                            {children.map((child) => renderLink(child, true))}
+                                        </div>
+                                    );
+                                })}
                             </nav>
                         </div>
                     </motion.div>
