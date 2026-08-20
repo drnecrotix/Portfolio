@@ -28,7 +28,6 @@ export async function purgeApplicationCache() {
 }
 
 export async function checkForPortfolioUpdate() {
-    let destination = '/admin?update=checked';
     try {
         await requireAdmin();
         const local = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf8')) as { version?: string };
@@ -37,26 +36,40 @@ export async function checkForPortfolioUpdate() {
         const remote = await response.json() as { version?: string };
         const localVersion = local.version || 'unknown';
         const remoteVersion = remote.version || 'unknown';
-        destination = `/admin?localVersion=${encodeURIComponent(localVersion)}&remoteVersion=${encodeURIComponent(remoteVersion)}&update=${localVersion === remoteVersion ? 'current' : 'available'}`;
+        const available = localVersion !== remoteVersion;
+        return {
+            ok: true,
+            state: available ? 'available' as const : 'current' as const,
+            message: available ? `Update available: ${localVersion} → ${remoteVersion}.` : `Portfolio ${localVersion} is up to date.`,
+            localVersion,
+            remoteVersion,
+        };
     } catch (error) {
-        destination = `/admin?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unable to check GitHub for updates.')}`;
+        return {
+            ok: false,
+            state: 'error' as const,
+            message: error instanceof Error ? error.message : 'Unable to check GitHub for updates.',
+        };
     }
-    redirect(destination);
 }
 
 export async function installPortfolioUpdate() {
-    let destination = '/admin?update=started';
     try {
         await requireAdmin(true);
         const script = join(appRoot, 'scripts', 'self-update.mjs');
         if (!existsSync(script)) throw new Error('Update worker is missing from this deployment.');
         const tmp = join(appRoot, 'tmp');
         mkdirSync(tmp, { recursive: true });
-        writeFileSync(join(tmp, 'update-status.json'), JSON.stringify({ state: 'starting', message: 'Update worker is starting…', updatedAt: new Date().toISOString() }, null, 2));
+        const initialStatus = { state: 'starting', message: 'Update worker is starting…', updatedAt: new Date().toISOString() };
+        writeFileSync(join(tmp, 'update-status.json'), JSON.stringify(initialStatus, null, 2));
         const child = spawn(process.execPath, [script], { cwd: appRoot, env: process.env, detached: true, stdio: 'ignore' });
         child.unref();
+        return { ok: true, state: 'starting' as const, message: initialStatus.message };
     } catch (error) {
-        destination = `/admin?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unable to start update.')}`;
+        return {
+            ok: false,
+            state: 'error' as const,
+            message: error instanceof Error ? error.message : 'Unable to start update.',
+        };
     }
-    redirect(destination);
 }
