@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Globe, Menu, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
-import CardNav from '@/components/ui/CardNav';
+import CardNav, { type DropdownStyle } from '@/components/ui/CardNav';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { usePreloadState } from '@/components/ui/arc-preloader-hero';
 
@@ -20,18 +20,19 @@ type NavigationItem = {
     isVisible: boolean;
     isExternal: boolean;
     isDropdown: boolean;
+    dropdownStyle: DropdownStyle;
     parentId: string | null;
 };
 
 const fallbackItems: NavigationItem[] = [
-    { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, parentId: null },
-    { id: 'about', label: 'About', href: '#', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: true, parentId: null },
-    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
-    { id: 'skills', label: 'Skills', href: '/skills', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
-    { id: 'experience', label: 'Experience', href: '/experience', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
-    { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
-    { id: 'blog', label: 'Blog', href: '/blog', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, isDropdown: false, parentId: 'about' },
-    { id: 'contact', label: 'Contact', href: '/contact', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, parentId: null },
+    { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: null },
+    { id: 'about', label: 'About', href: '#', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: true, dropdownStyle: 'auto', parentId: null },
+    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
+    { id: 'skills', label: 'Skills', href: '/skills', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
+    { id: 'experience', label: 'Experience', href: '/experience', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
+    { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
+    { id: 'blog', label: 'Blog', href: '/blog', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
+    { id: 'contact', label: 'Contact', href: '/contact', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: null },
 ];
 
 function Clock() {
@@ -143,6 +144,7 @@ export function Navbar() {
                                             key={item.id}
                                             items={[{
                                                 label: item.label,
+                                                style: item.dropdownStyle || 'auto',
                                                 links: children.map((child) => ({ id: child.id, label: child.label, href: child.href, description: child.href, isExternal: child.isExternal })),
                                             }]}
                                             theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
