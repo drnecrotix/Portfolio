@@ -19,8 +19,12 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
     if (!post) notFound();
 
     const content = (post.content ?? {}) as { html?: string; text?: string; featuredImage?: string };
-    const availableTypes = postTypes.filter((item) => item.isActive || item.id === post.postTypeId).map(({ isActive: _isActive, ...item }) => item);
-    const availableCategories = categories.filter((item) => item.isActive || item.id === post.categoryId).map(({ isActive: _isActive, ...item }) => item);
+    const availableTypes = postTypes
+        .filter((item) => item.isActive || item.id === post.postTypeId)
+        .map((item) => ({ id: item.id, name: item.name, slug: item.slug, editorMode: item.editorMode }));
+    const availableCategories = categories
+        .filter((item) => item.isActive || item.id === post.categoryId)
+        .map((item) => ({ id: item.id, name: item.name, slug: item.slug }));
 
     return (
         <div className="mx-auto max-w-7xl">
