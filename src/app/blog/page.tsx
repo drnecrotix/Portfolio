@@ -13,6 +13,10 @@ export default async function BlogPage() {
                 { publishedAt: { lte: new Date() } },
             ],
         },
+        include: {
+            postType: { select: { name: true, slug: true } },
+            categoryRef: { select: { name: true, slug: true } },
+        },
         orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
     });
 
