@@ -17,10 +17,10 @@ function formatRemaining(milliseconds: number) {
     ].filter(Boolean).join(' ');
 }
 
-export function SiteModeCountdown({ startsAt, endsAt }: { startsAt?: string | null; endsAt: string }) {
+export function SiteModeCountdown({ startsAt, endsAt, initialNow }: { startsAt?: string | null; endsAt: string; initialNow: number }) {
     const start = useMemo(() => startsAt ? new Date(startsAt).getTime() : null, [startsAt]);
     const end = useMemo(() => new Date(endsAt).getTime(), [endsAt]);
-    const [now, setNow] = useState(() => Date.now());
+    const [now, setNow] = useState(initialNow);
 
     useEffect(() => {
         const timer = window.setInterval(() => setNow(Date.now()), 1000);
