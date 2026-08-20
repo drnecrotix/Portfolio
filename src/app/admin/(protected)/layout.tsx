@@ -9,6 +9,7 @@ const navItems = [
     ['Homepage', '/admin/homepage'],
     ['Projects', '/admin/projects'],
     ['Blog', '/admin/blog'],
+    ['Blog Taxonomies', '/admin/blog/taxonomies'],
     ['Pages', '/admin/pages'],
     ['Navigation', '/admin/navigation'],
     ['Footer', '/admin/footer'],
