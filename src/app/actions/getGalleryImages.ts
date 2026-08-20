@@ -17,9 +17,9 @@ export async function getAllGalleryImages(): Promise<GalleryImage[]> {
         const selected = settings.items
             .filter((item) => item.isVisible && item.type === 'image' && item.mediaUrl)
             .sort((a, b) => a.order - b.order)
-            .map((item, index) => ({
+            .map((item) => ({
                 src: item.mediaUrl,
-                filename: `${String(index + 1).padStart(3, '0')}-${item.title || 'gallery-item'}.jpg`,
+                filename: `${item.title || 'gallery-item'}.jpg`,
             }));
 
         if (selected.length) return selected;
