@@ -3,17 +3,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { prisma } from '@/lib/prisma';
 import { StatusToast } from '@/components/admin/StatusToast';
+import { PortfolioUpdater, type PortfolioUpdateStatus } from '@/components/admin/PortfolioUpdater';
 import { normalizeAssistantSettings } from '@/lib/assistant-settings';
-import { checkForPortfolioUpdate, installPortfolioUpdate, purgeApplicationCache } from './actions';
+import { purgeApplicationCache } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-type UpdateStatus = { state?: string; message?: string; updatedAt?: string; targetVersion?: string | null };
-
-function readUpdateStatus(): UpdateStatus | null {
+function readUpdateStatus(): PortfolioUpdateStatus | null {
     try {
         const file = join(process.cwd(), 'tmp', 'update-status.json');
-        return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as UpdateStatus : null;
+        return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as PortfolioUpdateStatus : null;
     } catch { return null; }
 }
 
@@ -36,20 +35,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     const assistant = normalizeAssistantSettings(settings?.assistantSettings);
     const updateStatus = readUpdateStatus();
     const currentVersion = localVersion();
-    const updateParam = typeof params.update === 'string' ? params.update : undefined;
     const error = typeof params.error === 'string' ? params.error : undefined;
-    const remoteVersion = typeof params.remoteVersion === 'string' ? params.remoteVersion : undefined;
     const toastMessage = error
         ? error
         : params.cache === 'purged'
             ? 'Application cache purged and public routes revalidated.'
-            : updateParam === 'available'
-                ? `Update available: ${currentVersion} → ${remoteVersion || 'newer version'}.`
-                : updateParam === 'current'
-                    ? `Portfolio ${currentVersion} is up to date.`
-                    : updateParam === 'started'
-                        ? 'Portfolio update started. Refresh the dashboard to see progress.'
-                        : undefined;
+            : undefined;
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -64,16 +55,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             </section>
 
             <section className="mt-8 grid gap-6 lg:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-                    <p className="text-xs uppercase tracking-[0.25em] text-white/35">Portfolio updates</p>
-                    <h3 className="mt-2 text-xl font-semibold">GitHub updater</h3>
-                    <p className="mt-2 text-sm text-white/45">Installed v{currentVersion}. Checks the main branch version and can deploy it on N0C while preserving secrets and Passenger configuration.</p>
-                    {updateStatus && <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/55"><span className="uppercase tracking-[0.18em]">{updateStatus.state}</span><p className="mt-1 normal-case tracking-normal">{updateStatus.message}</p></div>}
-                    <div className="mt-5 flex flex-wrap gap-2">
-                        <form action={checkForPortfolioUpdate}><button className="rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5">Check update</button></form>
-                        <form action={installPortfolioUpdate}><button className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black">Install update</button></form>
-                    </div>
-                </div>
+                <PortfolioUpdater currentVersion={currentVersion} initialStatus={updateStatus} />
 
                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
                     <p className="text-xs uppercase tracking-[0.25em] text-white/35">Cache</p>
