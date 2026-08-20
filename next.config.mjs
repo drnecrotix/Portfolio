@@ -9,8 +9,15 @@ const nextConfig = {
     transpilePackages: ['three'],
     experimental: {
         // N0C/CloudLinux ships an older glibc than the native Next.js SWC binary requires.
-        // Only the dedicated N0C webpack build opts into WASM; normal builds keep native bindings/Turbopack.
-        ...(useN0cWasmSwc ? { useWasmBinary: true } : {}),
+        // Keep its webpack build deliberately low-concurrency and memory-conscious.
+        ...(useN0cWasmSwc
+            ? {
+                  useWasmBinary: true,
+                  cpus: 1,
+                  webpackBuildWorker: true,
+                  webpackMemoryOptimizations: true,
+              }
+            : {}),
         serverActions: {
             // Media uploads allow files up to 10 MB. Leave headroom for multipart form overhead.
             bodySizeLimit: '12mb',
@@ -18,6 +25,16 @@ const nextConfig = {
         // Proxy still sees admin Server Action requests before the route handles them.
         proxyClientMaxBodySize: '12mb',
     },
+    // Webpack's filesystem cache can noticeably increase peak memory on constrained shared hosting.
+    // Disable it only for the N0C compatibility build; normal development/CI keeps Next defaults.
+    ...(useN0cWasmSwc
+        ? {
+              webpack(config) {
+                  config.cache = false;
+                  return config;
+              },
+          }
+        : {}),
     images: {
         remotePatterns: [
             { protocol: 'https', hostname: 'cdn.jsdelivr.net' },
