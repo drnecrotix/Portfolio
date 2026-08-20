@@ -46,6 +46,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     const [isChecking, startCheck] = useTransition();
     const [isStarting, startInstall] = useTransition();
     const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const autoCheckStarted = useRef(false);
 
     const showNotice = useCallback(() => {
         setNoticeVisible(true);
@@ -67,6 +68,15 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
 
     const isUpdating = activeStates.has(status?.state || '') || isStarting;
 
+    const runCheck = useCallback((notifyWhenCurrent: boolean) => {
+        setCheckResult(null);
+        startCheck(async () => {
+            const result = await checkForPortfolioUpdate() as CheckResult;
+            setCheckResult(result);
+            if (notifyWhenCurrent || result.state === 'available' || result.state === 'error') showNotice();
+        });
+    }, [showNotice]);
+
     useEffect(() => {
         if (!isUpdating) return;
         const firstPoll = setTimeout(() => void pollStatus(), 0);
@@ -76,6 +86,13 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
             clearInterval(timer);
         };
     }, [isUpdating, pollStatus]);
+
+    useEffect(() => {
+        if (autoCheckStarted.current || isUpdating) return;
+        autoCheckStarted.current = true;
+        const timer = setTimeout(() => runCheck(false), 250);
+        return () => clearTimeout(timer);
+    }, [isUpdating, runCheck]);
 
     useEffect(() => () => {
         if (noticeTimer.current) clearTimeout(noticeTimer.current);
@@ -88,16 +105,10 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     }, [checkResult, isChecking, status]);
 
     const isCurrent = checkResult?.ok === true && checkResult.state === 'current';
-    // Installation is enabled only after a fresh check confirms a newer version.
     const canInstall = checkResult?.ok === true && checkResult.state === 'available' && !isUpdating && !isChecking;
 
     function handleCheck() {
-        setCheckResult(null);
-        startCheck(async () => {
-            const result = await checkForPortfolioUpdate() as CheckResult;
-            setCheckResult(result);
-            showNotice();
-        });
+        runCheck(true);
     }
 
     function handleInstall() {
@@ -129,7 +140,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
                 <p className="text-xs uppercase tracking-[0.25em] text-white/35">Portfolio updates</p>
                 <h3 className="mt-2 text-xl font-semibold">GitHub updater</h3>
-                <p className="mt-2 text-sm text-white/45">Installed v{currentVersion}. Checks the main branch version and can deploy it on N0C while preserving secrets and Passenger configuration.</p>
+                <p className="mt-2 text-sm text-white/45">Installed v{currentVersion}. The dashboard checks GitHub automatically and can deploy a newer main-branch version on N0C while preserving secrets and Passenger configuration.</p>
 
                 <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/20">
                     <div className="flex items-start gap-3 p-4">
