@@ -1,19 +1,24 @@
 import { prisma } from '@/lib/prisma';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
+import { StatusToast } from '@/components/admin/StatusToast';
 import { updateGeneralSettings } from './actions';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
 
-export default async function SettingsPage() {
-    const raw = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
+    const [raw, params] = await Promise.all([
+        prisma.siteSettings.findUnique({ where: { id: 'default' } }),
+        searchParams,
+    ]);
     const settings = normalizeGeneralSiteSettings(raw);
 
     return (
         <div className="mx-auto max-w-5xl">
+            <StatusToast type={params.error ? 'error' : params.saved ? 'success' : undefined} message={params.error || (params.saved ? 'Settings saved and public cache refreshed.' : undefined)} />
             <div className="mb-10">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/35">General Settings</p>
                 <h2 className="mt-2 text-4xl font-semibold">Site identity & preferences</h2>
-                <p className="mt-3 max-w-2xl text-sm text-white/45">Central settings for identity, theme defaults, contact details and social profiles. Protected public layouts are not changed here.</p>
+                <p className="mt-3 max-w-2xl text-sm text-white/45">Central settings for identity, theme defaults, contact details and social profiles. Changes now invalidate the public layout cache immediately.</p>
             </div>
 
             <form action={updateGeneralSettings} className="space-y-8">
@@ -28,7 +33,7 @@ export default async function SettingsPage() {
                 </section>
 
                 <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
-                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Contact details</h3><p className="mt-1 text-xs text-white/40">These values will become the single source of truth for the Contact page and public identity components.</p></div>
+                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Contact details</h3><p className="mt-1 text-xs text-white/40">Single source of truth for public contact and identity components.</p></div>
                     <label className="text-sm text-white/60">Email<input type="email" name="email" defaultValue={settings.contactDetails.email} className={input} /></label>
                     <label className="text-sm text-white/60">Phone<input name="phone" defaultValue={settings.contactDetails.phone} className={input} /></label>
                     <label className="text-sm text-white/60">Location<input name="location" defaultValue={settings.contactDetails.location} className={input} /></label>
@@ -36,7 +41,7 @@ export default async function SettingsPage() {
                 </section>
 
                 <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
-                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Social profiles</h3><p className="mt-1 text-xs text-white/40">Leave a profile empty to hide it when public components are migrated to CMS settings.</p></div>
+                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Social profiles</h3><p className="mt-1 text-xs text-white/40">Leave a profile empty to hide it where the public component supports it.</p></div>
                     <label className="text-sm text-white/60">GitHub<input type="url" name="github" defaultValue={settings.socialLinks.github} className={input} /></label>
                     <label className="text-sm text-white/60">Instagram<input type="url" name="instagram" defaultValue={settings.socialLinks.instagram} className={input} /></label>
                     <label className="text-sm text-white/60">LinkedIn<input type="url" name="linkedin" defaultValue={settings.socialLinks.linkedin} className={input} /></label>
