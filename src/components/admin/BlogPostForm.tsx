@@ -1,17 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ContentStatus, PostType } from '@prisma/client';
 import { PostEditor } from '@/components/admin/PostEditor';
 import { MediaPicker } from '@/components/admin/MediaPicker';
+
+export type BlogTypeOption = { id: string; name: string; slug: string; editorMode: PostType };
+export type BlogCategoryOption = { id: string; name: string; slug: string };
 
 export type BlogPostFormValue = {
     title?: string;
     slug?: string;
     excerpt?: string | null;
     type?: PostType;
+    postTypeId?: string | null;
     status?: ContentStatus;
     category?: string | null;
+    categoryId?: string | null;
     tags?: string[];
     authorName?: string;
     seoTitle?: string | null;
@@ -21,7 +26,8 @@ export type BlogPostFormValue = {
     content?: { html?: string; text?: string; featuredImage?: string };
 };
 
-const inputClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 outline-none focus:border-white/25';
+const inputClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm outline-none transition focus:border-white/30 focus:bg-white/[0.05]';
+const panelClass = 'rounded-2xl border border-white/10 bg-white/[0.02] p-5';
 
 function dateValue(value?: Date | null) {
     if (!value) return '';
@@ -29,41 +35,94 @@ function dateValue(value?: Date | null) {
     return local.toISOString().slice(0, 16);
 }
 
-export function BlogPostForm({ value = {} }: { value?: BlogPostFormValue }) {
-    const [type, setType] = useState<PostType>(value.type ?? 'ARTICLE');
-    const initialContent = type === 'POETRY' ? value.content?.text ?? '' : value.content?.html ?? '';
+function slugify(value: string) {
+    return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+export function BlogPostForm({ value = {}, postTypes, categories, submitLabel = 'Publish / Save' }: {
+    value?: BlogPostFormValue;
+    postTypes: BlogTypeOption[];
+    categories: BlogCategoryOption[];
+    submitLabel?: string;
+}) {
+    const initialTypeId = value.postTypeId || postTypes[0]?.id || '';
+    const [selectedTypeId, setSelectedTypeId] = useState(initialTypeId);
+    const [title, setTitle] = useState(value.title ?? '');
+    const [slug, setSlug] = useState(value.slug ?? '');
+    const [slugTouched, setSlugTouched] = useState(Boolean(value.slug));
+
+    const selectedType = useMemo(() => postTypes.find((item) => item.id === selectedTypeId) || postTypes[0], [postTypes, selectedTypeId]);
+    const editorMode = selectedType?.editorMode ?? value.type ?? 'ARTICLE';
+    const poetry = editorMode === 'POETRY';
+    const initialContent = poetry ? value.content?.text ?? '' : value.content?.html ?? '';
+
+    const changeTitle = (next: string) => {
+        setTitle(next);
+        if (!slugTouched) setSlug(slugify(next));
+    };
 
     return (
-        <div className="space-y-8">
-            <div className="grid gap-5 md:grid-cols-2">
-                <label className="block md:col-span-2"><span className="text-sm text-white/55">Title</span><input name="title" required defaultValue={value.title ?? ''} className={inputClass} /></label>
-                <label className="block"><span className="text-sm text-white/55">Slug</span><input name="slug" required defaultValue={value.slug ?? ''} className={inputClass} /></label>
-                <label className="block"><span className="text-sm text-white/55">Author</span><input name="authorName" required defaultValue={value.authorName ?? 'Dr Necrotix'} className={inputClass} /></label>
-                <label className="block"><span className="text-sm text-white/55">Type</span><select name="type" value={type} onChange={(e) => setType(e.target.value as PostType)} className={inputClass}>{['ARTICLE','POETRY','THOUGHT','NOTE','PROJECT_LOG'].map((item) => <option key={item} value={item}>{item.replaceAll('_', ' ')}</option>)}</select></label>
-                <label className="block"><span className="text-sm text-white/55">Status</span><select name="status" defaultValue={value.status ?? 'DRAFT'} className={inputClass}>{['DRAFT','REVIEW','PUBLISHED','ARCHIVED'].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-                <label className="block"><span className="text-sm text-white/55">Category</span><input name="category" defaultValue={value.category ?? ''} className={inputClass} /></label>
-                <label className="block"><span className="text-sm text-white/55">Tags - comma separated</span><input name="tags" defaultValue={(value.tags ?? []).join(', ')} className={inputClass} /></label>
-                <label className="block md:col-span-2"><span className="text-sm text-white/55">Excerpt</span><textarea name="excerpt" rows={3} defaultValue={value.excerpt ?? ''} className={inputClass} /></label>
-                <label className="block"><span className="text-sm text-white/55">Published at</span><input name="publishedAt" type="datetime-local" defaultValue={dateValue(value.publishedAt)} className={inputClass} /></label>
-                <label className="block"><span className="text-sm text-white/55">Scheduled at</span><input name="scheduledAt" type="datetime-local" defaultValue={dateValue(value.scheduledAt)} className={inputClass} /></label>
+        <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_330px]">
+            <div className="min-w-0 space-y-6">
+                <section className={panelClass}>
+                    <label className="block">
+                        <span className="sr-only">Title</span>
+                        <input name="title" required value={title} onChange={(event) => changeTitle(event.target.value)} className="w-full border-0 bg-transparent px-0 py-2 text-3xl font-semibold tracking-tight text-white outline-none placeholder:text-white/20 md:text-4xl" placeholder="Add title" />
+                    </label>
+                    <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4 sm:flex-row sm:items-center">
+                        <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/30">Permalink</span>
+                        <div className="flex min-w-0 flex-1 items-center rounded-lg bg-black/25 px-3 py-2">
+                            <span className="shrink-0 text-xs text-white/25">/blog/</span>
+                            <input name="slug" required value={slug} onChange={(event) => { setSlugTouched(true); setSlug(event.target.value); }} className="min-w-0 flex-1 bg-transparent text-xs text-white/65 outline-none" placeholder="post-slug" />
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div className="mb-3 flex items-end justify-between gap-4">
+                        <div><p className="text-sm font-medium text-white/70">Content</p><p className="mt-1 text-xs text-white/35">{poetry ? 'Poetry editor preserves line breaks and stanza spacing.' : 'Visual rich-text editor with headings, lists, quotes, links and formatting.'}</p></div>
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/35">{selectedType?.name || editorMode.replaceAll('_', ' ')}</span>
+                    </div>
+                    <PostEditor key={selectedTypeId || editorMode} name="content" initialValue={initialContent} poetry={poetry} />
+                </section>
+
+                <section className={panelClass}>
+                    <h3 className="text-sm font-semibold">SEO</h3>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <label className="block text-xs text-white/45">SEO title<input name="seoTitle" defaultValue={value.seoTitle ?? ''} className={inputClass} /></label>
+                        <label className="block text-xs text-white/45">SEO description<textarea name="seoDescription" rows={3} defaultValue={value.seoDescription ?? ''} className={inputClass} /></label>
+                    </div>
+                </section>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
-                <MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image (optional)" />
-            </div>
+            <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
+                <section className={panelClass}>
+                    <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Publish</h3><span className="text-[10px] uppercase tracking-[0.18em] text-white/30">Post</span></div>
+                    <div className="mt-4 space-y-4">
+                        <label className="block text-xs text-white/45">Status<select name="status" defaultValue={value.status ?? 'DRAFT'} className={inputClass}>{['DRAFT','REVIEW','PUBLISHED','ARCHIVED'].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                        <label className="block text-xs text-white/45">Author<input name="authorName" required defaultValue={value.authorName ?? 'Dr Necrotix'} className={inputClass} /></label>
+                        <label className="block text-xs text-white/45">Publish date<input name="publishedAt" type="datetime-local" defaultValue={dateValue(value.publishedAt)} className={inputClass} /></label>
+                        <label className="block text-xs text-white/45">Schedule<input name="scheduledAt" type="datetime-local" defaultValue={dateValue(value.scheduledAt)} className={inputClass} /></label>
+                    </div>
+                    <button className="mt-5 w-full rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90">{submitLabel}</button>
+                </section>
 
-            <div>
-                <div className="mb-3">
-                    <p className="text-sm text-white/55">Content</p>
-                    <p className="mt-1 text-xs text-white/35">{type === 'POETRY' ? 'Poetry mode preserves line breaks and stanza spacing exactly.' : 'Rich text mode supports headings, emphasis, lists and quotes.'}</p>
-                </div>
-                <PostEditor key={type} name="content" initialValue={initialContent} poetry={type === 'POETRY'} />
-            </div>
+                <section className={panelClass}>
+                    <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Type & Category</h3><a href="/admin/blog/taxonomies" className="text-[11px] text-white/40 hover:text-white">Manage</a></div>
+                    <div className="mt-4 space-y-4">
+                        <label className="block text-xs text-white/45">Type<select name="postTypeId" value={selectedTypeId} onChange={(event) => setSelectedTypeId(event.target.value)} className={inputClass} required>{postTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                        <label className="block text-xs text-white/45">Category<select name="categoryId" defaultValue={value.categoryId ?? ''} className={inputClass}><option value="">Uncategorized</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                        <label className="block text-xs text-white/45">Tags<input name="tags" defaultValue={(value.tags ?? []).join(', ')} placeholder="design, development" className={inputClass} /></label>
+                    </div>
+                </section>
 
-            <div className="grid gap-5 md:grid-cols-2">
-                <label className="block"><span className="text-sm text-white/55">SEO title</span><input name="seoTitle" defaultValue={value.seoTitle ?? ''} className={inputClass} /></label>
-                <label className="block"><span className="text-sm text-white/55">SEO description</span><input name="seoDescription" defaultValue={value.seoDescription ?? ''} className={inputClass} /></label>
-            </div>
+                <section className={panelClass}><MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image" initialKind="image" lockKind /></section>
+
+                <section className={panelClass}>
+                    <h3 className="text-sm font-semibold">Excerpt</h3>
+                    <textarea name="excerpt" rows={5} defaultValue={value.excerpt ?? ''} className={inputClass} placeholder="Optional short summary used in cards and search results." />
+                </section>
+            </aside>
         </div>
     );
 }
