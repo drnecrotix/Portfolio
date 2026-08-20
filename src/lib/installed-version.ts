@@ -12,7 +12,10 @@ function readJsonVersion(file: string) {
 
 export function installedPortfolioVersion() {
     const root = process.cwd();
-    return readJsonVersion(join(root, 'tmp', 'installed-version.json'))
-        || readJsonVersion(join(root, 'package.json'))
+
+    // package.json is the deployed code's source of truth. The tmp marker is only a fallback
+    // for unusual hosting states where package.json cannot be read.
+    return readJsonVersion(join(root, 'package.json'))
+        || readJsonVersion(join(root, 'tmp', 'installed-version.json'))
         || 'unknown';
 }
