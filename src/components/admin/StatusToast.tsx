@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
 export function StatusToast({ type, message }: { type?: 'success' | 'error'; message?: string }) {
-    const [visible, setVisible] = useState(Boolean(type && message));
+    const [visible, setVisible] = useState(true);
 
     useEffect(() => {
-        setVisible(Boolean(type && message));
         if (!type || !message) return;
         const timer = window.setTimeout(() => setVisible(false), 5000);
         return () => window.clearTimeout(timer);
