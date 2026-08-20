@@ -5,7 +5,7 @@
     "scripts": {
         "dev": "next dev",
         "build": "next build",
-        "build:n0c": "NODE_OPTIONS='--no-addons --max-old-space-size=6144' next build --webpack --experimental-next-config-strip-types",
+        "build:n0c": "NODE_OPTIONS='--no-addons --max-old-space-size=6144' next build --webpack",
         "start": "next start",
         "lint": "eslint . --max-warnings=0",
         "typecheck": "tsc --noEmit",
