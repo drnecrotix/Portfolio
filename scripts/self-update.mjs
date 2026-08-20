@@ -146,18 +146,23 @@ try {
   status('running', 'Applying database migrations…', { targetVersion: remotePackage.version || null });
   run(process.execPath, [prismaCli, 'migrate', 'deploy'], { env: prismaEnv });
 
-  status('running', 'Building the production application…', { targetVersion: remotePackage.version || null });
-  const nodeOptions = process.env.NODE_OPTIONS?.trim();
-  const buildNodeOptions = nodeOptions?.includes('--max-old-space-size=')
-    ? nodeOptions
-    : `${nodeOptions ? `${nodeOptions} ` : ''}--max-old-space-size=6144`;
-  const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions };
+  status('running', 'Building the production application with WASM SWC compatibility mode…', { targetVersion: remotePackage.version || null });
+  const existingNodeOptions = (process.env.NODE_OPTIONS || '').trim().split(/\s+/).filter(Boolean);
+  const buildNodeOptions = [...existingNodeOptions];
+  if (!buildNodeOptions.includes('--no-addons')) buildNodeOptions.push('--no-addons');
+  if (!buildNodeOptions.some((option) => option.startsWith('--max-old-space-size='))) buildNodeOptions.push('--max-old-space-size=6144');
+  const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions.join(' ') };
   delete buildEnv.TURBOPACK;
   delete buildEnv.NEXT_TURBOPACK;
 
   const nextCli = resolvePackageFile('next/dist/bin/next');
   if (!nextCli) {
     throw new Error('Next.js CLI is not installed in the active N0C Node environment.');
+  }
+
+  const wasmSwc = resolvePackageFile('@next/swc-wasm-nodejs/wasm.js');
+  if (!wasmSwc) {
+    throw new Error('WASM SWC is not installed. Retry the update so N0C installs @next/swc-wasm-nodejs before building.');
   }
 
   run(process.execPath, [nextCli, 'build', '--webpack'], { env: buildEnv });
