@@ -66,6 +66,7 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
 
     const visiblePosts = filteredPosts.slice(0, visibleCount);
     const hasMore = visibleCount < filteredPosts.length;
+    const hasPublishedPosts = posts.length > 0;
 
     return (
         <main className="min-h-screen bg-background text-foreground selection:bg-primary/30">
@@ -77,53 +78,66 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                             <span>Publications Archive</span>
                             <span className="rounded-md border border-foreground/10 px-2 py-1 text-[10px] tracking-normal">{filteredPosts.length}</span>
                         </div>
-                        <div className="flex flex-wrap gap-x-8 gap-y-4">
-                            {categories.map((category) => {
-                                const active = selectedCategory === category;
-                                const label = category === 'all' ? 'All Publications' : category.replaceAll('-', ' ');
-                                return (
-                                    <button key={category} type="button" onClick={() => setSelectedCategory(category)} className={cn('relative py-1 text-sm font-medium capitalize transition-colors', active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
-                                        {label}
-                                        {active && <motion.span layoutId="active-blog-category" className="absolute -bottom-2 left-0 h-px w-full bg-foreground" />}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        {hasPublishedPosts && (
+                            <div className="flex flex-wrap gap-x-8 gap-y-4">
+                                {categories.map((category) => {
+                                    const active = selectedCategory === category;
+                                    const label = category === 'all' ? 'All Publications' : category.replaceAll('-', ' ');
+                                    return (
+                                        <button key={category} type="button" onClick={() => setSelectedCategory(category)} className={cn('relative py-1 text-sm font-medium capitalize transition-colors', active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}>
+                                            {label}
+                                            {active && <motion.span layoutId="active-blog-category" className="absolute -bottom-2 left-0 h-px w-full bg-foreground" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto lg:items-center">
-                        <div className="relative min-w-0 flex-1 sm:min-w-72">
-                            <Search className="absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search publications..." className="w-full border-b border-foreground/10 bg-transparent py-3 pl-7 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" />
+                    {hasPublishedPosts && (
+                        <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto lg:items-center">
+                            <div className="relative min-w-0 flex-1 sm:min-w-72">
+                                <Search className="absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search publications..." className="w-full border-b border-foreground/10 bg-transparent py-3 pl-7 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/40" />
+                            </div>
+                            <button type="button" onClick={() => setSortBy((current) => current === 'latest' ? 'oldest' : 'latest')} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-foreground/10 px-4 text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground">
+                                {sortBy === 'latest' ? <SortDesc className="h-4 w-4" /> : <SortAsc className="h-4 w-4" />}
+                                <span>{sortBy === 'latest' ? 'Latest' : 'Oldest'}</span>
+                            </button>
                         </div>
-                        <button type="button" onClick={() => setSortBy((current) => current === 'latest' ? 'oldest' : 'latest')} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-foreground/10 px-4 text-sm text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground">
-                            {sortBy === 'latest' ? <SortDesc className="h-4 w-4" /> : <SortAsc className="h-4 w-4" />}
-                            <span>{sortBy === 'latest' ? 'Latest' : 'Oldest'}</span>
-                        </button>
+                    )}
+                </div>
+
+                {hasPublishedPosts ? (
+                    <>
+                        <div className="divide-y divide-foreground/10 border-y border-foreground/10">
+                            {visiblePosts.map((post, index) => (
+                                <motion.article key={post.id} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.45, delay: Math.min(index, 5) * 0.035 }}>
+                                    <Link href={`/blog/${post.slug}`} className="group grid min-h-32 grid-cols-1 gap-5 py-7 transition-colors hover:bg-foreground/[0.02] md:grid-cols-[1fr_auto] md:items-center md:px-4 md:py-9">
+                                        <div className="min-w-0">
+                                            <h2 className="text-xl font-medium tracking-tight transition-transform duration-300 group-hover:translate-x-1 md:text-2xl lg:text-3xl">{post.title}</h2>
+                                            {post.excerpt && <p className="mt-2 max-w-4xl text-sm leading-relaxed text-muted-foreground md:text-base">{post.excerpt}</p>}
+                                        </div>
+                                        <div className="flex shrink-0 items-end gap-5 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:flex-col md:gap-1">
+                                            <span>{post.category.replaceAll('-', ' ')}</span>
+                                            <time dateTime={post.date}>{new Intl.DateTimeFormat('en', { month: 'short', day: '2-digit', year: 'numeric' }).format(new Date(post.date))}</time>
+                                        </div>
+                                    </Link>
+                                </motion.article>
+                            ))}
+                        </div>
+
+                        {filteredPosts.length === 0 && <div className="py-24 text-center text-sm text-muted-foreground">No publications match the selected filters.</div>}
+                        <div ref={sentinelRef} className="flex min-h-32 items-center justify-center" aria-hidden="true">
+                            {hasMore ? <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/50">Loading archive...</div> : filteredPosts.length > 0 ? <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground/40">End of archive</div> : null}
+                        </div>
+                    </>
+                ) : (
+                    <div className="border-y border-foreground/10 py-24 text-center">
+                        <p className="text-lg font-medium text-foreground">No publications yet</p>
+                        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Published CMS entries will appear here automatically. No demo or static articles are shown.</p>
                     </div>
-                </div>
-
-                <div className="divide-y divide-foreground/10 border-y border-foreground/10">
-                    {visiblePosts.map((post, index) => (
-                        <motion.article key={post.id} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ duration: 0.45, delay: Math.min(index, 5) * 0.035 }}>
-                            <Link href={`/blog/${post.slug}`} className="group grid min-h-32 grid-cols-1 gap-5 py-7 transition-colors hover:bg-foreground/[0.02] md:grid-cols-[1fr_auto] md:items-center md:px-4 md:py-9">
-                                <div className="min-w-0">
-                                    <h2 className="text-xl font-medium tracking-tight transition-transform duration-300 group-hover:translate-x-1 md:text-2xl lg:text-3xl">{post.title}</h2>
-                                    {post.excerpt && <p className="mt-2 max-w-4xl text-sm leading-relaxed text-muted-foreground md:text-base">{post.excerpt}</p>}
-                                </div>
-                                <div className="flex shrink-0 items-end gap-5 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:flex-col md:gap-1">
-                                    <span>{post.category.replaceAll('-', ' ')}</span>
-                                    <time dateTime={post.date}>{new Intl.DateTimeFormat('en', { month: 'short', day: '2-digit', year: 'numeric' }).format(new Date(post.date))}</time>
-                                </div>
-                            </Link>
-                        </motion.article>
-                    ))}
-                </div>
-
-                {filteredPosts.length === 0 && <div className="py-24 text-center text-sm text-muted-foreground">No publications match the selected filters.</div>}
-                <div ref={sentinelRef} className="flex min-h-32 items-center justify-center" aria-hidden="true">
-                    {hasMore ? <div className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/50">Loading archive...</div> : filteredPosts.length > 0 ? <div className="font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground/40">End of archive</div> : null}
-                </div>
+                )}
             </section>
         </main>
     );
