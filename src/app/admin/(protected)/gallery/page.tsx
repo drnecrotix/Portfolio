@@ -1,4 +1,5 @@
 import { StatusToast } from '@/components/admin/StatusToast';
+import { GalleryItemsEditor } from '@/components/admin/GalleryItemsEditor';
 import { prisma } from '@/lib/prisma';
 import { normalizeGallerySettings } from '@/lib/gallery-settings';
 import { saveGallerySettings } from './actions';
@@ -17,15 +18,17 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
   const settings = normalizeGallerySettings(record?.galleryContent);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-7xl">
       <StatusToast type={params.error ? 'error' : params.saved ? 'success' : undefined} message={params.error || (params.saved ? 'Gallery content saved and applied.' : undefined)} />
       <div className="mb-10">
         <p className="text-xs uppercase tracking-[0.3em] text-white/35">Content</p>
         <h2 className="mt-2 text-4xl font-semibold">Gallery</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Edit the text shown on the public Gallery page. Layout, motion, GLSL background, grid, lightbox and visual styling remain protected.</p>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Edit the public Gallery text and choose each gallery image separately from Media Library. Layout, motion, GLSL background, lightbox and visual styling remain protected.</p>
       </div>
 
       <form action={saveGallerySettings} className="space-y-8">
+        <GalleryItemsEditor initialItems={settings.items} />
+
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
           <p className="text-xs uppercase tracking-[0.25em] text-white/35">Manifesto hero</p>
           <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -68,8 +71,8 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
           </div>
         </section>
 
-        <div className="flex justify-end">
-          <button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Save Gallery content</button>
+        <div className="sticky bottom-5 z-20 flex justify-end">
+          <button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black shadow-2xl shadow-black/30">Save Gallery</button>
         </div>
       </form>
     </div>
