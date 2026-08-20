@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { safeCmsMediaUrl } from '@/lib/sanitize-cms-html';
 
 function field(form: FormData, key: string, max = 500) {
     const value = String(form.get(key) ?? '').trim();
@@ -31,6 +32,7 @@ export async function updateGeneralSettings(form: FormData) {
 
         const siteName = field(form, 'siteName', 120);
         const siteDescription = field(form, 'siteDescription', 500);
+        const faviconUrl = safeCmsMediaUrl(field(form, 'faviconUrl', 2048));
         const defaultTheme = field(form, 'defaultTheme', 16) === 'light' ? 'light' : 'dark';
         const allowDayMode = form.has('allowDayMode');
         const locale = field(form, 'locale', 20) || 'en';
@@ -54,8 +56,8 @@ export async function updateGeneralSettings(form: FormData) {
 
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
-            create: { id: 'default', siteName, siteDescription, defaultTheme, allowDayMode, accentColor: accentColor || null, locale, timezone, socialLinks, contactDetails },
-            update: { siteName, siteDescription, defaultTheme, allowDayMode, accentColor: accentColor || null, locale, timezone, socialLinks, contactDetails },
+            create: { id: 'default', siteName, siteDescription, faviconUrl: faviconUrl || null, defaultTheme, allowDayMode, accentColor: accentColor || null, locale, timezone, socialLinks, contactDetails },
+            update: { siteName, siteDescription, faviconUrl: faviconUrl || null, defaultTheme, allowDayMode, accentColor: accentColor || null, locale, timezone, socialLinks, contactDetails },
         });
 
         revalidatePath('/', 'layout');
