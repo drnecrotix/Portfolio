@@ -10,19 +10,23 @@ type MediaAsset = {
     altText?: string | null;
 };
 
+type MediaKind = 'all' | 'image' | 'file';
+
 type Props = {
     value?: string;
     onChange?: (url: string) => void;
     inputName?: string;
     label?: string;
+    initialKind?: MediaKind;
+    lockKind?: boolean;
 };
 
-export function MediaPicker({ value = '', onChange, inputName, label = 'Media' }: Props) {
+export function MediaPicker({ value = '', onChange, inputName, label = 'Media', initialKind = 'all', lockKind = false }: Props) {
     const [assets, setAssets] = useState<MediaAsset[]>([]);
     const [internalSelected, setInternalSelected] = useState(value);
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const [kind, setKind] = useState<'all' | 'image' | 'file'>('all');
+    const [kind, setKind] = useState<MediaKind>(initialKind);
     const selected = onChange ? value : internalSelected;
 
     useEffect(() => {
@@ -31,6 +35,10 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media' }
             .then((data) => setAssets(Array.isArray(data) ? data : []))
             .catch(() => setAssets([]));
     }, []);
+
+    useEffect(() => {
+        if (!onChange) setInternalSelected(value);
+    }, [onChange, value]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -85,13 +93,15 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media' }
                 <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
                     <div className="mb-4 flex flex-col gap-2 sm:flex-row">
                         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search media..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30" />
-                        <div className="flex gap-2">
-                            {(['all', 'image', 'file'] as const).map((value) => (
-                                <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${kind === value ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55'}`}>
-                                    {value}
-                                </button>
-                            ))}
-                        </div>
+                        {!lockKind && (
+                            <div className="flex gap-2">
+                                {(['all', 'image', 'file'] as const).map((value) => (
+                                    <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${kind === value ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55'}`}>
+                                        {value}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div className="grid max-h-80 grid-cols-2 gap-3 overflow-y-auto md:grid-cols-3">
                         {filtered.map((asset) => (
