@@ -15,6 +15,7 @@ export async function GET() {
     return NextResponse.json({
         mode: effective.mode,
         bypassAdmins: settings.bypassAdmins,
+        updatedAt: settings.updatedAt.toISOString(),
         title: settings.title,
         message: settings.message,
         countdownTarget: settings.countdownTarget,
