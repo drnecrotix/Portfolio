@@ -1,11 +1,12 @@
 'use server';
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
+import { installedPortfolioVersion } from '@/lib/installed-version';
 
 const appRoot = process.cwd();
 
@@ -30,11 +31,10 @@ export async function purgeApplicationCache() {
 export async function checkForPortfolioUpdate() {
     try {
         await requireAdmin();
-        const local = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf8')) as { version?: string };
         const response = await fetch('https://raw.githubusercontent.com/drnecrotix/Portfolio/main/package.json', { cache: 'no-store', signal: AbortSignal.timeout(10_000) });
         if (!response.ok) throw new Error(`GitHub returned HTTP ${response.status}`);
         const remote = await response.json() as { version?: string };
-        const localVersion = local.version || 'unknown';
+        const localVersion = installedPortfolioVersion();
         const remoteVersion = remote.version || 'unknown';
         const available = localVersion !== remoteVersion;
         return {
