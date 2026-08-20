@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
 import { StatusToast } from '@/components/admin/StatusToast';
+import { MediaPicker } from '@/components/admin/MediaPicker';
 import { updateGeneralSettings } from './actions';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
@@ -25,6 +26,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
                     <label className="text-sm text-white/60 md:col-span-2">Site name<input name="siteName" required defaultValue={settings.siteName} className={input} /></label>
                     <label className="text-sm text-white/60 md:col-span-2">Site description<textarea name="siteDescription" rows={3} defaultValue={settings.siteDescription} className={input} /></label>
+                    <div className="md:col-span-2">
+                        <MediaPicker value={settings.faviconUrl} inputName="faviconUrl" label="Favicon" initialKind="image" lockKind />
+                        <p className="mt-2 text-xs text-white/30">Choose a square PNG, WebP, ICO or SVG from the Media Library. If cleared, the default Dr Necrotix mark is used.</p>
+                    </div>
                     <label className="text-sm text-white/60">Locale<input name="locale" defaultValue={settings.locale} className={input} /></label>
                     <label className="text-sm text-white/60">Timezone<input name="timezone" defaultValue={settings.timezone} className={input} /></label>
                     <label className="text-sm text-white/60">Default theme<select name="defaultTheme" defaultValue={settings.defaultTheme} className={input}><option value="dark">Night</option><option value="light">Day</option></select></label>
