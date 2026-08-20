@@ -1,9 +1,35 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { deleteMediaFile, isManagedMediaKey, uploadMediaFile } from '@/lib/media-storage';
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const ALLOWED_UPLOAD_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/avif',
+    'application/pdf',
+    'text/plain',
+    'text/markdown',
+    'text/csv',
+    'application/json',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
+
+const ALLOWED_UPLOAD_EXTENSIONS = new Set([
+    'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif',
+    'pdf', 'txt', 'md', 'csv', 'json', 'zip',
+    'docx', 'xlsx', 'pptx',
+]);
 
 async function requireEditor() {
     const session = await auth();
@@ -36,101 +62,147 @@ function shortText(value: FormDataEntryValue | null, max: number) {
     return text ? text.slice(0, max) : null;
 }
 
+function uploadExtension(fileName: string) {
+    const parts = fileName.toLowerCase().split('.');
+    return parts.length > 1 ? parts.pop() || '' : '';
+}
+
+function uploadTypeAllowed(file: File) {
+    return ALLOWED_UPLOAD_TYPES.has(file.type) || ALLOWED_UPLOAD_EXTENSIONS.has(uploadExtension(file.name));
+}
+
+function mediaDestination(kind: string, error?: unknown) {
+    if (error) {
+        const message = error instanceof Error ? error.message : 'Media operation failed.';
+        return `/admin/media?error=${encodeURIComponent(message)}`;
+    }
+    return `/admin/media?saved=${encodeURIComponent(kind)}`;
+}
+
 export async function uploadMediaAsset(formData: FormData) {
-    await requireEditor();
-    const file = formData.get('file');
-    if (!(file instanceof File) || file.size === 0) throw new Error('Choose a file to upload.');
-    if (file.size > 10 * 1024 * 1024) throw new Error('Maximum upload size is 10 MB.');
-
-    // SVG is intentionally excluded because active content can execute when opened directly from a public bucket.
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
-    if (!allowed.includes(file.type)) throw new Error('Unsupported file type.');
-
-    const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
-    const key = `media/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${fileName}`;
-    const url = await uploadMediaFile(file, key);
+    let destination = mediaDestination('uploaded');
 
     try {
-        await prisma.mediaAsset.create({
-            data: {
-                key,
-                fileName,
-                mimeType: file.type || 'application/octet-stream',
-                size: file.size,
-                altText: shortText(formData.get('altText'), 500),
-                caption: shortText(formData.get('caption'), 2000),
-                url,
-            },
-        });
-    } catch (error) {
+        await requireEditor();
+        const file = formData.get('file');
+        if (!(file instanceof File) || file.size === 0) throw new Error('Choose a file to upload.');
+        if (file.size > MAX_UPLOAD_BYTES) throw new Error('Maximum upload size is 10 MB.');
+        if (!uploadTypeAllowed(file)) throw new Error('Unsupported file type. Use an image, PDF, text/CSV/JSON, ZIP, DOCX, XLSX or PPTX file.');
+
+        const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
+        const key = `media/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${fileName}`;
+        const url = await uploadMediaFile(file, key);
+
         try {
-            await deleteMediaFile(key);
-        } catch {
-            // Best-effort cleanup if DB registration fails after a successful upload.
+            await prisma.mediaAsset.create({
+                data: {
+                    key,
+                    fileName,
+                    mimeType: file.type || 'application/octet-stream',
+                    size: file.size,
+                    altText: shortText(formData.get('altText'), 500),
+                    caption: shortText(formData.get('caption'), 2000),
+                    url,
+                },
+            });
+        } catch (error) {
+            try {
+                await deleteMediaFile(key);
+            } catch {
+                // Best-effort cleanup if DB registration fails after a successful upload.
+            }
+            throw error;
         }
-        throw error;
+
+        revalidatePath('/admin/media');
+    } catch (error) {
+        destination = mediaDestination('uploaded', error);
     }
 
-    revalidatePath('/admin/media');
+    redirect(destination);
 }
 
 export async function createMediaAsset(formData: FormData) {
-    await requireEditor();
-    const fileName = safeFileName(String(formData.get('fileName') ?? '').trim());
-    if (!fileName) throw new Error('File name is required.');
+    let destination = mediaDestination('created');
 
-    await prisma.mediaAsset.create({
-        data: {
-            key: normalizeKey(formData.get('key'), fileName),
-            fileName,
-            mimeType: String(formData.get('mimeType') ?? 'application/octet-stream').trim().slice(0, 120) || 'application/octet-stream',
-            size: Math.max(0, Number(formData.get('size') ?? 0) || 0),
-            width: Math.max(0, Number(formData.get('width') ?? 0) || 0) || null,
-            height: Math.max(0, Number(formData.get('height') ?? 0) || 0) || null,
-            altText: shortText(formData.get('altText'), 500),
-            caption: shortText(formData.get('caption'), 2000),
-            url: normalizeUrl(formData.get('url')),
-        },
-    });
+    try {
+        await requireEditor();
+        const fileName = safeFileName(String(formData.get('fileName') ?? '').trim());
+        if (!fileName) throw new Error('File name is required.');
 
-    revalidatePath('/admin/media');
+        await prisma.mediaAsset.create({
+            data: {
+                key: normalizeKey(formData.get('key'), fileName),
+                fileName,
+                mimeType: String(formData.get('mimeType') ?? 'application/octet-stream').trim().slice(0, 120) || 'application/octet-stream',
+                size: Math.max(0, Number(formData.get('size') ?? 0) || 0),
+                width: Math.max(0, Number(formData.get('width') ?? 0) || 0) || null,
+                height: Math.max(0, Number(formData.get('height') ?? 0) || 0) || null,
+                altText: shortText(formData.get('altText'), 500),
+                caption: shortText(formData.get('caption'), 2000),
+                url: normalizeUrl(formData.get('url')),
+            },
+        });
+
+        revalidatePath('/admin/media');
+    } catch (error) {
+        destination = mediaDestination('created', error);
+    }
+
+    redirect(destination);
 }
 
 export async function updateMediaAsset(id: string, formData: FormData) {
-    await requireEditor();
-    const current = await prisma.mediaAsset.findUnique({ where: { id } });
-    if (!current) throw new Error('Media asset not found.');
+    let destination = mediaDestination('updated');
 
-    await prisma.mediaAsset.update({
-        where: { id },
-        data: {
-            fileName: safeFileName(String(formData.get('fileName') ?? current.fileName).trim()) || current.fileName,
-            mimeType: String(formData.get('mimeType') ?? current.mimeType).trim().slice(0, 120) || current.mimeType,
-            altText: shortText(formData.get('altText'), 500),
-            caption: shortText(formData.get('caption'), 2000),
-            width: Math.max(0, Number(formData.get('width') ?? 0) || 0) || null,
-            height: Math.max(0, Number(formData.get('height') ?? 0) || 0) || null,
-        },
-    });
+    try {
+        await requireEditor();
+        const current = await prisma.mediaAsset.findUnique({ where: { id } });
+        if (!current) throw new Error('Media asset not found.');
 
-    revalidatePath('/admin/media');
+        await prisma.mediaAsset.update({
+            where: { id },
+            data: {
+                fileName: safeFileName(String(formData.get('fileName') ?? current.fileName).trim()) || current.fileName,
+                mimeType: String(formData.get('mimeType') ?? current.mimeType).trim().slice(0, 120) || current.mimeType,
+                altText: shortText(formData.get('altText'), 500),
+                caption: shortText(formData.get('caption'), 2000),
+                width: Math.max(0, Number(formData.get('width') ?? 0) || 0) || null,
+                height: Math.max(0, Number(formData.get('height') ?? 0) || 0) || null,
+            },
+        });
+
+        revalidatePath('/admin/media');
+    } catch (error) {
+        destination = mediaDestination('updated', error);
+    }
+
+    redirect(destination);
 }
 
 export async function deleteMediaAsset(id: string, formData: FormData) {
-    const user = await requireEditor();
-    if (user.role === 'EDITOR') throw new Error('Editors cannot delete media assets.');
+    let destination = mediaDestination('removed');
 
-    const asset = await prisma.mediaAsset.findUnique({ where: { id } });
-    if (!asset) return;
+    try {
+        const user = await requireEditor();
+        if (user.role === 'EDITOR') throw new Error('Editors cannot delete media assets.');
 
-    const deleteStoredObject = formData.get('deleteStoredObject') === 'on';
-    if (deleteStoredObject) {
-        if (!isManagedMediaKey(asset.key)) {
-            throw new Error('Only files uploaded by this CMS can be deleted from R2. External assets are library references only.');
+        const asset = await prisma.mediaAsset.findUnique({ where: { id } });
+        if (!asset) redirect('/admin/media');
+
+        const deleteStoredObject = formData.get('deleteStoredObject') === 'on';
+        if (deleteStoredObject) {
+            if (!isManagedMediaKey(asset.key)) {
+                throw new Error('Only files uploaded by this CMS can be deleted from R2. External assets are library references only.');
+            }
+            await deleteMediaFile(asset.key);
         }
-        await deleteMediaFile(asset.key);
+
+        await prisma.mediaAsset.delete({ where: { id } });
+        revalidatePath('/admin/media');
+    } catch (error) {
+        destination = mediaDestination('removed', error);
     }
 
-    await prisma.mediaAsset.delete({ where: { id } });
-    revalidatePath('/admin/media');
+    redirect(destination);
 }
