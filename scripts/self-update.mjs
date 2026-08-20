@@ -134,18 +134,24 @@ try {
     throw new Error('Prisma CLI is not installed in the active N0C Node environment. Restore/install dev dependencies before retrying.');
   }
 
+  const prismaEnv = {
+    ...process.env,
+    PRISMA_CLIENT_ENGINE_TYPE: 'binary',
+    PRISMA_CLI_QUERY_ENGINE_TYPE: 'binary',
+  };
+
   status('running', 'Generating the Prisma client…', { targetVersion: remotePackage.version || null });
-  run(process.execPath, [prismaCli, 'generate']);
+  run(process.execPath, [prismaCli, 'generate'], { env: prismaEnv });
 
   status('running', 'Applying database migrations…', { targetVersion: remotePackage.version || null });
-  run(process.execPath, [prismaCli, 'migrate', 'deploy']);
+  run(process.execPath, [prismaCli, 'migrate', 'deploy'], { env: prismaEnv });
 
   status('running', 'Building the production application…', { targetVersion: remotePackage.version || null });
   const nodeOptions = process.env.NODE_OPTIONS?.trim();
   const buildNodeOptions = nodeOptions?.includes('--max-old-space-size=')
     ? nodeOptions
     : `${nodeOptions ? `${nodeOptions} ` : ''}--max-old-space-size=6144`;
-  const buildEnv = { ...process.env, NODE_OPTIONS: buildNodeOptions };
+  const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions };
   delete buildEnv.TURBOPACK;
   delete buildEnv.NEXT_TURBOPACK;
   run(npmCommand, ['run', 'build:n0c'], { env: buildEnv });
