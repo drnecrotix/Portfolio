@@ -150,7 +150,7 @@ try {
   const existingNodeOptions = (process.env.NODE_OPTIONS || '').trim().split(/\s+/).filter(Boolean);
   const buildNodeOptions = [...existingNodeOptions];
   if (!buildNodeOptions.some((option) => option.startsWith('--max-old-space-size='))) buildNodeOptions.push('--max-old-space-size=6144');
-  const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions.join(' ') };
+  const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions.join(' '), NEXT_N0C_WASM_SWC: '1' };
   delete buildEnv.TURBOPACK;
   delete buildEnv.NEXT_TURBOPACK;
 
