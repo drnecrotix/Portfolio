@@ -56,9 +56,9 @@ function writeInstalledVersion(version) {
   writeFileSync(installedVersionFile, JSON.stringify({ version, updatedAt: new Date().toISOString() }, null, 2));
 }
 
-function resolvePrismaCli() {
+function resolvePackageFile(path) {
   try {
-    return require.resolve('prisma/build/index.js', { paths: [appRoot] });
+    return require.resolve(path, { paths: [appRoot] });
   } catch {
     return null;
   }
@@ -129,7 +129,7 @@ try {
     });
   }
 
-  const prismaCli = resolvePrismaCli();
+  const prismaCli = resolvePackageFile('prisma/build/index.js');
   if (!prismaCli) {
     throw new Error('Prisma CLI is not installed in the active N0C Node environment. Restore/install dev dependencies before retrying.');
   }
@@ -154,7 +154,13 @@ try {
   const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions };
   delete buildEnv.TURBOPACK;
   delete buildEnv.NEXT_TURBOPACK;
-  run(npmCommand, ['run', 'build:n0c'], { env: buildEnv });
+
+  const nextCli = resolvePackageFile('next/dist/bin/next');
+  if (!nextCli) {
+    throw new Error('Next.js CLI is not installed in the active N0C Node environment.');
+  }
+
+  run(process.execPath, [nextCli, 'build', '--webpack'], { env: buildEnv });
 
   if (dependenciesReplaced && modulesBackup && existsSync(modulesBackup)) {
     rmSync(modulesBackup, { recursive: true, force: true });
