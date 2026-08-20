@@ -84,7 +84,6 @@ export async function proxy(request: NextRequest) {
 
     const settings = await fetchSiteMode(request);
     if (!settings) {
-        // Keep the site reachable if both the configured public origin and request origin cannot resolve Site Mode.
         return NextResponse.next();
     }
 
@@ -94,16 +93,14 @@ export async function proxy(request: NextRequest) {
 
     if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return NextResponse.next();
 
-    if (settings.mode === 'MAINTENANCE' || settings.mode === 'COMING_SOON' || settings.mode === 'PRIVATE') {
+    if (settings.mode === 'MAINTENANCE' || settings.mode === 'COMING_SOON' || settings.mode === 'PRIVATE' || settings.mode === 'ARCHIVE') {
         const target = request.nextUrl.clone();
         target.pathname = '/site-status';
         target.search = '';
         return NextResponse.redirect(target);
     }
 
-    const next = NextResponse.next();
-    if (settings.mode === 'ARCHIVE') next.headers.set('x-portfolio-archive-mode', '1');
-    return next;
+    return NextResponse.next();
 }
 
 export const config = {
