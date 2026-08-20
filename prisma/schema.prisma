@@ -124,6 +124,7 @@ model NavigationItem {
   sortOrder  Int              @default(0)
   isVisible  Boolean          @default(true)
   isExternal Boolean          @default(false)
+  isDropdown Boolean          @default(false)
   parentId   String?
   parent     NavigationItem?  @relation("NavigationChildren", fields: [parentId], references: [id], onDelete: SetNull)
   children   NavigationItem[] @relation("NavigationChildren")
