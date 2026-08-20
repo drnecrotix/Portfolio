@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import CleanFilmGrid from "@/components/sections/gallery/CleanFilmGrid";
 import ManifestoHero from "@/components/sections/gallery/ManifestoHero";
 import dynamic from "next/dynamic";
 import { usePerformance } from "@/hooks/usePerformance";
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { DeferredMount } from '@/components/ui/DeferredMount';
+import { defaultGallerySettings, type GallerySettings } from '@/lib/gallery-settings';
 
 const GLSLHills = dynamic(() => import("@/components/ui/glsl-hills").then(mod => mod.GLSLHills), {
     ssr: false,
@@ -13,8 +15,15 @@ const GLSLHills = dynamic(() => import("@/components/ui/glsl-hills").then(mod =>
 
 export default function GalleryPage() {
     const { isLowPowerMode } = usePerformance();
+    const [content, setContent] = useState<GallerySettings>(defaultGallerySettings);
 
-    // Legacy portfolio blog cards are intentionally not mounted here; public content is CMS-driven.
+    useEffect(() => {
+        fetch('/api/gallery-settings', { cache: 'no-store' })
+            .then((response) => response.ok ? response.json() : defaultGallerySettings)
+            .then((data) => setContent({ ...defaultGallerySettings, ...data }))
+            .catch(() => setContent(defaultGallerySettings));
+    }, []);
+
     return (
         <main className="bg-background min-h-screen selection:bg-cyan-500/30 selection:text-cyan-500 overflow-x-hidden relative">
             {!isLowPowerMode && (
@@ -25,10 +34,10 @@ export default function GalleryPage() {
                 </div>
             )}
             <div className="relative z-10">
-                <ManifestoHero isLowPowerMode={isLowPowerMode} />
+                <ManifestoHero isLowPowerMode={isLowPowerMode} content={content} />
                 <DeferredMount>
                     <ErrorBoundary fallback={<div className="container mx-auto py-20 text-center">Gallery Grid Unavailable</div>}>
-                        <CleanFilmGrid isLowPowerMode={isLowPowerMode} />
+                        <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} />
                     </ErrorBoundary>
                 </DeferredMount>
             </div>
