@@ -17,18 +17,19 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 export async function generateMetadata(): Promise<Metadata> {
     let seo = defaultSeoDefaults;
-    let siteName = 'Dr Necrotix';
+    let general = defaultGeneralSiteSettings;
 
     try {
         const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
         seo = normalizeSeoDefaults(settings?.seoDefaults);
-        siteName = settings?.siteName || siteName;
+        general = normalizeGeneralSiteSettings(settings);
     } catch {
         // Keep the public site renderable when the CMS database is temporarily unavailable.
     }
 
     const ogImages = seo.ogImage ? [{ url: seo.ogImage }] : undefined;
     const twitterImages = seo.twitterImage ? [seo.twitterImage] : seo.ogImage ? [seo.ogImage] : undefined;
+    const favicon = general.faviconUrl || defaultGeneralSiteSettings.faviconUrl;
 
     return {
         title: { default: seo.titleDefault, template: seo.titleTemplate },
@@ -39,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
         metadataBase: new URL(siteUrl),
         openGraph: {
             type: 'website', locale: seo.locale, url: siteUrl, title: seo.ogTitle,
-            description: seo.ogDescription, siteName, images: ogImages,
+            description: seo.ogDescription, siteName: general.siteName, images: ogImages,
         },
         twitter: {
             card: 'summary_large_image', title: seo.twitterTitle, description: seo.twitterDescription,
@@ -54,7 +55,11 @@ export async function generateMetadata(): Promise<Metadata> {
             },
         },
         verification: seo.googleVerification ? { google: seo.googleVerification } : undefined,
-        icons: { icon: '/dr-necrotix-mark.svg' },
+        icons: {
+            icon: [{ url: favicon }],
+            shortcut: [{ url: favicon }],
+            apple: [{ url: favicon }],
+        },
     };
 }
 
