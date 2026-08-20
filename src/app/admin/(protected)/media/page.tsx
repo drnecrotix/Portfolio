@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StatusToast } from '@/components/admin/StatusToast';
 import { prisma } from '@/lib/prisma';
 import { isManagedMediaKey, mediaStorageConfigured } from '@/lib/media-storage';
 import { createMediaAsset, deleteMediaAsset, updateMediaAsset, uploadMediaAsset } from './actions';
@@ -17,7 +18,14 @@ function formatBytes(size: number) {
     return `${value.toFixed(value >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 }
 
-type SearchParams = Promise<{ q?: string; type?: string }>;
+type SearchParams = Promise<{ q?: string; type?: string; saved?: string; error?: string }>;
+
+const savedMessages: Record<string, string> = {
+    uploaded: 'File uploaded and added to the media library.',
+    created: 'External media asset added.',
+    updated: 'Media metadata saved.',
+    removed: 'Media asset removed.',
+};
 
 export default async function MediaLibraryPage({ searchParams }: { searchParams: SearchParams }) {
     const params = await searchParams;
@@ -44,9 +52,15 @@ export default async function MediaLibraryPage({ searchParams }: { searchParams:
         prisma.mediaAsset.aggregate({ _sum: { size: true } }),
     ]);
     const storageReady = mediaStorageConfigured();
+    const savedMessage = params.saved ? savedMessages[params.saved] || 'Changes saved and applied.' : undefined;
 
     return (
         <div className="max-w-7xl mx-auto">
+            <StatusToast
+                type={params.error ? 'error' : savedMessage ? 'success' : undefined}
+                message={params.error || savedMessage}
+            />
+
             <div className="mb-10">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/35">Media Library</p>
                 <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
@@ -87,7 +101,7 @@ export default async function MediaLibraryPage({ searchParams }: { searchParams:
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h3 className="text-lg font-semibold">Direct upload</h3>
-                        <p className="mt-1 text-xs text-white/40">Uploads JPEG, PNG, WebP, GIF, SVG or PDF directly to the configured R2 bucket. Maximum 10 MB.</p>
+                        <p className="mt-1 text-xs text-white/40">Uploads JPG, PNG, WebP, GIF, AVIF, PDF, TXT, Markdown, CSV, JSON, ZIP, DOCX, XLSX or PPTX directly to the configured R2 bucket. Maximum 10 MB.</p>
                     </div>
                     <span className={`rounded-full border px-3 py-1 text-xs ${storageReady ? 'border-emerald-400/20 text-emerald-300' : 'border-amber-400/20 text-amber-300'}`}>
                         {storageReady ? 'R2 configured' : 'R2 not configured'}
@@ -95,7 +109,7 @@ export default async function MediaLibraryPage({ searchParams }: { searchParams:
                 </div>
                 {storageReady ? (
                     <form action={uploadMediaAsset} className="mt-6 grid gap-5 md:grid-cols-2">
-                        <label className="text-sm text-white/60 md:col-span-2">File<input name="file" type="file" required accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf" className={input} /></label>
+                        <label className="text-sm text-white/60 md:col-span-2">File<input name="file" type="file" required accept=".jpg,.jpeg,.png,.webp,.gif,.avif,.pdf,.txt,.md,.csv,.json,.zip,.docx,.xlsx,.pptx,image/jpeg,image/png,image/webp,image/gif,image/avif,application/pdf,text/plain,text/markdown,text/csv,application/json,application/zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation" className={input} /></label>
                         <label className="text-sm text-white/60">Alt text<input name="altText" placeholder="Describe the image for accessibility" className={input} /></label>
                         <label className="text-sm text-white/60">Caption<input name="caption" className={input} /></label>
                         <div className="md:col-span-2"><button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Upload to R2</button></div>
