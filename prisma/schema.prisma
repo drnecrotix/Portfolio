@@ -117,15 +117,20 @@ model Page {
 }
 
 model NavigationItem {
-  id         String   @id @default(cuid())
+  id         String           @id @default(cuid())
   label      String
   href       String
-  location   String   @default("primary")
-  sortOrder  Int      @default(0)
-  isVisible  Boolean  @default(true)
-  isExternal Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  location   String           @default("primary")
+  sortOrder  Int              @default(0)
+  isVisible  Boolean          @default(true)
+  isExternal Boolean          @default(false)
+  parentId   String?
+  parent     NavigationItem?  @relation("NavigationChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children   NavigationItem[] @relation("NavigationChildren")
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([parentId, sortOrder])
 }
 
 model SiteSettings {
