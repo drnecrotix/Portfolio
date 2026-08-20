@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
@@ -115,15 +116,15 @@ model Page {
 }
 
 model NavigationItem {
-  id        String  @id @default(cuid())
-  label     String
-  href      String
-  location  String  @default("primary")
-  sortOrder Int     @default(0)
-  isVisible Boolean @default(true)
-  isExternal Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  label      String
+  href       String
+  location   String   @default("primary")
+  sortOrder  Int      @default(0)
+  isVisible  Boolean  @default(true)
+  isExternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model SiteSettings {
