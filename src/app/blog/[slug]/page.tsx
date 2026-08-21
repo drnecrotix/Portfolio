@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { PostBody } from '@/components/blog/PostBody';
+import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComments';
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
 
 export const dynamic = 'force-dynamic';
@@ -52,6 +53,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             include: {
                 postType: { select: { name: true } },
                 categoryRef: { select: { name: true } },
+                comments: {
+                    where: { status: 'APPROVED' },
+                    orderBy: { createdAt: 'asc' },
+                    select: { id: true, authorName: true, content: true, createdAt: true },
+                },
             },
         }),
         prisma.post.findMany({
@@ -86,6 +92,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             date: (post.publishedAt ?? post.createdAt).toISOString(),
         };
     });
+    const comments: PublicBlogComment[] = cmsPost.comments.map((comment) => ({
+        ...comment,
+        createdAt: comment.createdAt.toISOString(),
+    }));
 
     return (
         <BlogArticleFrame
@@ -100,6 +110,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             relatedPosts={relatedPosts}
         >
             <PostBody type={cmsPost.type} content={content} />
+            <BlogComments postId={cmsPost.id} initialComments={comments} />
         </BlogArticleFrame>
     );
 }
