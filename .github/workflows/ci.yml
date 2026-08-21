@@ -82,6 +82,17 @@ jobs:
         run: npm run db:deploy
       - name: Verify migration status
         run: npm run db:status
+      - name: Guard Prisma runtime singleton
+        run: |
+          set -euo pipefail
+          offenders="$(git grep -n 'new PrismaClient' -- 'src/**' ':!src/lib/prisma.ts' || true)"
+          if [ -n "$offenders" ]; then
+            echo "Unexpected runtime PrismaClient instances found:"
+            echo "$offenders"
+            echo "::error::Runtime code must import the shared client from src/lib/prisma.ts."
+            exit 1
+          fi
+          echo "Runtime Prisma singleton guard passed."
       - name: Typecheck
         run: npm run typecheck
       - name: Lint changed source files
