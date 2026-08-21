@@ -6,10 +6,6 @@ export type HomepageContent = {
     lineThreePrefix: string;
     lineThreeSuffix: string;
     collaboration: string;
-    locationLabel: string;
-    yearLabel: string;
-    resumeLabel: string;
-    resumeHref: string;
     workspaceUrl: string;
     workspaceTooltip: string;
     assistantTooltip: string;
@@ -27,10 +23,6 @@ export const defaultHomepageContent: HomepageContent = {
     lineThreePrefix: 'BUILD',
     lineThreeSuffix: 'CREATE',
     collaboration: 'Open to meaningful collaborations, creative work and technical projects.',
-    locationLabel: 'BULGARIA',
-    yearLabel: '2026',
-    resumeLabel: 'View Resume',
-    resumeHref: '/resume',
     workspaceUrl: '/projects',
     workspaceTooltip: 'Explore Projects',
     assistantTooltip: 'Talk to my AI Assistant',

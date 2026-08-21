@@ -1,0 +1,10 @@
+/* Keep the static copyright and animated compact label on the same visual baseline. */
+footer .flex.min-w-0.items-center.overflow-hidden.pl-1 > span {
+  line-height: 1;
+}
+
+footer .flex.min-w-0.items-center.overflow-hidden.pl-1 > div > span {
+  top: 50%;
+  margin-top: -0.5em;
+  line-height: 1;
+}

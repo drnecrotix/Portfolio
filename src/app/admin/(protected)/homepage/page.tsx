@@ -34,10 +34,6 @@ export default async function HomepageAdminPage() {
                 </section>
 
                 <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-6 grid md:grid-cols-2 gap-5">
-                    <label className="text-sm text-white/60">Location label<input name="locationLabel" defaultValue={content.locationLabel} className={input} /></label>
-                    <label className="text-sm text-white/60">Year label<input name="yearLabel" defaultValue={content.yearLabel} className={input} /></label>
-                    <label className="text-sm text-white/60">Resume button label<input name="resumeLabel" defaultValue={content.resumeLabel} className={input} /></label>
-                    <label className="text-sm text-white/60">Resume URL<input name="resumeHref" defaultValue={content.resumeHref} className={input} /></label>
                     <label className="text-sm text-white/60">Workspace/project URL<input name="workspaceUrl" defaultValue={content.workspaceUrl} className={input} /></label>
                     <label className="text-sm text-white/60">Workspace tooltip<input name="workspaceTooltip" defaultValue={content.workspaceTooltip} className={input} /></label>
                     <label className="text-sm text-white/60">Assistant tooltip<input name="assistantTooltip" defaultValue={content.assistantTooltip} className={input} /></label>
