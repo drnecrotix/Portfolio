@@ -49,9 +49,8 @@ for (const theme of themes) {
       }
 
       if (route === '/blog') {
-        // The protected archive title is plain text in the current design.
-        await expect(page.getByText(/Publications Archive/i).first()).toBeVisible();
-        await expect(page.getByRole('searchbox', { name: 'Search publications...' })).toBeVisible();
+        await expect(page.getByRole('button', { name: /All Publications/i }).first()).toBeVisible();
+        await expect(page.getByRole('searchbox', { name: 'SEARCH ARCHIVE' })).toBeVisible();
       }
 
       if (route === '/contact') {
