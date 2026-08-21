@@ -1,4 +1,5 @@
 import type { Project as PrismaProject } from '@prisma/client';
+import sanitizeHtml from 'sanitize-html';
 import type { Project } from '@/types';
 
 type ProjectContent = {
@@ -12,6 +13,15 @@ type ProjectContent = {
 const MAX_LIST_ITEMS = 50;
 const MAX_LIST_ITEM_LENGTH = 120;
 
+function projectDescriptionText(value?: string | null) {
+    if (!value) return undefined;
+    if (!/<[a-z][\s\S]*>/i.test(value)) return value;
+    return sanitizeHtml(value, {
+        allowedTags: [],
+        allowedAttributes: {},
+    }).replace(/\s+/g, ' ').trim();
+}
+
 export function cmsProjectToPortfolioProject(project: PrismaProject): Project {
     const content = (project.content ?? {}) as unknown as ProjectContent;
 
@@ -20,7 +30,7 @@ export function cmsProjectToPortfolioProject(project: PrismaProject): Project {
         slug: project.slug,
         title: project.title,
         description: project.description,
-        longDescription: project.longDescription ?? undefined,
+        longDescription: projectDescriptionText(project.longDescription),
         image: content.image,
         techStack: project.technologies,
         tools: project.tools,
