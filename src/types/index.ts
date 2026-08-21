@@ -1,11 +1,15 @@
 import React from 'react';
 
+export type ProjectContentBlock = 'mission' | 'features' | 'chronicles' | 'installation';
+
 export interface Project {
     id: string;
     slug: string;
     title: string;
     description: string;
     longDescription?: string;
+    contentLayout?: string;
+    contentBlocks?: ProjectContentBlock[];
     image?: string;
     techStack: string[];
     tools: string[];
@@ -159,19 +163,5 @@ export interface GalleryItem {
     url: string;
     thumbnail?: string;
     category: string;
-}
-
-export interface PortfolioData {
-    personal: PersonalInfo;
-    projects: Project[];
-    experiences: Experience[];
-    education: Education[];
-    achievements: Achievement[];
-    techStack: TechStack[];
-    hardSkills: Skill[];
-    softSkills: SoftSkill[];
-    tools: Tool[];
-    faqs: FAQ[];
-    blogs: BlogPost[];
-    gallery: GalleryItem[];
+    tags?: string[];
 }
