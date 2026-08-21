@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { ProjectPageContent } from '@/components/projects/ProjectPageContent';
+import { ProjectComposerPage } from '@/components/projects/ProjectComposerPage';
 import { getProjectImages } from '@/app/actions/getProjectImages';
 import { prisma } from '@/lib/prisma';
 import { cmsProjectToPortfolioProject } from '@/lib/cms-projects';
@@ -20,5 +20,5 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         galleryImages: galleryImages.length > 0 ? galleryImages : project.galleryImages,
     };
 
-    return <ProjectPageContent project={updatedProject} />;
+    return <ProjectComposerPage project={updatedProject} />;
 }

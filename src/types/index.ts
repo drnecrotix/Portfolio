@@ -1,11 +1,15 @@
 import React from 'react';
 
+export type ProjectContentBlock = 'mission' | 'features' | 'chronicles' | 'installation';
+
 export interface Project {
     id: string;
     slug: string;
     title: string;
     description: string;
     longDescription?: string;
+    contentLayout?: string;
+    contentBlocks?: ProjectContentBlock[];
     image?: string;
     techStack: string[];
     tools: string[];

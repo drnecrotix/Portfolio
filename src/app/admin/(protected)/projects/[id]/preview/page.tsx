@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { cmsProjectToPortfolioProject } from '@/lib/cms-projects';
-import { ProjectPageContent } from '@/components/projects/ProjectPageContent';
+import { ProjectComposerPage } from '@/components/projects/ProjectComposerPage';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,7 @@ export default async function ProjectPreviewPage({ params }: { params: Promise<{
                 <div><p className="text-xs uppercase tracking-[0.25em] text-white/35">CMS Preview</p><p className="text-sm text-white/70">{project.title}</p></div>
                 <Link href={`/admin/projects/${project.id}`} className="rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70 hover:text-white">Back to editor</Link>
             </div>
-            <ProjectPageContent project={cmsProjectToPortfolioProject(project)} />
+            <ProjectComposerPage project={cmsProjectToPortfolioProject(project)} />
         </div>
     );
 }
