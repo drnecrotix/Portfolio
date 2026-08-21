@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as {
     prisma?: PrismaClient;
+    prismaShutdownRegistered?: boolean;
+    prismaShutdownInProgress?: boolean;
 };
 
 function databaseUrlWithPoolLimit() {
@@ -31,6 +33,33 @@ export const prisma =
         log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
     });
 
-// Reuse one PrismaClient per Node.js process in every environment. This is especially
-// important on shared PostgreSQL hosting where each additional client owns its own pool.
+// Reuse one PrismaClient per Node.js process in every environment. Passenger may run
+// multiple workers, so each worker still owns its own deliberately small connection pool.
 globalForPrisma.prisma = prisma;
+
+function registerPrismaShutdownHandlers() {
+    if (globalForPrisma.prismaShutdownRegistered) return;
+    globalForPrisma.prismaShutdownRegistered = true;
+
+    const shutdown = async (signal: 'SIGTERM' | 'SIGINT') => {
+        if (globalForPrisma.prismaShutdownInProgress) return;
+        globalForPrisma.prismaShutdownInProgress = true;
+
+        if (process.env.PRISMA_LIFECYCLE_LOG === '1') {
+            console.info(`[prisma] disconnecting worker pid=${process.pid} signal=${signal}`);
+        }
+
+        try {
+            await prisma.$disconnect();
+        } catch (error) {
+            console.error('[prisma] failed to disconnect cleanly', error);
+        } finally {
+            process.exit(signal === 'SIGINT' ? 130 : 0);
+        }
+    };
+
+    process.once('SIGTERM', () => void shutdown('SIGTERM'));
+    process.once('SIGINT', () => void shutdown('SIGINT'));
+}
+
+registerPrismaShutdownHandlers();
