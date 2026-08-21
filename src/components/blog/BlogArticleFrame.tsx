@@ -82,7 +82,7 @@ export function BlogArticleFrame({
 
     return (
         <main className="min-h-screen bg-background pb-24 pt-32 text-foreground">
-            <div className="container mx-auto mb-12 max-w-7xl px-6">
+            <div className="container mx-auto mb-12 max-w-6xl px-6">
                 <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
                     <button
                         onClick={goBack}
@@ -91,10 +91,7 @@ export function BlogArticleFrame({
                         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                         <span>Back</span>
                     </button>
-                    <div className="max-w-5xl">
-                        <div className="mb-5 font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                            {typeLabel} · {categoryLabel}
-                        </div>
+                    <div className="mx-auto max-w-4xl">
                         <h1 className="mb-6 text-4xl font-black leading-[1.06] tracking-tight md:text-5xl lg:text-7xl">{title}</h1>
                         {excerpt && <p className="max-w-3xl text-lg font-light leading-relaxed text-muted-foreground md:text-xl">{excerpt}</p>}
                     </div>
@@ -102,7 +99,7 @@ export function BlogArticleFrame({
             </div>
 
             {featuredImage && (
-                <div className="container mx-auto mb-12 max-w-7xl px-6">
+                <div className="container mx-auto mb-12 max-w-6xl px-6">
                     <motion.div
                         initial={{ opacity: 0, scale: 0.96 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -116,14 +113,14 @@ export function BlogArticleFrame({
                 </div>
             )}
 
-            <div className="container mx-auto mb-16 max-w-7xl px-6">
+            <div className="container mx-auto mb-16 max-w-6xl px-6">
                 <motion.div
                     initial={{ opacity: 0, y: 14 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.45, delay: 0.22 }}
-                    className="flex flex-col items-start justify-between gap-6 border-y border-foreground/10 py-6 md:flex-row md:items-center"
+                    className="mx-auto flex max-w-4xl flex-col gap-6 border-y border-foreground/10 py-6 lg:flex-row lg:items-center lg:justify-between"
                 >
-                    <div className="flex w-full items-center justify-between gap-10 md:w-auto md:justify-start">
+                    <div className="grid w-full gap-5 sm:grid-cols-3 lg:w-auto lg:min-w-[34rem]">
                         <div className="flex flex-col gap-1">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Written by</span>
                             <span className="font-bold">{author}</span>
@@ -132,7 +129,12 @@ export function BlogArticleFrame({
                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Published on</span>
                             <time className="font-bold" dateTime={publishedAt}>{new Date(publishedAt).toLocaleDateString()}</time>
                         </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Type / Category</span>
+                            <span className="font-bold">{typeLabel} · {categoryLabel}</span>
+                        </div>
                     </div>
+
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="inline-flex items-center gap-2">
                             <motion.button
@@ -169,54 +171,32 @@ export function BlogArticleFrame({
                 </motion.div>
             </div>
 
-            <div className="container mx-auto max-w-7xl px-6">
-                <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
-                    <motion.article
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.55, delay: 0.28 }}
-                        className="min-w-0 lg:col-span-8"
-                    >
-                        {children}
-                    </motion.article>
+            <div className="container mx-auto max-w-6xl px-6">
+                <motion.article
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.55, delay: 0.28 }}
+                    className="mx-auto min-w-0 max-w-4xl"
+                >
+                    {children}
 
-                    <motion.aside
-                        initial={{ opacity: 0, x: 18 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.5, delay: 0.34 }}
-                        className="lg:col-span-4"
-                    >
-                        <div className="space-y-10 lg:sticky lg:top-28">
-                            <section>
-                                <h3 className="mb-5 border-b border-foreground/10 pb-4 text-sm font-bold uppercase tracking-widest text-muted-foreground">Article</h3>
-                                <div className="space-y-3 text-sm">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <span className="text-muted-foreground">Type / Category</span>
-                                        <span className="max-w-[60%] text-right font-medium">{typeLabel} · {categoryLabel}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">Author</span><span className="font-medium">{author}</span></div>
-                                </div>
-                            </section>
-
-                            {tags.length > 0 && (
-                                <section>
-                                    <h3 className="mb-5 border-b border-foreground/10 pb-4 text-sm font-bold uppercase tracking-widest text-muted-foreground">Topics</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {tags.map((tag) => (
-                                            <Link key={tag} href={`/blog?q=${encodeURIComponent(tag)}`} className="rounded-md border border-foreground/10 bg-foreground/[0.03] px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/20 hover:bg-primary/10 hover:text-primary">
-                                                {tag}
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-                        </div>
-                    </motion.aside>
-                </div>
+                    {tags.length > 0 && (
+                        <section className="mt-14 border-t border-foreground/10 pt-8">
+                            <h3 className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground">Topics</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {tags.map((tag) => (
+                                    <Link key={tag} href={`/blog?q=${encodeURIComponent(tag)}`} className="rounded-md border border-foreground/10 bg-foreground/[0.03] px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/20 hover:bg-primary/10 hover:text-primary">
+                                        {tag}
+                                    </Link>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                </motion.article>
             </div>
 
             {relatedPosts.length > 0 && (
-                <section className="container mx-auto mt-20 max-w-7xl border-t border-foreground/10 px-6 pt-16">
+                <section className="container mx-auto mt-20 max-w-6xl border-t border-foreground/10 px-6 pt-16">
                     <div className="mb-10 flex items-center justify-between gap-6">
                         <h3 className="text-2xl font-black tracking-tight">From the blog</h3>
                         <Link href="/blog" className="rounded-lg border border-foreground/10 bg-foreground/[0.04] px-5 py-2 text-sm font-bold transition-colors hover:bg-foreground/[0.08]">View all posts</Link>

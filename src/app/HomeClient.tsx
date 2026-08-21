@@ -41,7 +41,7 @@ export default function HomeClient({ content, identity }: { content: HomepageCon
                 initial={skipAnimation ? false : { opacity: 0, y: 40 }}
                 animate={skipAnimation ? { opacity: 1, y: 0 } : isReadyToAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
                 transition={{ duration: skipAnimation ? 0 : 1.4, ease: skipAnimation ? 'linear' : [0.16, 1, 0.3, 1], opacity: { duration: skipAnimation ? 0 : 0.8 } }}
-                className="home-hero-container relative flex min-h-0 flex-1 overflow-hidden will-change-transform will-change-opacity"
+                className="home-hero-container relative overflow-hidden will-change-transform will-change-opacity [&>div]:!min-h-0"
             >
                 <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
             </motion.main>
