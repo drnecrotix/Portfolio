@@ -133,17 +133,31 @@ export function BlogArticleFrame({
                             <time className="font-bold" dateTime={publishedAt}>{new Date(publishedAt).toLocaleDateString()}</time>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <button
-                            onClick={() => void toggleLike()}
-                            disabled={liking}
-                            aria-pressed={liked}
-                            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-60 ${liked ? 'bg-rose-500/12 text-rose-500 hover:bg-rose-500/18' : 'bg-foreground/[0.06] text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground'}`}
-                        >
-                            <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-                            <span>{liked ? 'Liked' : 'Like'}</span>
-                            <span className="rounded-full bg-foreground/[0.06] px-1.5 py-0.5 text-[10px] tabular-nums">{likeCount}</span>
-                        </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="inline-flex items-center gap-2">
+                            <motion.button
+                                type="button"
+                                onClick={() => void toggleLike()}
+                                disabled={liking}
+                                aria-pressed={liked}
+                                aria-label={liked ? 'Unlike this publication' : 'Like this publication'}
+                                whileTap={{ scale: 0.88 }}
+                                animate={liked ? { scale: [1, 1.22, 0.96, 1] } : { scale: 1 }}
+                                transition={{ duration: 0.42, ease: 'easeOut' }}
+                                className={`group flex size-10 items-center justify-center rounded-full border transition disabled:opacity-60 ${liked ? 'border-rose-500/25 bg-rose-500/12 text-rose-500' : 'border-foreground/10 bg-foreground/[0.05] text-muted-foreground hover:bg-foreground/[0.09] hover:text-foreground'}`}
+                            >
+                                <Heart className={`h-5 w-5 transition-transform duration-200 group-hover:scale-110 ${liked ? 'fill-current' : ''}`} strokeWidth={1.8} />
+                            </motion.button>
+                            <motion.span
+                                key={likeCount}
+                                initial={{ scale: 0.8, opacity: 0.5 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="inline-flex min-w-8 items-center justify-center rounded-full border border-foreground/10 bg-foreground/[0.045] px-2.5 py-1 text-xs font-bold tabular-nums text-muted-foreground"
+                                aria-label={`${likeCount} likes`}
+                            >
+                                {likeCount}
+                            </motion.span>
+                        </div>
                         <button
                             onClick={copyLink}
                             className="flex items-center gap-2 rounded-lg bg-foreground/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-all hover:bg-foreground/[0.1] hover:text-foreground"
