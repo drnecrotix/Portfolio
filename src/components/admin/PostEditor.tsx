@@ -7,7 +7,19 @@ import Link from '@tiptap/extension-link';
 
 const tool = 'rounded-md border border-white/10 px-3 py-1.5 text-xs text-white/65 transition hover:border-white/25 hover:bg-white/[0.05] hover:text-white disabled:opacity-30';
 
-export function PostEditor({ name, initialValue = '', poetry = false }: { name: string; initialValue?: string; poetry?: boolean }) {
+type EditorShortcode = {
+    label: string;
+    value: string;
+};
+
+type Props = {
+    name: string;
+    initialValue?: string;
+    poetry?: boolean;
+    shortcodes?: EditorShortcode[];
+};
+
+export function PostEditor({ name, initialValue = '', poetry = false, shortcodes = [] }: Props) {
     if (poetry) {
         return (
             <textarea
@@ -20,10 +32,10 @@ export function PostEditor({ name, initialValue = '', poetry = false }: { name: 
         );
     }
 
-    return <RichEditor name={name} initialValue={initialValue} />;
+    return <RichEditor name={name} initialValue={initialValue} shortcodes={shortcodes} />;
 }
 
-function RichEditor({ name, initialValue }: { name: string; initialValue: string }) {
+function RichEditor({ name, initialValue, shortcodes }: { name: string; initialValue: string; shortcodes: EditorShortcode[] }) {
     const [html, setHtml] = useState(initialValue);
     const editor = useEditor({
         immediatelyRender: false,
@@ -50,6 +62,11 @@ function RichEditor({ name, initialValue }: { name: string; initialValue: string
         else editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
     };
 
+    const insertShortcode = (value: string) => {
+        if (!editor || !value) return;
+        editor.chain().focus().insertContent(`<p>${value}</p>`).run();
+    };
+
     return (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
             <div className="sticky top-0 z-10 flex flex-wrap gap-2 border-b border-white/10 bg-[#101010]/95 p-3 backdrop-blur-xl">
@@ -63,7 +80,7 @@ function RichEditor({ name, initialValue }: { name: string; initialValue: string
                         else if (value === 'h3') editor.chain().focus().toggleHeading({ level: 3 }).run();
                         else editor.chain().focus().setParagraph().run();
                     }}
-                    className="rounded-md border border-white/10 bg-black/30 px-3 py-1.5 text-xs text-white/70 outline-none"
+                    className="rounded-md border border-white/10 bg-black/30 px-3 py-1.5 text-xs text-white/70 outline-none [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white"
                 >
                     <option value="p">Paragraph</option>
                     <option value="h2">Heading 2</option>
@@ -78,6 +95,25 @@ function RichEditor({ name, initialValue }: { name: string; initialValue: string
                 <button type="button" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={tool}>Quote</button>
                 <button type="button" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} className={tool}>Code</button>
                 <button type="button" onClick={setLink} className={tool}>Link</button>
+                {shortcodes.length > 0 && (
+                    <>
+                        <span className="mx-1 h-7 w-px bg-white/10" />
+                        <select
+                            aria-label="Insert content block"
+                            defaultValue=""
+                            onChange={(event) => {
+                                insertShortcode(event.target.value);
+                                event.target.value = '';
+                            }}
+                            className="rounded-md border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5 text-xs text-emerald-200 outline-none [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white"
+                        >
+                            <option value="" disabled>Insert project block…</option>
+                            {shortcodes.map((shortcode) => (
+                                <option key={shortcode.value} value={shortcode.value}>{shortcode.label}</option>
+                            ))}
+                        </select>
+                    </>
+                )}
                 <span className="mx-1 h-7 w-px bg-white/10" />
                 <button type="button" disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} className={tool}>Undo</button>
                 <button type="button" disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} className={tool}>Redo</button>
