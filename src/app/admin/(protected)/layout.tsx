@@ -2,31 +2,43 @@ import './admin.css';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
+import { ChevronDown } from 'lucide-react';
 import { auth, signOut } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
-import { AdminMobileNavigation } from '@/components/admin/AdminMobileNavigation';
+import { AdminMobileNavigation, type AdminNavGroup, type AdminNavItem } from '@/components/admin/AdminMobileNavigation';
 
-const navItems = [
-    ['Dashboard', '/admin'],
-    ['Homepage', '/admin/homepage'],
-    ['Projects', '/admin/projects'],
-    ['Blog', '/admin/blog'],
-    ['Comments', '/admin/comments'],
-    ['Blog Taxonomies', '/admin/blog/taxonomies'],
-    ['Gallery', '/admin/gallery'],
-    ['Pages', '/admin/pages'],
-    ['Navigation', '/admin/navigation'],
-    ['Footer', '/admin/footer'],
-    ['Media', '/admin/media'],
-    ['AI Assistant', '/admin/assistant'],
-    ['Revisions', '/admin/revisions'],
-    ['Site Mode', '/admin/site-mode'],
-    ['SEO', '/admin/seo'],
-    ['Redirects', '/admin/redirects'],
-    ['Users', '/admin/users'],
-    ['Settings', '/admin/settings'],
-] as const;
+const dashboardItem = ['Dashboard', '/admin'] as const satisfies AdminNavItem;
+
+const navGroups = [
+    ['Content', [
+        ['Homepage', '/admin/homepage'],
+        ['Projects', '/admin/projects'],
+        ['Blog', '/admin/blog'],
+        ['Comments', '/admin/comments'],
+        ['Blog Taxonomies', '/admin/blog/taxonomies'],
+        ['Gallery', '/admin/gallery'],
+        ['Pages', '/admin/pages'],
+        ['Media', '/admin/media'],
+    ]],
+    ['Appearance', [
+        ['Navigation', '/admin/navigation'],
+        ['Footer', '/admin/footer'],
+    ]],
+    ['Publishing & SEO', [
+        ['Revisions', '/admin/revisions'],
+        ['Site Mode', '/admin/site-mode'],
+        ['SEO', '/admin/seo'],
+        ['Redirects', '/admin/redirects'],
+    ]],
+    ['Tools', [
+        ['AI Assistant', '/admin/assistant'],
+    ]],
+    ['Administration', [
+        ['Users', '/admin/users'],
+        ['Settings', '/admin/settings'],
+    ]],
+] as const satisfies readonly AdminNavGroup[];
 
 async function signOutAction() {
     'use server';
@@ -42,11 +54,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' }, select: { siteName: true } }).catch(() => null);
     const siteName = settings?.siteName ?? 'Portfolio';
     const canModerateComments = session.user.role === 'OWNER' || session.user.role === 'ADMIN';
-    const visibleNavItems = navItems.filter(([label]) => label !== 'Comments' || canModerateComments);
+    const visibleNavGroups = navGroups.map(([groupLabel, items]) => [
+        groupLabel,
+        items.filter(([label]) => label !== 'Comments' || canModerateComments),
+    ] as const).filter(([, items]) => items.length > 0);
 
     return (
         <div className="admin-shell min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
-            <AdminMobileNavigation siteName={siteName} role={session.user.role} navItems={visibleNavItems} signOutAction={signOutAction} />
+            <AdminMobileNavigation siteName={siteName} role={session.user.role} dashboardItem={dashboardItem} navGroups={visibleNavGroups} signOutAction={signOutAction} />
 
             <aside className="hidden border-r border-foreground/10 bg-foreground/[0.015] p-5 lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">
                 <div className="mb-7 flex items-start justify-between gap-3">
@@ -58,9 +73,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     <AdminThemeToggle />
                 </div>
 
-                <nav className="grid gap-1">
-                    {visibleNavItems.map(([label, href]) => (
-                        <Link key={href} href={href} className="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground">{label}</Link>
+                <nav className="grid gap-2">
+                    <Link href={dashboardItem[1]} className="block rounded-lg border border-transparent px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:border-foreground/10 hover:bg-foreground/[0.05]">{dashboardItem[0]}</Link>
+
+                    {visibleNavGroups.map(([groupLabel, items], index) => (
+                        <details key={groupLabel} className="group/nav rounded-xl border border-foreground/10 bg-foreground/[0.012]" open={index === 0}>
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground transition hover:text-foreground [&::-webkit-details-marker]:hidden">
+                                <span>{groupLabel}</span>
+                                <ChevronDown className="size-3.5 transition-transform group-open/nav:rotate-180" />
+                            </summary>
+                            <div className="grid gap-0.5 border-t border-foreground/10 p-1.5">
+                                {items.map(([label, href]) => (
+                                    <Link key={href} href={href} className="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground">{label}</Link>
+                                ))}
+                            </div>
+                        </details>
                     ))}
                 </nav>
 
