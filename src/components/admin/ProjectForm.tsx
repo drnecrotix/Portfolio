@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition, type FormEvent } from 'react';
+import { useState, useTransition, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Project as PrismaProject } from '@prisma/client';
 import { MediaPicker } from '@/components/admin/MediaPicker';
@@ -29,11 +29,9 @@ export function ProjectForm({
     const rawContent = (project?.content ?? {}) as Record<string, unknown>;
     const image = typeof rawContent.image === 'string' ? rawContent.image : '';
     const content = JSON.stringify(rawContent, null, 2);
-    const categoryOptions = useMemo(() => {
-        const values = [...categories];
-        if (project?.category && !values.includes(project.category)) values.push(project.category);
-        return values.sort((a, b) => a.localeCompare(b));
-    }, [categories, project?.category]);
+    const categoryOptions = [...categories];
+    if (project?.category && !categoryOptions.includes(project.category)) categoryOptions.push(project.category);
+    categoryOptions.sort((a, b) => a.localeCompare(b));
     const [category, setCategory] = useState(project?.category ?? '');
     const [saveState, setSaveState] = useState<'idle' | 'saved' | 'error'>('idle');
     const [saveMessage, setSaveMessage] = useState('');
