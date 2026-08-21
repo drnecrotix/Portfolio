@@ -17,6 +17,8 @@ function readUpdateStatus(): PortfolioUpdateStatus | null {
     } catch { return null; }
 }
 
+const panelClass = 'rounded-2xl border border-foreground/10 bg-foreground/[0.025]';
+
 export default async function AdminDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
     const params = await searchParams;
     const [projects, posts, pages, media, drafts, publishedPosts, activeUsers, revisions, settings, siteMode, recentRevisions] = await prisma.$transaction([
@@ -38,50 +40,77 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     const updateStatus = readUpdateStatus();
     const currentVersion = installedPortfolioVersion();
     const error = typeof params.error === 'string' ? params.error : undefined;
-    const toastMessage = error
-        ? error
-        : params.cache === 'purged'
-            ? 'Application cache purged and public routes revalidated.'
-            : undefined;
+    const toastMessage = error ? error : params.cache === 'purged' ? 'Application cache purged and public routes revalidated.' : undefined;
 
     return (
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto max-w-[1500px]">
             <StatusToast type={error ? 'error' : toastMessage ? 'success' : undefined} message={toastMessage} />
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
-                <div><p className="text-xs uppercase tracking-[0.3em] text-white/35">Control center</p><h2 className="text-4xl font-semibold mt-2">Dashboard</h2></div>
-                <div className="text-right"><p className="text-sm text-white/60">{settings?.siteName ?? 'Dr Necrotix'}</p><p className="mt-1 text-xs uppercase tracking-[0.2em] text-white/30">Site mode: {siteMode?.mode ?? 'NORMAL'} · v{currentVersion}</p></div>
-            </div>
 
-            <section className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {cards.map(([label, value]) => <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.025] p-6"><p className="text-xs uppercase tracking-[0.2em] text-white/35">{label}</p><p className="text-3xl font-semibold mt-4">{value}</p></div>)}
+            <header className="mb-6 flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground sm:text-xs">Control center</p>
+                    <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Dashboard</h2>
+                </div>
+                <div className="sm:text-right">
+                    <p className="text-sm text-muted-foreground">{settings?.siteName ?? 'Dr Necrotix'}</p>
+                    <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground sm:text-xs sm:tracking-[0.2em]">Site mode: {siteMode?.mode ?? 'NORMAL'} · v{currentVersion}</p>
+                </div>
+            </header>
+
+            <section className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4 xl:grid-cols-8" aria-label="Site statistics">
+                {cards.map(([label, value]) => (
+                    <div key={label} className={`${panelClass} min-w-0 p-4 sm:p-5`}>
+                        <p className="truncate text-[9px] uppercase tracking-[0.14em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">{label}</p>
+                        <p className="mt-3 text-2xl font-semibold tabular-nums sm:text-3xl">{value}</p>
+                    </div>
+                ))}
             </section>
 
-            <section className="mt-8 grid gap-6 lg:grid-cols-3">
-                <PortfolioUpdater currentVersion={currentVersion} initialStatus={updateStatus} />
+            <section className="mt-5 grid gap-4 lg:grid-cols-12">
+                <div className="min-w-0 lg:col-span-5"><PortfolioUpdater currentVersion={currentVersion} initialStatus={updateStatus} /></div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-                    <p className="text-xs uppercase tracking-[0.25em] text-white/35">Cache</p>
-                    <h3 className="mt-2 text-xl font-semibold">Purge cache</h3>
-                    <p className="mt-2 text-sm text-white/45">Revalidates the public layout, projects, blog, contact page and dashboard without deleting user data.</p>
-                    <form action={purgeApplicationCache} className="mt-5"><button className="rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5">Purge application cache</button></form>
+                <div className={`${panelClass} p-5 sm:p-6 lg:col-span-3`}>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Cache</p>
+                    <h3 className="mt-2 text-lg font-semibold">Purge cache</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">Revalidates the public layout, projects, blog, contact page and dashboard without deleting user data.</p>
+                    <form action={purgeApplicationCache} className="mt-5"><button className="w-full rounded-xl border border-foreground/15 px-4 py-2.5 text-sm transition hover:bg-foreground/[0.05] sm:w-auto">Purge application cache</button></form>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-                    <p className="text-xs uppercase tracking-[0.25em] text-white/35">AI Assistant</p>
-                    <h3 className="mt-2 text-xl font-semibold">{assistant.assistantName}</h3>
-                    <p className="mt-2 text-sm text-white/45">{assistant.enabled ? 'Enabled' : 'Disabled'} · {assistant.providerOrder.join(' → ')} · temp {assistant.temperature}</p>
-                    <Link href="/admin/assistant" className="mt-5 inline-block rounded-xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5">Edit assistant</Link>
+                <div className={`${panelClass} p-5 sm:p-6 lg:col-span-4`}>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">AI Assistant</p>
+                    <h3 className="mt-2 text-lg font-semibold">{assistant.assistantName}</h3>
+                    <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">{assistant.enabled ? 'Enabled' : 'Disabled'} · {assistant.providerOrder.join(' → ')} · temp {assistant.temperature}</p>
+                    <Link href="/admin/assistant" className="mt-5 inline-flex rounded-xl border border-foreground/15 px-4 py-2.5 text-sm transition hover:bg-foreground/[0.05]">Edit assistant</Link>
                 </div>
             </section>
 
-            <section className="mt-8 grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 md:p-8">
-                    <div className="flex items-center justify-between gap-4"><div><p className="text-xs uppercase tracking-[0.25em] text-white/35">Activity</p><h3 className="mt-2 text-xl font-semibold">Recent revisions</h3></div><Link href="/admin/revisions" className="text-sm text-white/45 transition hover:text-white">View history →</Link></div>
-                    <div className="mt-6 divide-y divide-white/10">
-                        {recentRevisions.length ? recentRevisions.map((revision) => <div key={revision.id} className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm text-white/80">{revision.note || `${revision.entityType} revision`}</p><p className="mt-1 text-xs uppercase tracking-[0.18em] text-white/30">{revision.entityType} · {revision.user?.name ?? revision.user?.email ?? 'System'}</p></div><time className="text-xs text-white/35">{revision.createdAt.toLocaleString('en-GB', { timeZone: settings?.timezone ?? 'Europe/Sofia' })}</time></div>) : <p className="py-8 text-sm text-white/40">No revisions have been recorded yet.</p>}
+            <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.5fr)]">
+                <div className={`${panelClass} min-w-0 p-5 sm:p-6`}>
+                    <div className="flex flex-col gap-3 border-b border-foreground/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div><p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Activity</p><h3 className="mt-2 text-lg font-semibold">Recent revisions</h3></div>
+                        <Link href="/admin/revisions" className="text-sm text-muted-foreground transition hover:text-foreground">View history →</Link>
+                    </div>
+                    <div className="divide-y divide-foreground/10">
+                        {recentRevisions.length ? recentRevisions.map((revision) => (
+                            <div key={revision.id} className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                                <div className="min-w-0">
+                                    <p className="break-words text-sm text-foreground/85">{revision.note || `${revision.entityType} revision`}</p>
+                                    <p className="mt-1 break-words text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:text-xs">{revision.entityType} · {revision.user?.name ?? revision.user?.email ?? 'System'}</p>
+                                </div>
+                                <time className="text-xs text-muted-foreground sm:text-right">{revision.createdAt.toLocaleString('en-GB', { timeZone: settings?.timezone ?? 'Europe/Sofia' })}</time>
+                            </div>
+                        )) : <p className="py-8 text-sm text-muted-foreground">No revisions have been recorded yet.</p>}
                     </div>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 md:p-8"><p className="text-xs uppercase tracking-[0.25em] text-white/35">Quick access</p><div className="mt-5 space-y-2">{[['New project', '/admin/projects/new'], ['New publication', '/admin/blog/new'], ['Manage media', '/admin/media'], ['AI Assistant', '/admin/assistant'], ['Site Mode', '/admin/site-mode'], ['Users & roles', '/admin/users']].map(([label, href]) => <Link key={href} href={href} className="block rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60 transition hover:bg-white/[0.05] hover:text-white">{label}</Link>)}</div></div>
+
+                <div className={`${panelClass} p-5 sm:p-6`}>
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Quick access</p>
+                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-1">
+                        {[['New project', '/admin/projects/new'], ['New publication', '/admin/blog/new'], ['Manage media', '/admin/media'], ['AI Assistant', '/admin/assistant'], ['Site Mode', '/admin/site-mode'], ['Users & roles', '/admin/users']].map(([label, href]) => (
+                            <Link key={href} href={href} className="min-w-0 rounded-xl border border-foreground/10 px-3 py-3 text-sm text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground">{label}</Link>
+                        ))}
+                    </div>
+                </div>
             </section>
         </div>
     );
