@@ -57,8 +57,11 @@ export function BlogArticleFrame({
         <main className="min-h-screen bg-background pb-24 pt-32 text-foreground">
             <div className="container mx-auto mb-12 max-w-7xl px-6">
                 <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
-                    <button onClick={goBack} className="mb-7 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-                        <ArrowLeft className="h-4 w-4" />
+                    <button
+                        onClick={goBack}
+                        className="group mb-7 inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.035] px-3.5 py-2 text-sm font-medium text-foreground/70 shadow-sm transition-all hover:border-foreground/20 hover:bg-foreground/[0.07] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                    >
+                        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                         <span>Back</span>
                     </button>
                     <div className="max-w-5xl">
@@ -134,8 +137,10 @@ export function BlogArticleFrame({
                             <section>
                                 <h3 className="mb-5 border-b border-foreground/10 pb-4 text-sm font-bold uppercase tracking-widest text-muted-foreground">Article</h3>
                                 <div className="space-y-3 text-sm">
-                                    <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">Type</span><span className="font-medium">{typeLabel}</span></div>
-                                    <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">Category</span><span className="font-medium">{categoryLabel}</span></div>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <span className="text-muted-foreground">Type / Category</span>
+                                        <span className="max-w-[60%] text-right font-medium">{typeLabel} · {categoryLabel}</span>
+                                    </div>
                                     <div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">Author</span><span className="font-medium">{author}</span></div>
                                 </div>
                             </section>

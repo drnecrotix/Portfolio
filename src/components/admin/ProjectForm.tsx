@@ -19,7 +19,8 @@ export function ProjectForm({ project, action, submitLabel }: { project?: Prisma
             </section>
 
             <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
-                <MediaPicker value={image} inputName="imageUrl" label="Project cover image" />
+                <MediaPicker value={image} inputName="imageUrl" label="Project cover image" initialKind="image" lockKind />
+                <p className="mt-3 text-[11px] text-white/30">Choose an existing image or upload a new one here; uploads are saved to the shared Media Library automatically.</p>
             </section>
 
             <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.02] p-6 md:grid-cols-2">

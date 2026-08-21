@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { PublicPost } from '@/lib/cms-posts';
 
 const POSTS_PER_PAGE = 9;
+const ROW_HEIGHT = 88;
 const FALLBACK_IMAGE = '/dr-necrotix-mark.svg';
 
 function categoryLabel(value: string) {
@@ -82,13 +83,14 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
             .toUpperCase(),
     }));
 
-    const listHeight = Math.max(520, Math.min(900, paginatedPosts.length * 88));
+    // Keep list rows consistently compact even when the archive contains only a few posts.
+    const listHeight = Math.max(ROW_HEIGHT, paginatedPosts.length * ROW_HEIGHT);
 
     return (
         <main className="min-h-screen bg-background text-foreground selection:bg-primary/30">
             <section className="relative z-20 px-6 pb-24 pt-32 md:px-12 lg:px-10">
                 <div className="mx-auto max-w-screen-2xl">
-                    <div className="mb-16 flex flex-col items-end justify-between gap-10 border-b border-foreground/5 pb-8 md:flex-row">
+                    <div className="mb-12 flex flex-col items-end justify-between gap-8 border-b border-foreground/5 pb-7 md:flex-row">
                         <div className="flex flex-wrap gap-x-12 gap-y-6">
                             {categories.map((category) => {
                                 const count = category.slug === 'all'
@@ -168,7 +170,7 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                         </div>
                     </div>
 
-                    <div ref={listRef} className="relative mx-auto max-w-screen-2xl pt-10 scroll-mt-24">
+                    <div ref={listRef} className="relative mx-auto max-w-screen-2xl pt-5 scroll-mt-24">
                         {paginatedPosts.length > 0 ? (
                             <div className="w-full overflow-hidden" style={{ height: `${listHeight}px` }}>
                                 <FlowingMenu items={menuItems} />
@@ -180,7 +182,7 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                         )}
 
                         {totalPages > 1 && (
-                            <div className="mt-20 flex items-center justify-between border-t border-foreground/5 pt-10">
+                            <div className="mt-16 flex items-center justify-between border-t border-foreground/5 pt-8">
                                 <button
                                     type="button"
                                     onClick={() => changePage(Math.max(1, page - 1))}

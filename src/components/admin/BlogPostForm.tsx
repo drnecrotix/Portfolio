@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition, type FormEvent } from 'react';
 import type { ContentStatus, PostType } from '@prisma/client';
 import { PostEditor } from '@/components/admin/PostEditor';
 import { MediaPicker } from '@/components/admin/MediaPicker';
+import { TagInput } from '@/components/admin/TagInput';
 
 export type BlogTypeOption = { id: string; name: string; slug: string; editorMode: PostType };
 export type BlogCategoryOption = { id: string; name: string; slug: string };
@@ -31,6 +32,7 @@ export type BlogPostFormValue = {
 };
 
 const inputClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm outline-none transition focus:border-white/30 focus:bg-white/[0.05]';
+const selectClass = `${inputClass} text-white [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white`;
 const panelClass = 'rounded-2xl border border-white/10 bg-white/[0.02] p-5';
 
 function dateValue(value?: Date | null) {
@@ -128,7 +130,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                     <section className={panelClass}>
                         <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Publish</h3><span className="text-[10px] uppercase tracking-[0.18em] text-white/30">Post</span></div>
                         <div className="mt-4 space-y-4">
-                            <label className="block text-xs text-white/45">Status<select name="status" defaultValue={value.status ?? 'DRAFT'} className={inputClass}>{['DRAFT','REVIEW','PUBLISHED','ARCHIVED'].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                            <label className="block text-xs text-white/45">Status<select name="status" defaultValue={value.status ?? 'DRAFT'} className={selectClass}>{['DRAFT','REVIEW','PUBLISHED','ARCHIVED'].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
                             <label className="block text-xs text-white/45">Author<input name="authorName" required defaultValue={value.authorName ?? 'Dr Necrotix'} className={inputClass} /></label>
                             <label className="block text-xs text-white/45">Publish date<input name="publishedAt" type="datetime-local" defaultValue={dateValue(value.publishedAt)} className={inputClass} /></label>
                             <label className="block text-xs text-white/45">Schedule<input name="scheduledAt" type="datetime-local" defaultValue={dateValue(value.scheduledAt)} className={inputClass} /></label>
@@ -142,13 +144,16 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                     <section className={panelClass}>
                         <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Type & Category</h3><Link href="/admin/blog/taxonomies" className="text-[11px] text-white/40 hover:text-white">Manage</Link></div>
                         <div className="mt-4 space-y-4">
-                            <label className="block text-xs text-white/45">Type<select name="postTypeId" value={selectedTypeId} onChange={(event) => setSelectedTypeId(event.target.value)} className={inputClass} required>{postTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                            <label className="block text-xs text-white/45">Category<select name="categoryId" defaultValue={value.categoryId ?? ''} className={inputClass}><option value="">Uncategorized</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                            <label className="block text-xs text-white/45">Tags<input name="tags" defaultValue={(value.tags ?? []).join(', ')} placeholder="design, development" className={inputClass} /></label>
+                            <label className="block text-xs text-white/45">Type<select name="postTypeId" value={selectedTypeId} onChange={(event) => setSelectedTypeId(event.target.value)} className={selectClass} required>{postTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                            <label className="block text-xs text-white/45">Category<select name="categoryId" defaultValue={value.categoryId ?? ''} className={selectClass}><option value="">Uncategorized</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                            <TagInput name="tags" initialTags={value.tags ?? []} />
                         </div>
                     </section>
 
-                    <section className={panelClass}><MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image" initialKind="image" lockKind /></section>
+                    <section className={panelClass}>
+                        <MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image" initialKind="image" lockKind />
+                        <p className="mt-3 text-[11px] text-white/30">Choose an existing image or upload a new one here; uploads are saved to the shared Media Library automatically.</p>
+                    </section>
 
                     <section className={panelClass}>
                         <h3 className="text-sm font-semibold">Excerpt</h3>
