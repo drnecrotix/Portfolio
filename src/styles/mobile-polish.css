@@ -1,0 +1,44 @@
+@media (max-width: 767px) {
+  /* Keep the LinkedIn mark in the intended visual gap instead of on top of DR. */
+  .relative > div:has(> a[aria-label='LinkedIn']) {
+    top: -1.15rem !important;
+    left: 0.65rem !important;
+  }
+
+  .relative > div:has(> a[aria-label='LinkedIn']) svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Keep the mobile Home CTA label visually attached to the arrow button. */
+  .relative.flex.min-h-screen:has(a[aria-label='GitHub']) main > div:last-child > div {
+    justify-content: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Reserve the public header safe-area for the assistant so its close controls stay reachable. */
+  div.fixed.z-50.flex.flex-col:has(textarea[data-lenis-prevent]) {
+    top: calc(env(safe-area-inset-top, 0px) + 6.75rem) !important;
+    bottom: max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    transform: none !important;
+    transform-origin: center top !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .relative.flex.min-h-screen:has(a[aria-label='GitHub']) main > div:last-child > div {
+    gap: 0.5rem !important;
+  }
+
+  div.fixed.z-50.flex.flex-col:has(textarea[data-lenis-prevent]) {
+    top: calc(env(safe-area-inset-top, 0px) + 6.25rem) !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+  }
+}
