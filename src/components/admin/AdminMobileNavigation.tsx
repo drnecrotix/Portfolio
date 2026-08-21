@@ -3,20 +3,23 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
-import { Menu, ShieldCheck } from 'lucide-react';
+import { ChevronDown, Menu, ShieldCheck } from 'lucide-react';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 
 export type AdminNavItem = readonly [label: string, href: string];
+export type AdminNavGroup = readonly [label: string, items: readonly AdminNavItem[]];
 
 export function AdminMobileNavigation({
     siteName,
     role,
-    navItems,
+    dashboardItem,
+    navGroups,
     signOutAction,
 }: {
     siteName: string;
     role: string;
-    navItems: readonly AdminNavItem[];
+    dashboardItem: AdminNavItem;
+    navGroups: readonly AdminNavGroup[];
     signOutAction: () => Promise<void>;
 }) {
     const pathname = usePathname();
@@ -29,6 +32,8 @@ export function AdminMobileNavigation({
     useEffect(() => {
         detailsRef.current?.removeAttribute('open');
     }, [pathname]);
+
+    const linkClass = (active: boolean) => `block min-w-0 rounded-xl border px-3 py-2.5 text-sm transition-colors ${active ? 'border-foreground/15 bg-foreground/[0.08] font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:border-foreground/10 hover:bg-foreground/[0.05] hover:text-foreground'}`;
 
     return (
         <header className="sticky top-0 z-50 border-b border-foreground/10 bg-background/95 px-3 py-3 backdrop-blur-xl lg:hidden">
@@ -49,21 +54,28 @@ export function AdminMobileNavigation({
                             <ShieldCheck className="size-3.5" />
                             Admin navigation
                         </div>
-                        <nav className="grid grid-cols-2 gap-1.5">
-                            {navItems.map(([label, href]) => {
-                                const active = pathname === href;
+
+                        <nav className="grid gap-2">
+                            <Link href={dashboardItem[1]} onClick={closeMenu} className={linkClass(pathname === dashboardItem[1])}>{dashboardItem[0]}</Link>
+
+                            {navGroups.map(([groupLabel, items]) => {
+                                const groupActive = items.some(([, href]) => pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`)));
                                 return (
-                                    <Link
-                                        key={href}
-                                        href={href}
-                                        onClick={closeMenu}
-                                        className={`min-w-0 rounded-xl border px-3 py-3 text-sm transition-colors ${active ? 'border-foreground/15 bg-foreground/[0.08] font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:border-foreground/10 hover:bg-foreground/[0.05] hover:text-foreground'}`}
-                                    >
-                                        {label}
-                                    </Link>
+                                    <details key={groupLabel} className="group/nav rounded-xl border border-foreground/10 bg-foreground/[0.018]" open={groupActive || undefined}>
+                                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground [&::-webkit-details-marker]:hidden">
+                                            <span>{groupLabel}</span>
+                                            <ChevronDown className="size-4 transition-transform group-open/nav:rotate-180" />
+                                        </summary>
+                                        <div className="grid gap-1 border-t border-foreground/10 p-2">
+                                            {items.map(([label, href]) => (
+                                                <Link key={href} href={href} onClick={closeMenu} className={linkClass(pathname === href)}>{label}</Link>
+                                            ))}
+                                        </div>
+                                    </details>
                                 );
                             })}
                         </nav>
+
                         <form action={signOutAction} className="mt-3 border-t border-foreground/10 pt-3">
                             <button className="w-full rounded-xl px-3 py-3 text-left text-sm text-red-500/80 transition hover:bg-red-500/10 hover:text-red-500">Sign out</button>
                         </form>
