@@ -7,6 +7,7 @@ import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 import { defaultGeneralSiteSettings, normalizeGeneralSiteSettings } from '@/lib/site-settings';
 
 import '@/styles/globals.css';
+import '@/styles/mobile-polish.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jetbrains', display: 'swap' });
