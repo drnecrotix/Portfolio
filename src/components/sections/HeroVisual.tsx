@@ -47,7 +47,7 @@ export function HeroVisual({
   }, [isExiting]);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative flex min-h-0 w-full flex-col overflow-hidden bg-background text-foreground selection:bg-primary/20 md:min-h-screen">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-background text-foreground selection:bg-primary/20 md:min-h-screen">
       <div className="absolute h-full w-full z-0 bg-[radial-gradient(circle,_#888_0.5px,_transparent_0.5px)] opacity-20 [background-size:24px_24px] dark:bg-[radial-gradient(circle,_#444_0.5px,_transparent_0.5px)]" />
 
       <div className="pointer-events-none absolute inset-0 z-[5] overflow-hidden">
@@ -57,7 +57,7 @@ export function HeroVisual({
           gradientThird="radial-gradient(50% 50% at 50% 50%, hsla(0, 0%, 100%, .08) 0, hsla(0, 0%, 100%, 0) 80%, transparent 100%)" />
       </div>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-[105rem] flex-none flex-col justify-center pb-8 pt-24 sm:pb-10 sm:pt-28 md:flex-1 md:pb-20 md:pt-40">
+      <main className="relative z-10 mx-auto flex w-full max-w-[105rem] flex-1 flex-col justify-center pb-8 pt-24 sm:pb-10 sm:pt-28 md:pb-20 md:pt-40">
         <div className="relative flex w-full flex-col justify-center gap-3 px-5 sm:px-6 md:gap-4 md:items-center">
           <AnimatePresence>
             {tooltip.show && (
@@ -88,8 +88,10 @@ export function HeroVisual({
           <div className="relative flex items-center gap-8">
             <div className="relative min-w-0">
               {identity.linkedinUrl && (
-                <div ref={linkedinRef} className="absolute -top-8 left-4 z-20 hidden text-primary/60 opacity-0 hover:text-primary md:block">
-                  <a href={identity.linkedinUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="LinkedIn"><Linkedin size={32} /></a>
+                <div ref={linkedinRef} className="absolute -top-7 left-3 z-20 text-primary/60 opacity-0 hover:text-primary md:-top-8 md:left-4">
+                  <a href={identity.linkedinUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="LinkedIn">
+                    <Linkedin className="h-6 w-6 md:h-8 md:w-8" />
+                  </a>
                 </div>
               )}
               {identity.instagramUrl && (
@@ -99,11 +101,6 @@ export function HeroVisual({
               )}
               <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, delay: 0.1, ease: [0.16, 1, 0.3, 1] }} className="flex min-w-0 flex-wrap items-center px-0 text-[clamp(2.7rem,13vw,5.1rem)] font-black leading-[0.85] tracking-tighter text-shiny will-change-transform md:px-4 md:text-[clamp(3rem,11vw,13rem)]">
                 <span>{content.lineTwoPrefix}</span>
-                {identity.linkedinUrl && (
-                  <a href={identity.linkedinUrl} target="_blank" rel="noopener noreferrer" className="mx-[0.06em] inline-flex shrink-0 items-center justify-center text-primary/65 transition hover:text-primary md:hidden" aria-label="LinkedIn">
-                    <Linkedin className="h-[0.58em] w-[0.58em]" strokeWidth={1.8} />
-                  </a>
-                )}
                 <div ref={zapRef} className="group relative mx-[0.05em] hidden cursor-pointer lg:block" onClick={() => window.open(content.workspaceUrl, '_blank')} onMouseEnter={(e) => setTooltip({ show: true, text: content.workspaceTooltip, icon: 'zap', x: e.clientX, y: e.clientY })} onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))} onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}>
                   <Zap className="h-[0.8em] w-[0.8em] text-sky-400 transition-colors group-hover:text-sky-300" strokeWidth={1.5} />
                 </div>
