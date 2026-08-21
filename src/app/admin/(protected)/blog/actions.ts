@@ -77,7 +77,7 @@ export async function createPost(form: FormData) {
     const post = await prisma.post.create({ data: await fields(form) });
     revalidatePath('/blog');
     revalidatePath('/admin/blog');
-    redirect(`/admin/blog/${post.id}`);
+    return { ok: true as const, id: post.id, created: true as const, savedAt: new Date().toISOString() };
 }
 
 export async function updatePost(id: string, form: FormData) {
@@ -101,9 +101,11 @@ export async function updatePost(id: string, form: FormData) {
     });
 
     revalidatePath('/blog');
+    revalidatePath('/admin/blog');
     revalidatePath(`/blog/${current.slug}`);
     if (current.slug !== nextFields.slug) revalidatePath(`/blog/${nextFields.slug}`);
-    revalidatePath(`/admin/blog/${id}`);
+
+    return { ok: true as const, id, created: false as const, savedAt: new Date().toISOString() };
 }
 
 export async function deletePost(id: string) {
