@@ -49,111 +49,111 @@ export function HeroVisual({
   }, [isExiting]);
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative min-h-screen w-full flex flex-col bg-background text-foreground overflow-hidden selection:bg-primary/20">
-      <div className="w-full absolute h-full z-0 bg-[radial-gradient(circle,_#888_0.5px,_transparent_0.5px)] dark:bg-[radial-gradient(circle,_#444_0.5px,_transparent_0.5px)] opacity-20 [background-size:24px_24px]" />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative flex min-h-screen w-full flex-col overflow-hidden bg-background text-foreground selection:bg-primary/20">
+      <div className="absolute h-full w-full z-0 bg-[radial-gradient(circle,_#888_0.5px,_transparent_0.5px)] opacity-20 [background-size:24px_24px] dark:bg-[radial-gradient(circle,_#444_0.5px,_transparent_0.5px)]" />
 
-      <div className="absolute inset-0 z-[5] pointer-events-none overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 z-[5] overflow-hidden">
         <Spotlight duration={10} xOffset={120} translateY={-300}
           gradientFirst="radial-gradient(68.54% 68.72% at 55.02% 31.46%, hsla(0, 0%, 100%, .15) 0, hsla(0, 0%, 100%, .05) 50%, transparent 80%)"
           gradientSecond="radial-gradient(50% 50% at 50% 50%, hsla(0, 0%, 100%, .1) 0, hsla(0, 0%, 100%, .02) 80%, transparent 100%)"
           gradientThird="radial-gradient(50% 50% at 50% 50%, hsla(0, 0%, 100%, .08) 0, hsla(0, 0%, 100%, 0) 80%, transparent 100%)" />
       </div>
 
-      <main className="relative flex-1 flex flex-col justify-center pt-40 pb-20 z-10 max-w-[105rem] w-full mx-auto">
-        <div className="flex relative gap-4 px-6 md:items-center w-full flex-col justify-center">
+      <main className="relative z-10 mx-auto flex w-full max-w-[105rem] flex-1 flex-col justify-center pb-14 pt-28 sm:pb-16 sm:pt-32 md:pb-20 md:pt-40">
+        <div className="relative flex w-full flex-col justify-center gap-3 px-5 sm:px-6 md:gap-4 md:items-center">
           <AnimatePresence>
             {tooltip.show && (
-              <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ type: "spring", damping: 20, stiffness: 300 }} className="fixed pointer-events-none z-[100] flex items-center gap-2 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold px-4 py-2.5 rounded-full shadow-2xl" style={{ left: tooltip.x, top: tooltip.y, x: "-50%", y: "-150%" }}>
-                {tooltip.icon === 'zap' && <ExternalLink className="w-4 h-4" />}
-                {tooltip.icon === 'bot' && <MessageSquare className="w-4 h-4" />}
+              <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ type: "spring", damping: 20, stiffness: 300 }} className="pointer-events-none fixed z-[100] flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 font-bold text-white shadow-2xl dark:bg-white dark:text-black" style={{ left: tooltip.x, top: tooltip.y, x: "-50%", y: "-150%" }}>
+                {tooltip.icon === 'zap' && <ExternalLink className="h-4 w-4" />}
+                {tooltip.icon === 'bot' && <MessageSquare className="h-4 w-4" />}
                 <span className="text-sm">{tooltip.text}</span>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="md:flex gap-8 items-center relative">
-            <motion.p initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.2 }} className="text-[10px] md:text-xs text-muted-foreground text-start md:text-right leading-relaxed max-w-[200px] md:max-w-[220px] font-medium uppercase tracking-[0.2em]">
+          <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:gap-8">
+            <motion.p initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.2 }} className="max-w-[20rem] text-start text-[10px] font-medium uppercase leading-relaxed tracking-[0.2em] text-muted-foreground md:max-w-[220px] md:text-right md:text-xs">
               {content.intro}
             </motion.p>
-            <div className="relative">
+            <div className="relative min-w-0">
               {identity.githubUrl && (
-                <div ref={githubRef} className="absolute -top-4 right-0 md:right-2 text-primary/60 hover:text-primary z-20 opacity-0">
+                <div ref={githubRef} className="absolute -top-3 right-0 z-20 text-primary/60 opacity-0 hover:text-primary md:-top-4 md:right-2">
                   <a href={identity.githubUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="GitHub"><Github size={32} /></a>
                 </div>
               )}
-              <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }} className="text-[clamp(3rem,11vw,13rem)] font-black leading-[0.85] tracking-tighter text-shiny will-change-transform px-4">
+              <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }} className="whitespace-nowrap px-0 text-[clamp(2.7rem,13vw,5.1rem)] font-black leading-[0.85] tracking-tighter text-shiny will-change-transform md:px-4 md:text-[clamp(3rem,11vw,13rem)]">
                 {content.lineOne}
               </motion.h1>
             </div>
           </div>
 
-          <div className="md:flex gap-8 items-center relative">
-            <div className="relative">
+          <div className="relative flex items-center gap-8">
+            <div className="relative min-w-0">
               {identity.linkedinUrl && (
-                <div ref={linkedinRef} className="absolute -top-8 left-4 text-primary/60 hover:text-primary z-20 opacity-0">
+                <div ref={linkedinRef} className="absolute -top-6 left-0 z-20 text-primary/60 opacity-0 hover:text-primary md:-top-8 md:left-4">
                   <a href={identity.linkedinUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="LinkedIn"><Linkedin size={32} /></a>
                 </div>
               )}
               {identity.instagramUrl && (
-                <div ref={instagramRef} className="absolute -bottom-12 right-24 md:right-36 text-primary/60 hover:text-primary z-20 opacity-0">
+                <div ref={instagramRef} className="absolute -bottom-9 right-3 z-20 text-primary/60 opacity-0 hover:text-primary md:-bottom-12 md:right-36">
                   <a href={identity.instagramUrl} target="_blank" rel="noopener noreferrer" className="block" aria-label="Instagram"><Instagram size={32} /></a>
                 </div>
               )}
-              <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, delay: 0.1, ease: [0.16, 1, 0.3, 1] }} className="text-[clamp(3rem,11vw,13rem)] md:flex items-center font-black leading-[0.85] tracking-tighter text-shiny will-change-transform px-4">
+              <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, delay: 0.1, ease: [0.16, 1, 0.3, 1] }} className="flex min-w-0 flex-wrap items-center px-0 text-[clamp(2.7rem,13vw,5.1rem)] font-black leading-[0.85] tracking-tighter text-shiny will-change-transform md:px-4 md:text-[clamp(3rem,11vw,13rem)]">
                 <span>{content.lineTwoPrefix}</span>
-                <div ref={zapRef} className="hidden lg:block mx-[0.05em] relative cursor-pointer group" onClick={() => window.open(content.workspaceUrl, '_blank')} onMouseEnter={(e) => setTooltip({ show: true, text: content.workspaceTooltip, icon: 'zap', x: e.clientX, y: e.clientY })} onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))} onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}>
-                  <Zap className="w-[0.8em] h-[0.8em] text-sky-400 group-hover:text-sky-300 transition-colors" strokeWidth={1.5} />
+                <div ref={zapRef} className="group relative mx-[0.05em] hidden cursor-pointer lg:block" onClick={() => window.open(content.workspaceUrl, '_blank')} onMouseEnter={(e) => setTooltip({ show: true, text: content.workspaceTooltip, icon: 'zap', x: e.clientX, y: e.clientY })} onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))} onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}>
+                  <Zap className="h-[0.8em] w-[0.8em] text-sky-400 transition-colors group-hover:text-sky-300" strokeWidth={1.5} />
                 </div>
-                <div ref={zapSmallRef} className="block lg:hidden mx-[0.02em] relative cursor-pointer group" onClick={() => window.open(content.workspaceUrl, '_blank')} onMouseEnter={(e) => setTooltip({ show: true, text: content.workspaceTooltip, icon: 'zap', x: e.clientX, y: e.clientY })} onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))} onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}>
-                  <Zap className="w-[0.8em] h-[0.8em] text-sky-400 group-hover:text-sky-300 transition-colors" strokeWidth={2} />
+                <div ref={zapSmallRef} className="group relative mx-[0.02em] block cursor-pointer lg:hidden" onClick={() => window.open(content.workspaceUrl, '_blank')} onMouseEnter={(e) => setTooltip({ show: true, text: content.workspaceTooltip, icon: 'zap', x: e.clientX, y: e.clientY })} onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))} onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}>
+                  <Zap className="h-[0.8em] w-[0.8em] text-sky-400 transition-colors group-hover:text-sky-300" strokeWidth={2} />
                 </div>
-                <span>{content.lineTwoSuffix}</span>
+                <span className="min-w-0">{content.lineTwoSuffix}</span>
               </motion.h1>
             </div>
           </div>
 
-          <div className="md:flex gap-8 items-center relative">
-            <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }} className="text-[clamp(3rem,11vw,13rem)] md:flex items-center font-black leading-[0.85] tracking-tighter text-shiny will-change-transform px-4">
+          <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:gap-8">
+            <motion.h1 initial={{ opacity: 0, y: 30 }} animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }} transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }} className="flex min-w-0 flex-wrap items-center px-0 text-[clamp(2.7rem,13vw,5.1rem)] font-black leading-[0.85] tracking-tighter text-shiny will-change-transform md:px-4 md:text-[clamp(3rem,11vw,13rem)]">
               <span>{content.lineThreePrefix}</span>
-              <div ref={botRef} className="mx-[0.05em] relative cursor-pointer group" onClick={(e) => {
+              <div ref={botRef} className="group relative mx-[0.05em] cursor-pointer" onClick={(e) => {
                 const rect = e.currentTarget.getBoundingClientRect();
                 window.dispatchEvent(new CustomEvent('portfolio:toggle-chatbot', { detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } }));
               }} onMouseEnter={(e) => setTooltip({ show: true, text: content.assistantTooltip, icon: 'bot', x: e.clientX, y: e.clientY })} onMouseMove={(e) => setTooltip(prev => ({ ...prev, x: e.clientX, y: e.clientY }))} onMouseLeave={() => setTooltip(prev => ({ ...prev, show: false }))}>
-                <Bot className="w-[0.85em] h-[0.85em] text-yellow-500 fill-yellow-500/10 group-hover:text-yellow-400 group-hover:fill-yellow-400/20 transition-colors" />
+                <Bot className="h-[0.85em] w-[0.85em] fill-yellow-500/10 text-yellow-500 transition-colors group-hover:fill-yellow-400/20 group-hover:text-yellow-400" />
               </div>
-              <span>{content.lineThreeSuffix}</span>
+              <span className="min-w-0">{content.lineThreeSuffix}</span>
             </motion.h1>
 
-            <motion.p initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="text-[10px] md:text-xs text-muted-foreground pt-4 md:pt-8 leading-relaxed max-w-[250px] md:max-w-[200px] font-medium uppercase tracking-widest">
+            <motion.p initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="max-w-[20rem] pt-2 text-[10px] font-medium uppercase leading-relaxed tracking-widest text-muted-foreground md:max-w-[200px] md:pt-8 md:text-xs">
               {content.collaboration}
             </motion.p>
           </div>
         </div>
 
-        <div className="mx-auto max-w-[105rem] w-full px-8 md:px-20 mt-12 md:mt-24">
-          <div className="flex items-center gap-6">
-            <Separator className="flex-1 h-[1px] bg-foreground/10 hidden md:block" />
-            <div className="text-[10px] md:text-xs whitespace-nowrap font-bold tracking-[0.3em] text-muted-foreground uppercase">{content.locationLabel} — {content.yearLabel}</div>
-            <Link href={content.resumeHref} className="group flex items-center">
-              <motion.div className="relative flex items-center bg-zinc-100 dark:bg-white h-12 w-12 group-hover:w-44 rounded-full transition-all duration-500 ease-[0.23,1,0.32,1] overflow-hidden shadow-xl">
-                <span className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 group-hover:delay-150 text-[10px] font-black uppercase tracking-widest text-zinc-900 dark:text-black pl-6 pr-12">{content.resumeLabel}</span>
-                <div className="absolute right-0 flex items-center justify-center size-12 text-zinc-900 dark:text-black group-hover:rotate-45 transition-transform duration-500"><ArrowDownRight className="w-5 h-5" /></div>
+        <div className="mx-auto mt-10 w-full max-w-[105rem] px-5 sm:px-8 md:mt-24 md:px-20">
+          <div className="flex items-center justify-between gap-4 md:justify-start md:gap-6">
+            <Separator className="hidden h-[1px] flex-1 bg-foreground/10 md:block" />
+            <div className="min-w-0 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground sm:whitespace-nowrap md:text-xs md:tracking-[0.3em]">{content.locationLabel} — {content.yearLabel}</div>
+            <Link href={content.resumeHref} className="group flex shrink-0 items-center">
+              <motion.div className="relative flex h-12 w-12 items-center overflow-hidden rounded-full bg-zinc-100 shadow-xl transition-all duration-500 ease-[0.23,1,0.32,1] dark:bg-white md:group-hover:w-44">
+                <span className="whitespace-nowrap pl-6 pr-12 text-[10px] font-black uppercase tracking-widest text-zinc-900 opacity-0 transition-opacity duration-200 dark:text-black md:group-hover:opacity-100 md:group-hover:delay-150">{content.resumeLabel}</span>
+                <div className="absolute right-0 flex size-12 items-center justify-center text-zinc-900 transition-transform duration-500 group-hover:rotate-45 dark:text-black"><ArrowDownRight className="h-5 w-5" /></div>
               </motion.div>
             </Link>
           </div>
         </div>
       </main>
 
-      <div className="absolute left-0 top-1/2 z-50 hidden md:flex items-center transform -translate-y-1/2 group/container" onMouseEnter={() => setShowProfile(true)} onMouseLeave={() => setShowProfile(false)}>
+      <div className="group/container absolute left-0 top-1/2 z-50 hidden -translate-y-1/2 transform items-center md:flex" onMouseEnter={() => setShowProfile(true)} onMouseLeave={() => setShowProfile(false)}>
         <div className="relative z-50">
-          <motion.div whileHover={{ x: 10 }} className="bg-white text-black py-10 px-4 text-[10px] font-black uppercase tracking-[0.5em] shadow-2xl rounded-r-3xl border-r border-y border-zinc-200 cursor-pointer">
+          <motion.div whileHover={{ x: 10 }} className="cursor-pointer rounded-r-3xl border-r border-y border-zinc-200 bg-white px-4 py-10 text-[10px] font-black uppercase tracking-[0.5em] text-black shadow-2xl">
             <span className="rotate-0 [writing-mode:vertical-rl]">{content.availabilityLabel}</span>
           </motion.div>
         </div>
 
         <AnimatePresence>
           {showProfile && (
-            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="pl-4 pointer-events-auto" style={{ width: 'max-content' }}>
+            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="pointer-events-auto pl-4" style={{ width: 'max-content' }}>
               <ProfileCard
                 name={identity.name}
                 title={content.profileTitle}
@@ -162,7 +162,7 @@ export function HeroVisual({
                 githubUrl={identity.githubUrl || '#'}
                 linkedinUrl={identity.linkedinUrl || '#'}
                 instagramUrl={identity.instagramUrl || '#'}
-                className="!max-w-4xl scale-[0.8] origin-left"
+                className="!max-w-4xl origin-left scale-[0.8]"
               />
             </motion.div>
           )}
