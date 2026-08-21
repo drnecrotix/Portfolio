@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { CornerUpLeft, MessageSquare, RefreshCw, Send, ShieldCheck, X } from 'lucide-react';
 
 export type PublicBlogComment = {
@@ -38,11 +38,6 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
         catch (challengeError) { setError(challengeError instanceof Error ? challengeError.message : 'Unable to load bot check.'); }
         finally { setLoadingChallenge(false); }
     };
-
-    useEffect(() => {
-        if (!composerOpen || challenge || loadingChallenge) return;
-        void loadChallenge();
-    }, [composerOpen, challenge, loadingChallenge]);
 
     const closeComposer = () => {
         setComposerOpen(false);
@@ -85,6 +80,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
         } catch (submitError) {
             setError(submitError instanceof Error ? submitError.message : 'Unable to post comment.');
             setChallenge(null);
+            await loadChallenge();
         } finally {
             setSubmitting(false);
         }
@@ -98,6 +94,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
         setMessage('');
         setError('');
         setComposerOpen(true);
+        if (!challenge && !loadingChallenge) void loadChallenge();
         window.requestAnimationFrame(() => document.getElementById('comment-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     };
 
@@ -106,6 +103,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
         setMessage('');
         setError('');
         setComposerOpen(true);
+        if (!challenge && !loadingChallenge) void loadChallenge();
         window.requestAnimationFrame(() => document.getElementById('comment-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     };
 
