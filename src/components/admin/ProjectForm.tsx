@@ -11,6 +11,12 @@ import type { ProjectSaveResult } from '@/app/admin/(protected)/projects/actions
 const field = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/[0.05]';
 const selectField = `${field} [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white`;
 const panel = 'rounded-2xl border border-white/10 bg-white/[0.02] p-6';
+const projectShortcodes = [
+    { label: 'Mission Brief', value: '[[mission]]' },
+    { label: 'Features', value: '[[features]]' },
+    { label: 'Engineering Chronicles', value: '[[chronicles]]' },
+    { label: 'Installation', value: '[[installation]]' },
+];
 
 type ProjectSaveAction = (formData: FormData) => Promise<ProjectSaveResult>;
 
@@ -83,8 +89,11 @@ export function ProjectForm({
             </section>
 
             <section className={panel}>
-                <div className="mb-3"><p className="text-sm font-medium text-white/70">Long description</p><p className="mt-1 text-xs text-white/35">Rich-text editor with headings, lists, quotes, code, links and formatting.</p></div>
-                <PostEditor name="longDescription" initialValue={project?.longDescription ?? ''} />
+                <div className="mb-4">
+                    <p className="text-sm font-medium text-white/70">Long description</p>
+                    <p className="mt-1 text-xs leading-relaxed text-white/35">Write a clean rich-text description. Use <strong className="text-white/55">Insert project block…</strong> only where you want Mission, Features, Chronicles or Installation to appear. Blocks are no longer added automatically.</p>
+                </div>
+                <PostEditor name="longDescription" initialValue={project?.longDescription ?? ''} shortcodes={projectShortcodes} />
             </section>
 
             <section className={panel}>
@@ -111,7 +120,7 @@ export function ProjectForm({
             <section className={`grid gap-5 md:grid-cols-2 ${panel}`}>
                 <label className="block"><span className="text-sm text-white/55">SEO title</span><input className={field} name="seoTitle" defaultValue={project?.seoTitle ?? ''} /></label>
                 <label className="block"><span className="text-sm text-white/55">SEO description</span><textarea className={field} name="seoDescription" rows={3} defaultValue={project?.seoDescription ?? ''} /></label>
-                <label className="block md:col-span-2"><span className="text-sm text-white/55">Advanced content JSON</span><p className="mt-1 text-xs text-white/30">Optional keys: galleryImages, features, installation, challengesAndSolutions. The cover image is managed above.</p><textarea className={`${field} font-mono`} name="content" rows={16} defaultValue={content} /></label>
+                <label className="block md:col-span-2"><span className="text-sm text-white/55">Advanced content JSON</span><p className="mt-1 text-xs text-white/30">Optional data sources for project blocks: galleryImages, features, installation, challengesAndSolutions. A block renders only when its shortcode is placed in Long description.</p><textarea className={`${field} font-mono`} name="content" rows={16} defaultValue={content} /></label>
             </section>
 
             <div className="sticky bottom-4 z-20 flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-[#101010]/95 p-4 shadow-2xl backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
