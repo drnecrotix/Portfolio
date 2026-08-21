@@ -92,10 +92,10 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
     };
 
     return (
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2 overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm text-white/60">{label}</span>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {selected && (
                         <button type="button" onClick={clear} className="rounded-lg border border-red-500/20 px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10">
                             Clear selection
@@ -108,21 +108,21 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
             </div>
             {inputName && <input type="hidden" name={inputName} value={selected} />}
             {selected && (
-                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                <div className="flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={selected} alt="Selected media preview" className="h-14 w-20 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
-                    <input readOnly value={selected} className="min-w-0 flex-1 bg-transparent text-xs text-white/60 outline-none" />
+                    <img src={selected} alt="Selected media preview" className="h-14 w-20 shrink-0 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                    <span className="min-w-0 flex-1 truncate text-xs text-white/60" title={selected}>{selected}</span>
                 </div>
             )}
             {open && (
-                <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-4 shadow-2xl">
-                    <div className="mb-4 flex gap-2 border-b border-white/10 pb-3">
+                <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d0d] p-4 shadow-2xl">
+                    <div className="mb-4 flex flex-wrap gap-2 border-b border-white/10 pb-3">
                         <button type="button" onClick={() => setTab('library')} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${tab === 'library' ? 'bg-white text-black' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'}`}>Media Library</button>
                         <button type="button" onClick={() => setTab('upload')} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${tab === 'upload' ? 'bg-white text-black' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'}`}>Upload files</button>
                     </div>
 
                     {tab === 'upload' ? (
-                        <div className="py-4">
+                        <div className="min-w-0 py-4">
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -132,18 +132,18 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                     const file = event.target.files?.[0];
                                     if (file) void uploadFile(file);
                                 }}
-                                className="block w-full cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30"
+                                className="block w-full min-w-0 cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30"
                             />
                             <p className="mt-3 text-[11px] leading-relaxed text-white/30">Upload directly to the shared Media Library. Maximum file size: 10 MB.</p>
-                            {uploading && <p className="mt-3 text-xs text-sky-300">Uploading and adding to library…</p>}
-                            {uploadError && <p className="mt-3 text-xs text-red-300">{uploadError}</p>}
+                            {uploading && <p className="mt-3 break-words text-xs text-sky-300">Uploading and adding to library…</p>}
+                            {uploadError && <p className="mt-3 max-w-full break-words text-xs text-red-300">{uploadError}</p>}
                         </div>
                     ) : (
                         <>
-                            <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+                            <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row">
                                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search media..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
                                 {!lockKind && (
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         {(['all', 'image', 'file'] as const).map((value) => (
                                             <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${kind === value ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55 hover:bg-white/[0.05]'}`}>
                                                 {value}
@@ -152,17 +152,17 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                     </div>
                                 )}
                             </div>
-                            {uploadMessage && <p className="mb-3 text-xs text-emerald-300">{uploadMessage}</p>}
-                            <div className="grid max-h-80 grid-cols-2 gap-3 overflow-y-auto md:grid-cols-3">
+                            {uploadMessage && <p className="mb-3 max-w-full break-all text-xs leading-relaxed text-emerald-300">{uploadMessage}</p>}
+                            <div className="grid max-h-80 min-w-0 grid-cols-2 gap-3 overflow-y-auto md:grid-cols-3">
                                 {filtered.map((asset) => (
-                                    <button key={asset.id} type="button" onClick={() => choose(asset.url)} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] text-left hover:border-white/30">
+                                    <button key={asset.id} type="button" onClick={() => choose(asset.url)} className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] text-left hover:border-white/30">
                                         {asset.mimeType.startsWith('image/') ? (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={asset.url} alt={asset.altText || asset.fileName} className="aspect-video w-full object-cover" />
                                         ) : (
                                             <div className="flex aspect-video items-center justify-center text-xs text-white/35">FILE</div>
                                         )}
-                                        <div className="truncate px-3 pt-2 text-xs text-white/70">{asset.fileName}</div>
+                                        <div className="truncate px-3 pt-2 text-xs text-white/70" title={asset.fileName}>{asset.fileName}</div>
                                         <div className="truncate px-3 pb-2 pt-1 font-mono text-[10px] text-white/30">{asset.mimeType}</div>
                                     </button>
                                 ))}
