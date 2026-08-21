@@ -22,27 +22,19 @@ export function ConditionalNavigation({ children }: { children: React.ReactNode 
     const shellClassName = !useShell
         ? 'contents'
         : isHome
-            ? 'relative flex h-[100svh] max-h-[100svh] flex-col overflow-hidden'
+            ? 'relative flex min-h-[100svh] flex-col overflow-x-hidden'
             : 'relative flex min-h-screen flex-col';
     const contentClassName = !useShell
         ? 'contents'
         : isHome
-            ? 'relative min-h-0 flex-1 overflow-hidden'
+            ? 'relative flex min-h-0 flex-1 flex-col'
             : 'relative flex-1';
 
     return (
         <div className={shellClassName}>
             {showNavbar && <Navbar />}
             <div className={contentClassName}>{children}</div>
-
-            {showFooter && isHome ? (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 overflow-hidden [&_footer]:pointer-events-auto [&_footer>div]:px-4 [&_footer>div]:py-3 sm:[&_footer>div]:px-6 sm:[&_footer>div]:py-4 [&_footer>div>div]:px-3 [&_footer>div>div]:py-3 sm:[&_footer>div>div]:px-5">
-                    <Footer />
-                </div>
-            ) : showFooter ? (
-                <Footer />
-            ) : null}
-
+            {showFooter && <Footer />}
             {showBackToTop && <BackToTop />}
         </div>
     );
