@@ -15,10 +15,17 @@ type Challenge = {
     token: string;
 };
 
+async function fetchChallenge() {
+    const response = await fetch('/api/blog/comments/challenge', { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Unable to load bot check.');
+    return data as Challenge;
+}
+
 export function BlogComments({ postId, initialComments }: { postId: string; initialComments: PublicBlogComment[] }) {
     const [comments, setComments] = useState(initialComments);
     const [challenge, setChallenge] = useState<Challenge | null>(null);
-    const [loadingChallenge, setLoadingChallenge] = useState(false);
+    const [loadingChallenge, setLoadingChallenge] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
@@ -27,10 +34,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
         setLoadingChallenge(true);
         setError('');
         try {
-            const response = await fetch('/api/blog/comments/challenge', { cache: 'no-store' });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Unable to load bot check.');
-            setChallenge(data as Challenge);
+            setChallenge(await fetchChallenge());
         } catch (challengeError) {
             setError(challengeError instanceof Error ? challengeError.message : 'Unable to load bot check.');
         } finally {
@@ -39,7 +43,20 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
     };
 
     useEffect(() => {
-        void loadChallenge();
+        let active = true;
+        fetchChallenge()
+            .then((data) => {
+                if (active) setChallenge(data);
+            })
+            .catch((challengeError) => {
+                if (active) setError(challengeError instanceof Error ? challengeError.message : 'Unable to load bot check.');
+            })
+            .finally(() => {
+                if (active) setLoadingChallenge(false);
+            });
+        return () => {
+            active = false;
+        };
     }, []);
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
