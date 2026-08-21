@@ -1,18 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { usePathname } from 'next/navigation';
 import { Navbar, Footer } from '@/components/layout';
 import { BackToTop } from '@/components/ui/BackToTop';
 
 export function ConditionalNavigation({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
     const segments = pathname?.split('/').filter(Boolean) || [];
     const isAdmin = segments[0] === 'admin';
     const projectsIndex = segments.indexOf('projects');
@@ -20,10 +14,6 @@ export function ConditionalNavigation({ children }: { children: React.ReactNode 
     const blogIndex = segments.indexOf('blog');
     const isBlogDetail = blogIndex !== -1 && segments.length > blogIndex + 1;
     const useFullLayout = !isAdmin && !(isProjectDetail || isBlogDetail);
-
-    if (!mounted) {
-        return <>{children}</>;
-    }
 
     return (
         <div className={useFullLayout ? 'relative flex min-h-screen flex-col' : 'contents'}>
