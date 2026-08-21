@@ -27,7 +27,7 @@ export function AdminMobileNavigation({
     };
 
     useEffect(() => {
-        closeMenu();
+        detailsRef.current?.removeAttribute('open');
     }, [pathname]);
 
     return (
