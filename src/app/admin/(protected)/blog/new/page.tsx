@@ -24,9 +24,7 @@ export default async function NewBlogPostPage() {
             {postTypes.length === 0 ? (
                 <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.05] p-6 text-sm text-amber-200">Create at least one active post type before writing a post.</div>
             ) : (
-                <form action={createPost}>
-                    <BlogPostForm postTypes={postTypes} categories={categories} submitLabel="Create post" />
-                </form>
+                <BlogPostForm action={createPost} postTypes={postTypes} categories={categories} submitLabel="Create post" />
             )}
         </div>
     );

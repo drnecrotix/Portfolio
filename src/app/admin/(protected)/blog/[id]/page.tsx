@@ -40,9 +40,7 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
                 </div>
             </div>
 
-            <form action={updatePost.bind(null, post.id)}>
-                <BlogPostForm value={{ ...post, content }} postTypes={availableTypes} categories={availableCategories} submitLabel="Update post" />
-            </form>
+            <BlogPostForm action={updatePost.bind(null, post.id)} value={{ ...post, content }} postTypes={availableTypes} categories={availableCategories} submitLabel="Update post" />
 
             <section className="mt-12 border-t border-white/10 pt-8">
                 <h3 className="text-lg font-semibold">Recent revisions</h3>

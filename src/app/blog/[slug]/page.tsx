@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { PostBody } from '@/components/blog/PostBody';
+import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,41 +45,61 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    const cmsPost = await prisma.post.findUnique({
-        where: { slug },
-        include: {
-            postType: { select: { name: true } },
-            categoryRef: { select: { name: true } },
-        },
-    });
+    const now = new Date();
+    const [cmsPost, related] = await prisma.$transaction([
+        prisma.post.findUnique({
+            where: { slug },
+            include: {
+                postType: { select: { name: true } },
+                categoryRef: { select: { name: true } },
+            },
+        }),
+        prisma.post.findMany({
+            where: {
+                slug: { not: slug },
+                status: 'PUBLISHED',
+                OR: [{ publishedAt: null }, { publishedAt: { lte: now } }],
+            },
+            include: {
+                categoryRef: { select: { name: true } },
+            },
+            orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+            take: 2,
+        }),
+    ]);
 
     if (!cmsPost || !isPublicPost(cmsPost)) notFound();
 
     const content = (cmsPost.content ?? {}) as PostContent;
     const typeLabel = cmsPost.postType?.name ?? cmsPost.type.replaceAll('_', ' ');
     const categoryLabel = cmsPost.categoryRef?.name ?? cmsPost.category ?? 'Publication';
+    const publishedAt = (cmsPost.publishedAt ?? cmsPost.createdAt).toISOString();
+    const relatedPosts: RelatedBlogPost[] = related.map((post) => {
+        const relatedContent = (post.content ?? {}) as PostContent;
+        return {
+            slug: post.slug,
+            title: post.title,
+            excerpt: post.excerpt,
+            image: relatedContent.featuredImage || null,
+            category: post.categoryRef?.name ?? post.category ?? 'Publication',
+            author: post.authorName,
+            date: (post.publishedAt ?? post.createdAt).toISOString(),
+        };
+    });
 
     return (
-        <main className="min-h-screen bg-background text-foreground pb-24 pt-32">
-            <article className="mx-auto w-full max-w-5xl px-6 md:px-12">
-                <Link href="/blog" className="text-sm text-muted-foreground transition-colors hover:text-foreground">Back to archive</Link>
-                <header className="mt-10 border-b border-foreground/10 pb-10">
-                    <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{typeLabel} - {categoryLabel}</div>
-                    <h1 className="mt-5 text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl">{cmsPost.title}</h1>
-                    {cmsPost.excerpt && <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">{cmsPost.excerpt}</p>}
-                    <div className="mt-8 flex flex-wrap gap-6 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                        <span>{cmsPost.authorName}</span>
-                        <time dateTime={(cmsPost.publishedAt ?? cmsPost.createdAt).toISOString()}>{(cmsPost.publishedAt ?? cmsPost.createdAt).toLocaleDateString()}</time>
-                    </div>
-                </header>
-                {content.featuredImage && (
-                    <div className="mt-10 overflow-hidden rounded-2xl border border-foreground/10">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={content.featuredImage} alt={cmsPost.title} className="max-h-[38rem] w-full object-cover" />
-                    </div>
-                )}
-                <div className="pt-12"><PostBody type={cmsPost.type} content={content} /></div>
-            </article>
-        </main>
+        <BlogArticleFrame
+            title={cmsPost.title}
+            excerpt={cmsPost.excerpt}
+            featuredImage={content.featuredImage || null}
+            typeLabel={typeLabel}
+            categoryLabel={categoryLabel}
+            author={cmsPost.authorName}
+            publishedAt={publishedAt}
+            tags={cmsPost.tags}
+            relatedPosts={relatedPosts}
+        >
+            <PostBody type={cmsPost.type} content={content} />
+        </BlogArticleFrame>
     );
 }
