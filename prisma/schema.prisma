@@ -105,9 +105,24 @@ model Post {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   revisions      Revision[]
+  comments       BlogComment[]
 
   @@index([postTypeId])
   @@index([categoryId])
+}
+
+model BlogComment {
+  id          String   @id @default(cuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorName  String
+  authorEmail String?
+  content     String   @db.Text
+  status      String   @default("APPROVED")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([postId, status, createdAt])
 }
 
 model BlogPostType {
@@ -142,7 +157,7 @@ model Page {
   status          ContentStatus @default(DRAFT)
   content         Json
   seoTitle        String?
-  seoDescription  String?
+  seoDescription String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   revisions       Revision[]
