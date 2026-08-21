@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Separator } from "@/components/ui/separator";
-import { Github, Linkedin, Instagram, ArrowDownRight, Bot, Zap, ExternalLink, MessageSquare } from 'lucide-react';
-import Link from 'next/link';
+import { Github, Linkedin, Instagram, Bot, Zap, ExternalLink, MessageSquare } from 'lucide-react';
 import gsap from "gsap";
 import { ProfileCard } from "@/components/ui/profile-card";
 import { Spotlight } from "@/components/ui/spotlight-new";
@@ -127,19 +125,6 @@ export function HeroVisual({
             <motion.p initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="max-w-[20rem] pt-2 text-[10px] font-medium uppercase leading-relaxed tracking-widest text-muted-foreground md:max-w-[200px] md:pt-8 md:text-xs">
               {content.collaboration}
             </motion.p>
-          </div>
-        </div>
-
-        <div className="mx-auto mt-10 w-full max-w-[105rem] px-5 sm:px-8 md:mt-24 md:px-20">
-          <div className="flex items-center justify-between gap-4 md:justify-start md:gap-6">
-            <Separator className="hidden h-[1px] flex-1 bg-foreground/10 md:block" />
-            <div className="min-w-0 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground sm:whitespace-nowrap md:text-xs md:tracking-[0.3em]">{content.locationLabel} — {content.yearLabel}</div>
-            <Link href={content.resumeHref} className="group flex shrink-0 items-center">
-              <motion.div className="relative flex h-12 w-12 items-center overflow-hidden rounded-full bg-zinc-100 shadow-xl transition-all duration-500 ease-[0.23,1,0.32,1] dark:bg-white md:group-hover:w-44">
-                <span className="whitespace-nowrap pl-6 pr-12 text-[10px] font-black uppercase tracking-widest text-zinc-900 opacity-0 transition-opacity duration-200 dark:text-black md:group-hover:opacity-100 md:group-hover:delay-150">{content.resumeLabel}</span>
-                <div className="absolute right-0 flex size-12 items-center justify-center text-zinc-900 transition-transform duration-500 group-hover:rotate-45 dark:text-black"><ArrowDownRight className="h-5 w-5" /></div>
-              </motion.div>
-            </Link>
           </div>
         </div>
       </main>
