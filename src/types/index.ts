@@ -163,5 +163,19 @@ export interface GalleryItem {
     url: string;
     thumbnail?: string;
     category: string;
-    tags?: string[];
+}
+
+export interface PortfolioData {
+    personal: PersonalInfo;
+    projects: Project[];
+    experiences: Experience[];
+    education: Education[];
+    achievements: Achievement[];
+    techStack: TechStack[];
+    hardSkills: Skill[];
+    softSkills: SoftSkill[];
+    tools: Tool[];
+    faqs: FAQ[];
+    blogs: BlogPost[];
+    gallery: GalleryItem[];
 }
