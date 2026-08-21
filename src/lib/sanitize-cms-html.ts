@@ -8,6 +8,13 @@ const allowedTags = [
 
 const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
     a: ['href', 'target', 'rel'],
+    p: ['style'],
+    h1: ['style'],
+    h2: ['style'],
+    h3: ['style'],
+    h4: ['style'],
+    h5: ['style'],
+    h6: ['style'],
     span: ['class'],
     code: ['class'],
 };
@@ -16,6 +23,11 @@ export function sanitizeCmsHtml(value: unknown) {
     return sanitizeHtml(String(value ?? ''), {
         allowedTags,
         allowedAttributes,
+        allowedStyles: {
+            '*': {
+                'text-align': [/^(left|center|right|justify)$/],
+            },
+        },
         allowedSchemes: ['http', 'https', 'mailto'],
         allowProtocolRelative: false,
         disallowedTagsMode: 'discard',
