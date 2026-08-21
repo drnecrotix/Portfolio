@@ -41,10 +41,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
     const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' }, select: { siteName: true } }).catch(() => null);
     const siteName = settings?.siteName ?? 'Portfolio';
+    const canModerateComments = session.user.role === 'OWNER' || session.user.role === 'ADMIN';
+    const visibleNavItems = navItems.filter(([label]) => label !== 'Comments' || canModerateComments);
 
     return (
         <div className="admin-shell min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
-            <AdminMobileNavigation siteName={siteName} role={session.user.role} navItems={navItems} signOutAction={signOutAction} />
+            <AdminMobileNavigation siteName={siteName} role={session.user.role} navItems={visibleNavItems} signOutAction={signOutAction} />
 
             <aside className="hidden border-r border-foreground/10 bg-foreground/[0.015] p-5 lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">
                 <div className="mb-7 flex items-start justify-between gap-3">
@@ -57,7 +59,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 </div>
 
                 <nav className="grid gap-1">
-                    {navItems.map(([label, href]) => (
+                    {visibleNavItems.map(([label, href]) => (
                         <Link key={href} href={href} className="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground">{label}</Link>
                     ))}
                 </nav>
