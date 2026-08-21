@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 import type { AdminNavGroup, AdminNavItem } from '@/components/admin/AdminMobileNavigation';
@@ -25,12 +25,8 @@ export function AdminDesktopNavigation({
     signOutAction: () => Promise<void>;
 }) {
     const pathname = usePathname();
-    const [openGroup, setOpenGroup] = useState<string | null>(() => activeGroupForPath(pathname, navGroups) ?? navGroups[0]?.[0] ?? null);
-
-    useEffect(() => {
-        const active = activeGroupForPath(pathname, navGroups);
-        if (active) setOpenGroup(active);
-    }, [pathname, navGroups]);
+    const activeGroup = activeGroupForPath(pathname, navGroups);
+    const [openGroup, setOpenGroup] = useState<string | null>(() => activeGroup ?? navGroups[0]?.[0] ?? null);
 
     const linkClass = (active: boolean) => `block rounded-lg border px-3 py-2 text-sm transition-colors ${active ? 'border-foreground/10 bg-foreground/[0.06] font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:border-foreground/10 hover:bg-foreground/[0.05] hover:text-foreground'}`;
 
@@ -49,10 +45,10 @@ export function AdminDesktopNavigation({
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 [scrollbar-gutter:stable]">
                 <nav className="grid gap-2 py-3">
-                    <Link href={dashboardItem[1]} className={linkClass(pathname === dashboardItem[1])}>{dashboardItem[0]}</Link>
+                    <Link href={dashboardItem[1]} onClick={() => setOpenGroup(null)} className={linkClass(pathname === dashboardItem[1])}>{dashboardItem[0]}</Link>
 
                     {navGroups.map(([groupLabel, items]) => {
-                        const isOpen = openGroup === groupLabel;
+                        const isOpen = openGroup === groupLabel || (openGroup === null && activeGroup === groupLabel);
                         return (
                             <section key={groupLabel} className="overflow-hidden rounded-xl border border-foreground/10 bg-foreground/[0.012]">
                                 <button
@@ -67,7 +63,14 @@ export function AdminDesktopNavigation({
                                 {isOpen && (
                                     <div className="grid gap-0.5 border-t border-foreground/10 p-1.5">
                                         {items.map(([label, href]) => (
-                                            <Link key={href} href={href} className={linkClass(pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`)))}>{label}</Link>
+                                            <Link
+                                                key={href}
+                                                href={href}
+                                                onClick={() => setOpenGroup(groupLabel)}
+                                                className={linkClass(pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`)))}
+                                            >
+                                                {label}
+                                            </Link>
                                         ))}
                                     </div>
                                 )}
