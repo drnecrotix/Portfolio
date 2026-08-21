@@ -8,12 +8,21 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const project = await prisma.project.findUnique({
-        where: { id },
-        include: { revisions: { orderBy: { createdAt: 'desc' }, take: 10 } },
-    });
+    const [project, categoryRows] = await Promise.all([
+        prisma.project.findUnique({
+            where: { id },
+            include: { revisions: { orderBy: { createdAt: 'desc' }, take: 10 } },
+        }),
+        prisma.project.findMany({
+            where: { category: { not: null } },
+            distinct: ['category'],
+            select: { category: true },
+            orderBy: { category: 'asc' },
+        }),
+    ]);
     if (!project) notFound();
 
+    const categories = categoryRows.map((item) => item.category).filter((value): value is string => Boolean(value));
     const updateAction = updateProject.bind(null, project.id);
     const deleteAction = deleteProject.bind(null, project.id);
 
@@ -27,7 +36,7 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
                 </div>
             </div>
 
-            <ProjectForm project={project} action={updateAction} submitLabel="Save changes" />
+            <ProjectForm project={project} categories={categories} action={updateAction} submitLabel="Save changes" />
 
             <section className="mt-10 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
                 <div className="flex items-center justify-between gap-4"><div><h3 className="text-xl font-semibold">Revision history</h3><p className="mt-1 text-sm text-white/40">A snapshot is saved automatically before each edit.</p></div><span className="text-sm text-white/35">{project.revisions.length} shown</span></div>
