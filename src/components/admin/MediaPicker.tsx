@@ -42,10 +42,6 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
             .catch(() => setAssets([]));
     }, []);
 
-    useEffect(() => {
-        if (!onChange) setInternalSelected(value);
-    }, [onChange, value]);
-
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
         return assets.filter((asset) => {
