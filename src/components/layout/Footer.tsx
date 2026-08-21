@@ -90,6 +90,15 @@ export function Footer() {
         return () => { document.body.style.overflow = ''; };
     }, [isExpanded]);
 
+    useEffect(() => {
+        if (!isExpanded) return;
+        const timer = window.setTimeout(() => {
+            setIsExpanded(false);
+            setIsAboutExpanded(false);
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [pathname]);
+
     const toggleExpand = useCallback(() => setIsExpanded((value) => !value), []);
     const closeExpanded = useCallback(() => {
         setIsExpanded(false);
@@ -129,38 +138,18 @@ export function Footer() {
                         gradientSecond={theme === 'dark' ? 'radial-gradient(50% 50% at 50% 50%, hsla(210, 100%, 85%, .06) 0, hsla(210, 100%, 55%, .02) 80%, transparent 100%)' : 'radial-gradient(50% 50% at 50% 50%, hsla(0, 0%, 20%, .02) 0, hsla(0, 0%, 15%, .01) 80%, transparent 100%)'}
                         gradientThird={theme === 'dark' ? 'radial-gradient(50% 50% at 50% 50%, hsla(210, 100%, 85%, .04) 0, hsla(210, 100%, 45%, .02) 80%, transparent 100%)' : 'radial-gradient(50% 50% at 50% 50%, hsla(0, 0%, 20%, .01) 0, hsla(0, 0%, 15%, .01) 80%, transparent 100%)'}
                     />
-
                     <div className="shrink-0 pt-3 sm:pt-[5vh]"><Marquee phrases={settings.marquee} /></div>
-
                     <div className="relative z-10 mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-5 pb-8 pt-6 sm:px-8 sm:pt-8 lg:px-[8vw] lg:pb-0 lg:pt-[4vh]">
                         <div className="mb-6 flex justify-end lg:absolute lg:right-[6vw] lg:top-[3vh] lg:mb-0">
-                            <motion.button
-                                onClick={closeExpanded}
-                                className="relative flex size-12 items-center justify-center rounded-full bg-black text-white shadow-2xl dark:bg-white dark:text-black sm:size-14"
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.15 }}
-                                whileHover={{ scale: 1.06 }}
-                                whileTap={{ scale: 0.94 }}
-                                aria-label="Close footer menu"
-                            >
+                            <motion.button onClick={closeExpanded} className="relative flex size-12 items-center justify-center rounded-full bg-black text-white shadow-2xl dark:bg-white dark:text-black sm:size-14" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.94 }} aria-label="Close footer menu">
                                 <X className="size-5 sm:size-6" strokeWidth={2.5} />
                             </motion.button>
                         </div>
 
                         <div className="grid w-full grid-cols-2 gap-x-6 gap-y-9 sm:gap-x-10 sm:gap-y-12 lg:grid-cols-4 lg:gap-x-[5vw] lg:gap-y-[4vh]">
                             <FooterColumn title={settings.linksHeading}>
-                                {settings.quickLinks.map((link) => (
-                                    <FooterLink key={`${link.label}-${link.href}`} href={link.href} onNavigate={closeExpanded}>{link.label}</FooterLink>
-                                ))}
-                                {settings.aboutLinks.length > 0 && (
-                                    <AboutHoverMenu
-                                        label={settings.aboutLabel}
-                                        links={settings.aboutLinks}
-                                        onExpandChange={setIsAboutExpanded}
-                                        onNavigate={closeExpanded}
-                                    />
-                                )}
+                                {settings.quickLinks.map((link) => <FooterLink key={`${link.label}-${link.href}`} href={link.href} onNavigate={closeExpanded}>{link.label}</FooterLink>)}
+                                {settings.aboutLinks.length > 0 && <AboutHoverMenu label={settings.aboutLabel} links={settings.aboutLinks} onExpandChange={setIsAboutExpanded} onNavigate={closeExpanded} />}
                             </FooterColumn>
 
                             <FooterColumn title={settings.socialsHeading}>
@@ -187,15 +176,7 @@ export function Footer() {
 
                             <FooterColumn title={settings.localTimeHeading}>
                                 <p className="text-sm font-medium tracking-tight text-zinc-900 dark:text-white sm:text-base lg:text-[1.2vw]">{localTime}</p>
-                                <a
-                                    href={settings.locationUrl || '#'}
-                                    onClick={closeExpanded}
-                                    target={settings.locationUrl?.startsWith('/') ? undefined : '_blank'}
-                                    rel={settings.locationUrl?.startsWith('/') ? undefined : 'noopener noreferrer'}
-                                    className="inline-block text-sm font-medium tracking-tight text-zinc-900 transition-colors hover:text-zinc-500 dark:text-white dark:hover:text-zinc-400 sm:text-base lg:text-[1.2vw]"
-                                >
-                                    {settings.locationText}
-                                </a>
+                                <a href={settings.locationUrl || '#'} onClick={closeExpanded} target={settings.locationUrl?.startsWith('/') ? undefined : '_blank'} rel={settings.locationUrl?.startsWith('/') ? undefined : 'noopener noreferrer'} className="inline-block text-sm font-medium tracking-tight text-zinc-900 transition-colors hover:text-zinc-500 dark:text-white dark:hover:text-zinc-400 sm:text-base lg:text-[1.2vw]">{settings.locationText}</a>
                             </FooterColumn>
 
                             <FooterColumn title={settings.versionHeading}>
@@ -204,14 +185,7 @@ export function Footer() {
                         </div>
 
                         <div className="mt-auto hidden overflow-hidden pt-8 lg:block">
-                            <motion.h2
-                                initial={{ opacity: 0, y: '100%' }}
-                                animate={isAboutExpanded ? { opacity: 0, y: '120%' } : { opacity: 1, y: '38%' }}
-                                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                                className="select-none whitespace-nowrap text-center text-[18vw] font-black leading-none tracking-tighter text-zinc-900 dark:text-white"
-                            >
-                                {settings.brandText}
-                            </motion.h2>
+                            <motion.h2 initial={{ opacity: 0, y: '100%' }} animate={isAboutExpanded ? { opacity: 0, y: '120%' } : { opacity: 1, y: '38%' }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="select-none whitespace-nowrap text-center text-[18vw] font-black leading-none tracking-tighter text-zinc-900 dark:text-white">{settings.brandText}</motion.h2>
                         </div>
                     </div>
                 </motion.div>
@@ -234,14 +208,7 @@ export function Footer() {
                                 <span className={`shrink-0 text-[10px] font-bold uppercase tracking-widest sm:text-xs md:text-sm ${isBlog ? 'text-muted-foreground' : 'text-gradient'}`}>© {currentYear}</span>
                                 <div className="relative h-5 min-w-0 flex-1 overflow-hidden sm:h-full sm:w-[260px] sm:flex-none md:w-[320px]">
                                     <AnimatePresence mode="popLayout">
-                                        <motion.span
-                                            key={copyrightIndex}
-                                            initial={{ y: 18, opacity: 0 }}
-                                            animate={{ y: 0, opacity: 1 }}
-                                            exit={{ y: -18, opacity: 0 }}
-                                            transition={{ duration: 0.45, ease: 'easeInOut' }}
-                                            className={`absolute left-0 max-w-full truncate whitespace-nowrap text-[10px] font-bold uppercase tracking-widest sm:text-xs md:text-sm ${isBlog ? 'text-muted-foreground' : 'text-gradient'}`}
-                                        >
+                                        <motion.span key={copyrightIndex} initial={{ y: 18, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -18, opacity: 0 }} transition={{ duration: 0.45, ease: 'easeInOut' }} className={`absolute left-0 max-w-full truncate whitespace-nowrap text-[10px] font-bold uppercase tracking-widest sm:text-xs md:text-sm ${isBlog ? 'text-muted-foreground' : 'text-gradient'}`}>
                                             {copyrightIndex === 0 ? settings.compactName : settings.compactSecondary}
                                         </motion.span>
                                     </AnimatePresence>
@@ -251,34 +218,14 @@ export function Footer() {
                             <div className="flex min-w-0 items-center justify-between gap-2 sm:ml-auto sm:justify-end sm:gap-4 md:gap-8">
                                 <div className="flex min-w-0 items-center gap-0.5 sm:gap-1.5 md:gap-2">
                                     {iconLinks.map(({ label, href, Icon }) => (
-                                        <motion.a
-                                            key={label}
-                                            href={href}
-                                            target={href.startsWith('/') ? undefined : '_blank'}
-                                            rel={href.startsWith('/') ? undefined : 'noopener noreferrer'}
-                                            className="rounded-full p-2 text-muted-foreground transition-all hover:bg-foreground/5 hover:text-foreground active:scale-95 sm:p-1.5"
-                                            aria-label={label}
-                                        >
+                                        <motion.a key={label} href={href} target={href.startsWith('/') ? undefined : '_blank'} rel={href.startsWith('/') ? undefined : 'noopener noreferrer'} className="rounded-full p-2 text-muted-foreground transition-all hover:bg-foreground/5 hover:text-foreground active:scale-95 sm:p-1.5" aria-label={label}>
                                             <Icon className="size-4" />
                                         </motion.a>
                                     ))}
-                                    <motion.button
-                                        type="button"
-                                        onClick={() => window.dispatchEvent(new CustomEvent('portfolio:toggle-chatbot', { detail: { x: window.innerWidth / 2, y: window.innerHeight / 2 } }))}
-                                        className="rounded-full p-2 text-muted-foreground transition-all hover:bg-foreground/5 hover:text-foreground active:scale-95 sm:p-1.5"
-                                        aria-label="AI Assistant"
-                                    >
-                                        <Bot className="size-4" />
-                                    </motion.button>
+                                    <motion.button type="button" onClick={() => window.dispatchEvent(new CustomEvent('portfolio:toggle-chatbot', { detail: { x: window.innerWidth / 2, y: window.innerHeight / 2 } }))} className="rounded-full p-2 text-muted-foreground transition-all hover:bg-foreground/5 hover:text-foreground active:scale-95 sm:p-1.5" aria-label="AI Assistant"><Bot className="size-4" /></motion.button>
                                 </div>
 
-                                <motion.button
-                                    onClick={toggleExpand}
-                                    className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition-all md:px-5 md:py-2.5 md:text-xs ${isBlog ? 'border border-foreground/10 bg-muted/50 text-foreground hover:bg-muted' : 'bg-muted text-foreground hover:bg-muted/80'}`}
-                                    whileHover={{ scale: 1.04 }}
-                                    whileTap={{ scale: 0.96 }}
-                                    aria-label="Open footer menu"
-                                >
+                                <motion.button onClick={toggleExpand} className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] transition-all md:px-5 md:py-2.5 md:text-xs ${isBlog ? 'border border-foreground/10 bg-muted/50 text-foreground hover:bg-muted' : 'bg-muted text-foreground hover:bg-muted/80'}`} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }} aria-label="Open footer menu">
                                     <span className="hidden md:inline">{settings.moreLabel}</span>
                                     <ChevronUp className="size-4" />
                                 </motion.button>
@@ -304,30 +251,12 @@ function FooterColumn({ title, children }: { title: string; children: React.Reac
 function FooterLink({ href, children, target, onNavigate }: { href: string; children: React.ReactNode; target?: string; onNavigate?: () => void }) {
     return (
         <motion.div whileHover={{ x: 4 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }} className="min-w-0">
-            <Link
-                href={href}
-                target={target}
-                rel={target === '_blank' ? 'noopener noreferrer' : undefined}
-                onClick={onNavigate}
-                className="block w-fit max-w-full break-words text-sm font-medium text-zinc-900 transition-colors hover:text-zinc-500 dark:text-white dark:hover:text-zinc-400 sm:text-base lg:text-[clamp(14px,1.2vw,22px)]"
-            >
-                {children}
-            </Link>
+            <Link href={href} target={target} rel={target === '_blank' ? 'noopener noreferrer' : undefined} onClick={onNavigate} className="block w-fit max-w-full break-words text-sm font-medium text-zinc-900 transition-colors hover:text-zinc-500 dark:text-white dark:hover:text-zinc-400 sm:text-base lg:text-[clamp(14px,1.2vw,22px)]">{children}</Link>
         </motion.div>
     );
 }
 
-function AboutHoverMenu({
-    label,
-    links,
-    onExpandChange,
-    onNavigate,
-}: {
-    label: string;
-    links: FooterLinkSetting[];
-    onExpandChange: (expanded: boolean) => void;
-    onNavigate: () => void;
-}) {
+function AboutHoverMenu({ label, links, onExpandChange, onNavigate }: { label: string; links: FooterLinkSetting[]; onExpandChange: (expanded: boolean) => void; onNavigate: () => void }) {
     const [isHovered, setIsHovered] = useState(false);
     const isMobile = useIsMobile();
     const [isOpen, setIsOpen] = useState(false);
@@ -342,31 +271,13 @@ function AboutHoverMenu({
         <div className="flex min-w-0 flex-col gap-2" onMouseEnter={() => !isMobile && setIsHovered(true)} onMouseLeave={() => !isMobile && setIsHovered(false)}>
             <button type="button" className="flex w-fit items-center gap-2 text-left" onClick={() => isMobile && setIsOpen((value) => !value)}>
                 <span className="text-sm font-medium text-zinc-900 transition-colors hover:text-zinc-500 dark:text-white dark:hover:text-zinc-400 sm:text-base lg:text-[clamp(14px,1.2vw,22px)]">{label}</span>
-                <motion.span animate={{ rotate: active ? 180 : 0 }} transition={{ duration: 0.25 }}>
-                    <ChevronUp className="size-4 rotate-180 text-zinc-500" />
-                </motion.span>
+                <motion.span animate={{ rotate: active ? 180 : 0 }} transition={{ duration: 0.25 }}><ChevronUp className="size-4 rotate-180 text-zinc-500" /></motion.span>
             </button>
             <AnimatePresence>
                 {active && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="ml-1 flex flex-col gap-2 overflow-hidden border-l border-zinc-200 pl-3 dark:border-white/10"
-                    >
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="ml-1 flex flex-col gap-2 overflow-hidden border-l border-zinc-200 pl-3 dark:border-white/10">
                         {links.map((link) => (
-                            <Link
-                                key={`${link.label}-${link.href}`}
-                                href={link.href}
-                                onClick={() => {
-                                    setIsOpen(false);
-                                    onNavigate();
-                                }}
-                                className="break-words text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
-                            >
-                                {link.label}
-                            </Link>
+                            <Link key={`${link.label}-${link.href}`} href={link.href} onClick={() => { setIsOpen(false); onNavigate(); }} className="break-words text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">{link.label}</Link>
                         ))}
                     </motion.div>
                 )}
