@@ -150,7 +150,10 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                         </div>
                     </section>
 
-                    <section className={panelClass}><MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image" initialKind="image" lockKind /></section>
+                    <section className={panelClass}>
+                        <MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image" initialKind="image" lockKind />
+                        <p className="mt-3 text-[11px] text-white/30">Choose an existing image or upload a new one here; uploads are saved to the shared Media Library automatically.</p>
+                    </section>
 
                     <section className={panelClass}>
                         <h3 className="text-sm font-semibold">Excerpt</h3>
