@@ -1,22 +1,22 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ArcRevealHero } from "@/components/ui/arc-preloader-hero";
 
 export function ArcPreloaderWrapper({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const previousPath = useRef(pathname);
-    const isAdmin = pathname.startsWith('/admin');
-    const cameFromAdmin = previousPath.current.startsWith('/admin');
+    const initialPath = useRef(pathname);
+    const [hasNavigated, setHasNavigated] = useState(false);
 
     useEffect(() => {
-        previousPath.current = pathname;
+        if (pathname !== initialPath.current) setHasNavigated(true);
     }, [pathname]);
 
-    // The public site keeps the cinematic route reveal, but CMS navigation and the
-    // first public navigation after leaving the CMS should behave like a fast app.
-    if (isAdmin || cameFromAdmin) {
+    // Keep the cinematic reveal for an initial public page load only. Internal route
+    // changes (including CMS navigation and Home) should feel instant and never show
+    // generated route titles such as "Admin" or "Home" as a loading screen.
+    if (pathname.startsWith('/admin') || hasNavigated) {
         return <>{children}</>;
     }
 
