@@ -14,6 +14,13 @@ import {
 const PROJECT_STATUSES = ['PLANNED', 'ONGOING', 'COMPLETED', 'ARCHIVED'] as const;
 type ProjectStatusValue = (typeof PROJECT_STATUSES)[number];
 
+export type ProjectSaveResult = {
+    ok: true;
+    id: string;
+    created: boolean;
+    savedAt: string;
+};
+
 async function requireEditor() {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
@@ -28,11 +35,17 @@ function text(value: FormDataEntryValue | null, max: number, field: string, requ
     return result;
 }
 
+function readCategory(formData: FormData) {
+    const selected = text(formData.get('category'), 120, 'Category');
+    if (selected !== '__new__') return selected || null;
+    return text(formData.get('newCategory'), 120, 'New category', true);
+}
+
 function readProjectForm(formData: FormData) {
     const title = text(formData.get('title'), 160, 'Title', true);
     const slug = text(formData.get('slug'), 120, 'Slug', true).toLowerCase();
     const description = text(formData.get('description'), 500, 'Description', true);
-    const longDescription = text(formData.get('longDescription'), 10_000, 'Long description') || null;
+    const longDescription = text(formData.get('longDescription'), 50_000, 'Long description') || null;
     const rawStatus = String(formData.get('status') ?? 'PLANNED');
     if (!PROJECT_STATUSES.includes(rawStatus as ProjectStatusValue)) throw new Error('Invalid project status.');
     const status = rawStatus as ProjectStatusValue;
@@ -55,7 +68,7 @@ function readProjectForm(formData: FormData) {
         description,
         longDescription,
         status,
-        category: text(formData.get('category'), 120, 'Category') || null,
+        category: readCategory(formData),
         technologies: csvToList(formData.get('technologies')),
         tools: csvToList(formData.get('tools')),
         highlights: csvToList(formData.get('highlights')),
@@ -72,16 +85,16 @@ function readProjectForm(formData: FormData) {
     };
 }
 
-export async function createProject(formData: FormData) {
+export async function createProject(formData: FormData): Promise<ProjectSaveResult> {
     await requireEditor();
     const data = readProjectForm(formData);
     const project = await prisma.project.create({ data });
     revalidatePath('/admin/projects');
     revalidatePath('/projects');
-    redirect(`/admin/projects/${project.id}`);
+    return { ok: true, id: project.id, created: true, savedAt: new Date().toISOString() };
 }
 
-export async function updateProject(projectId: string, formData: FormData) {
+export async function updateProject(projectId: string, formData: FormData): Promise<ProjectSaveResult> {
     const user = await requireEditor();
     const current = await prisma.project.findUnique({ where: { id: projectId } });
     if (!current) throw new Error('Project not found.');
@@ -104,6 +117,7 @@ export async function updateProject(projectId: string, formData: FormData) {
     revalidatePath(`/admin/projects/${projectId}`);
     revalidatePath('/projects');
     revalidatePath(`/projects/${current.slug}`);
+    return { ok: true, id: projectId, created: false, savedAt: new Date().toISOString() };
 }
 
 export async function deleteProject(projectId: string) {
