@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Check, Copy } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Heart } from 'lucide-react';
 
 export type RelatedBlogPost = {
     slug: string;
@@ -17,6 +17,9 @@ export type RelatedBlogPost = {
 };
 
 export function BlogArticleFrame({
+    postId,
+    initialLikeCount,
+    initiallyLiked,
     title,
     excerpt,
     featuredImage,
@@ -28,6 +31,9 @@ export function BlogArticleFrame({
     relatedPosts,
     children,
 }: {
+    postId: string;
+    initialLikeCount: number;
+    initiallyLiked: boolean;
     title: string;
     excerpt: string | null;
     featuredImage: string | null;
@@ -41,11 +47,32 @@ export function BlogArticleFrame({
 }) {
     const router = useRouter();
     const [copied, setCopied] = useState(false);
+    const [liked, setLiked] = useState(initiallyLiked);
+    const [likeCount, setLikeCount] = useState(initialLikeCount);
+    const [liking, setLiking] = useState(false);
 
     const copyLink = async () => {
         await navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1800);
+    };
+
+    const toggleLike = async () => {
+        if (liking) return;
+        setLiking(true);
+        try {
+            const response = await fetch('/api/blog/likes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Unable to update like.');
+            setLiked(Boolean(data.liked));
+            setLikeCount(Number(data.count) || 0);
+        } finally {
+            setLiking(false);
+        }
     };
 
     const goBack = () => {
@@ -106,13 +133,25 @@ export function BlogArticleFrame({
                             <time className="font-bold" dateTime={publishedAt}>{new Date(publishedAt).toLocaleDateString()}</time>
                         </div>
                     </div>
-                    <button
-                        onClick={copyLink}
-                        className="flex items-center gap-2 rounded-lg bg-foreground/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-all hover:bg-foreground/[0.1] hover:text-foreground"
-                    >
-                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        <span>{copied ? 'Copied!' : 'Copy link'}</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            onClick={() => void toggleLike()}
+                            disabled={liking}
+                            aria-pressed={liked}
+                            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-60 ${liked ? 'bg-rose-500/12 text-rose-500 hover:bg-rose-500/18' : 'bg-foreground/[0.06] text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground'}`}
+                        >
+                            <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+                            <span>{liked ? 'Liked' : 'Like'}</span>
+                            <span className="rounded-full bg-foreground/[0.06] px-1.5 py-0.5 text-[10px] tabular-nums">{likeCount}</span>
+                        </button>
+                        <button
+                            onClick={copyLink}
+                            className="flex items-center gap-2 rounded-lg bg-foreground/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-all hover:bg-foreground/[0.1] hover:text-foreground"
+                        >
+                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            <span>{copied ? 'Copied!' : 'Copy link'}</span>
+                        </button>
+                    </div>
                 </motion.div>
             </div>
 
