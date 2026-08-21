@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
 import { useLenis } from 'lenis/react';
 
 export type PreloadPhase = "intro" | "text" | "reveal" | "done";
-export const PreloadContext = React.createContext<{ isPreloading: boolean, phase: PreloadPhase }>({ isPreloading: true, phase: "intro" });
+export const PreloadContext = React.createContext<{ isPreloading: boolean, phase: PreloadPhase }>({ isPreloading: false, phase: "done" });
 export const usePreloadState = () => React.useContext(PreloadContext);
 
 export type ArcRevealGreeting = {
@@ -59,13 +59,13 @@ export function ArcRevealHero({
   // 1 -> 2: Black curve lifts up to reveal page
   const progress = useMotionValue(0);
 
-  // Synchronously handle route change during render! 
+  // Synchronously handle route change during render!
   // This PREVENTS the new page from appearing BEFORE the preloader animation starts!
   if (pathname !== prevPathname) {
     const isBackToProjects = prevPathname.startsWith('/projects/') && pathname === '/projects';
     const isBackToBlog = prevPathname.startsWith('/blog/') && pathname === '/blog';
     setPrevPathname(pathname);
-    
+
     // Skip preloader if navigating back to the main listing page from a detail page
     if (!isBackToProjects && !isBackToBlog) {
         setPhase("intro");
@@ -94,7 +94,7 @@ export function ArcRevealHero({
   const title = React.useMemo(() => {
       if (pathname === '/') return 'Home';
       const parts = pathname.split('/').filter(Boolean);
-      
+
       if ((parts[0] === 'projects' || parts[0] === 'blog') && parts.length > 1) {
           // Format slug (e.g., browser-automation-agent -> Browser Automation Agent)
           return parts[1]
@@ -102,7 +102,7 @@ export function ArcRevealHero({
               .map(word => word.charAt(0).toUpperCase() + word.slice(1))
               .join(' ');
       }
-      
+
       if (parts.length > 0) {
           return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
       }
@@ -111,26 +111,19 @@ export function ArcRevealHero({
 
   const activeGreetings = greetings || [{ text: title }];
 
-
-
   const arcPath = useTransform(progress, (p: number) => {
     if (p <= 1) {
-      // Rise phase (0 to 1)
       const topEdge = 110 - p * 110;
-      // Convex upwards curve
       const control = topEdge - 30 * Math.sin(p * Math.PI);
       return `M 0 ${topEdge} Q 50 ${control} 100 ${topEdge} L 100 110 L 0 110 Z`;
-    } else {
-      // Reveal phase (1 to 2)
-      const t = p - 1;
-      const bottomEdge = 110 - t * 110;
-      // Concave upwards curve
-      const control = bottomEdge - 30 * Math.sin(t * Math.PI);
-      return `M 0 0 L 100 0 L 100 ${bottomEdge} Q 50 ${control} 0 ${bottomEdge} Z`;
     }
+
+    const t = p - 1;
+    const bottomEdge = 110 - t * 110;
+    const control = bottomEdge - 30 * Math.sin(t * Math.PI);
+    return `M 0 0 L 100 0 L 100 ${bottomEdge} Q 50 ${control} 0 ${bottomEdge} Z`;
   });
 
-  // Scroll lock and global event
   React.useEffect(() => {
     const isPreloading = phase !== "done";
     if (typeof window !== 'undefined') {
@@ -140,7 +133,7 @@ export function ArcRevealHero({
     if (isPreloading) {
         document.body.style.overflow = 'hidden';
         document.documentElement.style.overflow = 'hidden';
-        window.scrollTo(0, 0); // Force scroll to top while preloading
+        window.scrollTo(0, 0);
         if (lenis) lenis.stop();
     } else {
         document.body.style.overflow = '';
@@ -157,9 +150,7 @@ export function ArcRevealHero({
     };
   }, [phase, lenis]);
 
-  // Check initial load overrides
   React.useEffect(() => {
-    // For homepage first load, if the original hello loader will run, skip this one
     if (pathname === '/' && typeof window !== 'undefined') {
         const isLoaded = sessionStorage.getItem('portfolioLoaded');
         if (!isLoaded) {
@@ -178,38 +169,35 @@ export function ArcRevealHero({
         // ignore
       }
     }
-  }, []); // Run only once on mount
+  }, []);
 
-  // Phase: Intro -> Text
   React.useEffect(() => {
     if (phase !== "intro") return;
-    
+
     const controls = animate(progress, 1, {
       duration: revealDuration / 1000,
-      ease: [0.7, 0, 0.3, 1], // Smooth snappy curve
+      ease: [0.7, 0, 0.3, 1],
       onComplete: () => {
         setPhase("text");
       }
     });
-    
+
     return () => controls.stop();
   }, [phase, progress, revealDuration]);
 
-  // Phase: Text hold -> Reveal
   React.useEffect(() => {
     if (phase !== "text") return;
-    
+
     const t = window.setTimeout(() => {
       setPhase("reveal");
     }, greetingHold);
-    
+
     return () => window.clearTimeout(t);
   }, [phase, greetingHold]);
 
-  // Phase: Reveal -> Done
   React.useEffect(() => {
     if (phase !== "reveal") return;
-    
+
     const controls = animate(progress, 2, {
       duration: revealDuration / 1000,
       ease: [0.7, 0, 0.3, 1],
@@ -224,7 +212,7 @@ export function ArcRevealHero({
         }
       }
     });
-    
+
     return () => controls.stop();
   }, [phase, progress, revealDuration, storageKey]);
 
@@ -250,12 +238,11 @@ export function ArcRevealHero({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
-              "fixed inset-0 z-[999] h-screen w-full overflow-hidden", // changed w-screen to w-full
+              "fixed inset-0 z-[999] h-screen w-full overflow-hidden",
               introClassName,
             )}
           >
-            {/* The text layer */}
-            <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="absolute inset-0 z-10 flex items-center justify-center">
               <AnimatePresence mode="wait">
                 {phase === "text" && current && (
                   <motion.span
@@ -276,18 +263,15 @@ export function ArcRevealHero({
               </AnimatePresence>
             </div>
 
-            {/* The background curves layer */}
             <svg
-              className="pointer-events-none absolute inset-0 h-full w-full z-0"
+              className="pointer-events-none absolute inset-0 z-0 h-full w-full"
               viewBox="0 0 100 100"
               preserveAspectRatio="none"
               aria-hidden
             >
-              {/* Solid background covering the underlying page initially, removed when reveal starts */}
               {(phase === "intro" || phase === "text") && (
                 <rect width="100" height="100" className="fill-background" />
               )}
-              {/* The animating arc: black in light mode, dark gray in dark mode */}
               <motion.path d={arcPath} className="fill-foreground dark:fill-[#262626]" />
             </svg>
           </motion.div>
