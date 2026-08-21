@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     }
 
     const postId = cleanText(body.postId, 64);
+    const parentId = cleanText(body.parentId, 64) || null;
     const authorName = cleanText(body.authorName, MAX_NAME);
     const authorEmail = cleanText(body.authorEmail, MAX_EMAIL).toLowerCase();
     const content = cleanComment(body.content);
@@ -49,9 +50,19 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'This publication is not accepting comments.' }, { status: 404 });
     }
 
+    if (parentId) {
+        const parent = await prisma.blogComment.findFirst({
+            where: { id: parentId, postId, status: 'APPROVED' },
+            select: { id: true, parentId: true },
+        });
+        if (!parent) return NextResponse.json({ error: 'The comment you are replying to is unavailable.' }, { status: 404 });
+        if (parent.parentId) return NextResponse.json({ error: 'Replies can only be added to top-level comments.' }, { status: 400 });
+    }
+
     const comment = await prisma.blogComment.create({
         data: {
             postId,
+            parentId,
             authorName,
             authorEmail: authorEmail || null,
             content,
@@ -59,6 +70,7 @@ export async function POST(request: Request) {
         },
         select: {
             id: true,
+            parentId: true,
             authorName: true,
             content: true,
             createdAt: true,
