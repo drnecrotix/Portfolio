@@ -16,10 +16,14 @@ export default function HomeClient({ content, identity }: { content: HomepageCon
 
     useEffect(() => {
         const hasLoaded = sessionStorage.getItem('portfolioLoaded');
-        if (hasLoaded) {
+        if (!hasLoaded) return;
+
+        const frame = window.requestAnimationFrame(() => {
             setSkipAnimation(true);
             setIsLoading(false);
-        }
+        });
+
+        return () => window.cancelAnimationFrame(frame);
     }, []);
 
     const isReadyToAnimate = isLoading ? isInitialLoadingExit : phase === 'reveal' || phase === 'done';
