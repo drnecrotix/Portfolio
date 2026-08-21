@@ -122,7 +122,7 @@ function EditorialTemplate(props: Props) {
                 <div className="flex flex-wrap items-center justify-between gap-3 text-[10px] uppercase tracking-[0.3em] text-white/30"><span>{props.siteName}</span><span>{meta.code}</span></div>
                 <div className="my-auto py-10 md:py-12">
                     <div className="grid min-w-0 gap-7 lg:grid-cols-[0.34fr_minmax(0,1fr)] lg:items-end">
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={cn('min-w-0 break-words text-[clamp(4.5rem,11vw,10rem)] font-black leading-[0.78] tracking-[-0.075em]', meta.accent)}>{meta.code}</motion.div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={cn('min-w-0 whitespace-nowrap text-[clamp(3.5rem,8.2vw,7.5rem)] font-black leading-[0.82] tracking-[-0.07em]', meta.accent)}>{meta.code}</motion.div>
                         <div className="min-w-0">
                             <p className="mb-4 text-xs font-bold uppercase tracking-[0.28em] text-white/35">{meta.eyebrow}</p>
                             <h1 className="max-w-[10ch] break-words text-[clamp(3rem,6.5vw,6.8rem)] font-black leading-[0.92] tracking-[-0.05em]">{props.title}</h1>

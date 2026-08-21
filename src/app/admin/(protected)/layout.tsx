@@ -1,11 +1,9 @@
 import './admin.css';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { cookies } from 'next/headers';
-import { ChevronDown } from 'lucide-react';
 import { auth, signOut } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
+import { AdminDesktopNavigation } from '@/components/admin/AdminDesktopNavigation';
 import { AdminMobileNavigation, type AdminNavGroup, type AdminNavItem } from '@/components/admin/AdminMobileNavigation';
 
 const dashboardItem = ['Dashboard', '/admin'] as const satisfies AdminNavItem;
@@ -62,39 +60,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return (
         <div className="admin-shell min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
             <AdminMobileNavigation siteName={siteName} role={session.user.role} dashboardItem={dashboardItem} navGroups={visibleNavGroups} signOutAction={signOutAction} />
-
-            <aside className="hidden border-r border-foreground/10 bg-foreground/[0.015] p-5 lg:sticky lg:top-0 lg:block lg:h-screen lg:overflow-y-auto">
-                <div className="mb-7 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <p className="truncate text-[10px] uppercase tracking-[0.35em] text-muted-foreground">{siteName}</p>
-                        <h1 className="mt-2 text-lg font-semibold">Portfolio CMS</h1>
-                        <p className="mt-1 text-xs text-muted-foreground">{session.user.role}</p>
-                    </div>
-                    <AdminThemeToggle />
-                </div>
-
-                <nav className="grid gap-2">
-                    <Link href={dashboardItem[1]} className="block rounded-lg border border-transparent px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:border-foreground/10 hover:bg-foreground/[0.05]">{dashboardItem[0]}</Link>
-
-                    {visibleNavGroups.map(([groupLabel, items], index) => (
-                        <details key={groupLabel} className="group/nav rounded-xl border border-foreground/10 bg-foreground/[0.012]" open={index === 0}>
-                            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground transition hover:text-foreground [&::-webkit-details-marker]:hidden">
-                                <span>{groupLabel}</span>
-                                <ChevronDown className="size-3.5 transition-transform group-open/nav:rotate-180" />
-                            </summary>
-                            <div className="grid gap-0.5 border-t border-foreground/10 p-1.5">
-                                {items.map(([label, href]) => (
-                                    <Link key={href} href={href} className="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-foreground/[0.05] hover:text-foreground">{label}</Link>
-                                ))}
-                            </div>
-                        </details>
-                    ))}
-                </nav>
-
-                <form action={signOutAction} className="mt-8 border-t border-foreground/10 pt-5">
-                    <button className="text-sm text-muted-foreground transition hover:text-foreground">Sign out</button>
-                </form>
-            </aside>
+            <AdminDesktopNavigation siteName={siteName} role={session.user.role} dashboardItem={dashboardItem} navGroups={visibleNavGroups} signOutAction={signOutAction} />
 
             <main className="min-w-0 overflow-x-hidden p-3 sm:p-5 md:p-7 lg:p-9 xl:p-10 [&_button]:max-w-full [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full">
                 {children}
