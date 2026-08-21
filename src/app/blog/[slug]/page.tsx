@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { PostBody } from '@/components/blog/PostBody';
@@ -8,6 +9,7 @@ import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogAr
 export const dynamic = 'force-dynamic';
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const likeCookieName = 'necrotix_blog_like_id';
 
 type PostContent = { html?: string; text?: string; featuredImage?: string };
 
@@ -47,6 +49,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const now = new Date();
+    const cookieStore = await cookies();
+    const visitorId = cookieStore.get(likeCookieName)?.value || '__none__';
     const [cmsPost, related] = await prisma.$transaction([
         prisma.post.findUnique({
             where: { slug },
@@ -56,8 +60,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 comments: {
                     where: { status: 'APPROVED' },
                     orderBy: { createdAt: 'asc' },
-                    select: { id: true, authorName: true, content: true, createdAt: true },
+                    select: { id: true, parentId: true, authorName: true, content: true, createdAt: true },
                 },
+                likes: {
+                    where: { visitorId },
+                    select: { id: true },
+                    take: 1,
+                },
+                _count: { select: { likes: true } },
             },
         }),
         prisma.post.findMany({
@@ -99,6 +109,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
     return (
         <BlogArticleFrame
+            postId={cmsPost.id}
+            initialLikeCount={cmsPost._count.likes}
+            initiallyLiked={cmsPost.likes.length > 0}
             title={cmsPost.title}
             excerpt={cmsPost.excerpt}
             featuredImage={content.featuredImage || null}
