@@ -99,8 +99,8 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
             </div>
             <p className="whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground sm:leading-7">{comment.content}</p>
             {!isReply && (
-                <button type="button" onClick={() => startReply(comment)} className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground">
-                    <CornerUpLeft className="h-3.5 w-3.5" />Reply
+                <button type="button" onClick={() => startReply(comment)} className="mt-3 inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-foreground" aria-label={`Reply to ${comment.authorName}`} title="Reply">
+                    <CornerUpLeft className="h-4 w-4" />
                 </button>
             )}
         </article>
@@ -123,7 +123,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
                             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Email is optional and never shown publicly.</p>
                         </div>
                     </div>
-                    {replyTarget && <button type="button" onClick={() => setReplyTarget(null)} className="inline-flex items-center gap-2 self-start rounded-lg border border-foreground/10 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground"><X className="h-3.5 w-3.5" />Cancel reply</button>}
+                    {replyTarget && <button type="button" onClick={() => setReplyTarget(null)} className="inline-flex size-9 items-center justify-center self-start rounded-full border border-foreground/10 text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-foreground" aria-label="Cancel reply" title="Cancel reply"><X className="h-4 w-4" /></button>}
                 </div>
 
                 <div className="grid gap-5 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.45fr)_minmax(240px,0.85fr)] lg:items-start">
