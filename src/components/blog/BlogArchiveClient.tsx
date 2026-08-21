@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, SortAsc, SortDesc } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
@@ -17,7 +17,7 @@ function categoryLabel(value: string) {
 
 export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
     const searchParams = useSearchParams();
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [sortBy, setSortBy] = useState<'latest' | 'oldest'>('latest');
     const [currentPage, setCurrentPage] = useState(1);
@@ -29,14 +29,6 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
         for (const post of posts) bySlug.set(post.categorySlug || post.category, post.category);
         return [{ slug: 'all', label: 'All Publications' }, ...Array.from(bySlug, ([slug, label]) => ({ slug, label }))];
     }, [posts]);
-
-    useEffect(() => {
-        const q = searchParams.get('q');
-        if (q) {
-            setSearchQuery(q);
-            setSelectedCategory('all');
-        }
-    }, [searchParams]);
 
     const filteredPosts = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -56,8 +48,6 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
             });
     }, [posts, searchQuery, selectedCategory, sortBy]);
 
-    useEffect(() => setCurrentPage(1), [searchQuery, selectedCategory, sortBy]);
-
     const totalPages = Math.max(1, Math.ceil(filteredPosts.length / POSTS_PER_PAGE));
     const page = Math.min(currentPage, totalPages);
     const paginatedPosts = filteredPosts.slice((page - 1) * POSTS_PER_PAGE, page * POSTS_PER_PAGE);
@@ -65,6 +55,21 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
     const changePage = (nextPage: number) => {
         setCurrentPage(nextPage);
         listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const selectCategory = (category: string) => {
+        setSelectedCategory(category);
+        setCurrentPage(1);
+    };
+
+    const changeSearch = (query: string) => {
+        setSearchQuery(query);
+        setCurrentPage(1);
+    };
+
+    const toggleSort = () => {
+        setSortBy((value) => value === 'latest' ? 'oldest' : 'latest');
+        setCurrentPage(1);
     };
 
     const menuItems = paginatedPosts.map((post) => ({
@@ -94,7 +99,7 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                                     <button
                                         key={category.slug}
                                         type="button"
-                                        onClick={() => setSelectedCategory(category.slug)}
+                                        onClick={() => selectCategory(category.slug)}
                                         className={cn(
                                             'group relative flex items-start py-2 text-[15px] font-bold uppercase tracking-[0.2em] transition-all duration-500',
                                             active ? 'text-primary opacity-100' : 'text-muted-foreground/40 hover:text-foreground hover:opacity-100',
@@ -140,7 +145,7 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                                 </AnimatePresence>
                                 <button
                                     type="button"
-                                    onClick={() => setSortBy((value) => value === 'latest' ? 'oldest' : 'latest')}
+                                    onClick={toggleSort}
                                     onMouseEnter={() => setIsHoveringSort(true)}
                                     onMouseLeave={() => setIsHoveringSort(false)}
                                     className="relative flex h-12 w-12 items-center justify-center rounded-xl border border-foreground/10 bg-foreground/5 text-muted-foreground shadow-sm transition-all duration-500 hover:border-foreground hover:bg-foreground hover:text-background hover:shadow-xl"
@@ -155,7 +160,7 @@ export function BlogArchiveClient({ posts }: { posts: PublicPost[] }) {
                                     type="search"
                                     placeholder="SEARCH ARCHIVE"
                                     value={searchQuery}
-                                    onChange={(event) => setSearchQuery(event.target.value)}
+                                    onChange={(event) => changeSearch(event.target.value)}
                                     className="w-full border-b border-foreground/10 bg-transparent py-3 text-[14px] font-bold uppercase tracking-[0.1em] text-foreground outline-none transition-all placeholder:text-muted-foreground/20 focus:border-primary/60"
                                 />
                                 <Search className="absolute bottom-3 right-0 h-4 w-4 opacity-20 transition-opacity group-focus-within:opacity-100" />
