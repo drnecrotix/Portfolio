@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition, type FormEvent } from 'react';
 import type { ContentStatus, PostType } from '@prisma/client';
 import { PostEditor } from '@/components/admin/PostEditor';
 import { MediaPicker } from '@/components/admin/MediaPicker';
+import { TagInput } from '@/components/admin/TagInput';
 
 export type BlogTypeOption = { id: string; name: string; slug: string; editorMode: PostType };
 export type BlogCategoryOption = { id: string; name: string; slug: string };
@@ -145,7 +146,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                         <div className="mt-4 space-y-4">
                             <label className="block text-xs text-white/45">Type<select name="postTypeId" value={selectedTypeId} onChange={(event) => setSelectedTypeId(event.target.value)} className={selectClass} required>{postTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
                             <label className="block text-xs text-white/45">Category<select name="categoryId" defaultValue={value.categoryId ?? ''} className={selectClass}><option value="">Uncategorized</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-                            <label className="block text-xs text-white/45">Tags<input name="tags" defaultValue={(value.tags ?? []).join(', ')} placeholder="design, development" className={inputClass} /></label>
+                            <TagInput name="tags" initialTags={value.tags ?? []} />
                         </div>
                     </section>
 
