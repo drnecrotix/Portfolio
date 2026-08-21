@@ -32,30 +32,48 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     const scrollContainerRef = useRef<Record<string, HTMLDivElement | null>>({});
 
     useEffect(() => {
+        const configuredItems = content.items
+            .filter((item) => item.isVisible && item.mediaUrl)
+            .sort((a, b) => a.order - b.order)
+            .map((item) => ({
+                id: item.id,
+                title: item.title,
+                type: item.type,
+                category: item.type === 'video' ? 'Video' : 'Photo',
+                thumbnail: item.type === 'video' ? (item.thumbnailUrl || item.mediaUrl) : item.mediaUrl,
+                url: item.mediaUrl,
+                description: item.description,
+            }));
+
+        if (configuredItems.length) {
+            setGalleryItems(configuredItems);
+            return;
+        }
+
         getAllGalleryImages()
             .then((images) => setGalleryItems(images.map((img, index) => ({
                 id: `gallery-${index}`,
                 title: img.filename.split('.')[0].replace(/-/g, ' '),
                 type: 'image' as const,
-                category: content.galleryCategoryLabel,
+                category: 'Photo',
                 thumbnail: img.src,
                 url: img.src,
                 description: content.defaultImageDescription,
             }))))
             .catch((error) => console.error('Failed to load gallery images', error));
-    }, [content.galleryCategoryLabel, content.defaultImageDescription]);
+    }, [content.items, content.defaultImageDescription]);
 
     const groupedItems = useMemo(() => {
         const groups: Record<string, GalleryItem[]> = {};
         galleryItems
             .filter((item) => filter === 'all' || item.type === filter)
             .forEach((item) => {
-                const category = item.category || content.galleryCategoryLabel;
+                const category = item.category || (item.type === 'video' ? 'Video' : 'Photo');
                 if (!groups[category]) groups[category] = [];
                 groups[category].push(item);
             });
         return groups;
-    }, [filter, galleryItems, content.galleryCategoryLabel]);
+    }, [filter, galleryItems]);
 
     const categories = useMemo(() => Object.keys(groupedItems).sort(), [groupedItems]);
     const flattenedFilteredItems = useMemo(() => categories.flatMap((category) => groupedItems[category]), [categories, groupedItems]);
@@ -170,7 +188,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                         </div>
                     )}
 
-                    {viewMode === 'infinite' && <div className="relative mt-2 h-[800px] w-full"><InfiniteImageField images={galleryItems.map((item) => item.url)} /></div>}
+                    {viewMode === 'infinite' && <div className="relative mt-2 h-[800px] w-full"><InfiniteImageField images={flattenedFilteredItems.map((item) => item.thumbnail || item.url)} /></div>}
                     {categories.length === 0 && <div className="py-20 text-center"><p className="font-mono text-muted-foreground">{content.emptyLabel}</p></div>}
                 </div>
             </div>
