@@ -1,0 +1,91 @@
+/* Compatibility layer for legacy CMS views that were authored as dark-only utilities. */
+html:not(.dark) .admin-shell .text-white\/30,
+html:not(.dark) .admin-shell .text-white\/35,
+html:not(.dark) .admin-shell .text-white\/40,
+html:not(.dark) .admin-shell .text-white\/45,
+html:not(.dark) .admin-shell .text-white\/50,
+html:not(.dark) .admin-shell .text-white\/55,
+html:not(.dark) .admin-shell .text-white\/60,
+html:not(.dark) .admin-shell .text-white\/65,
+html:not(.dark) .admin-shell .text-white\/70,
+html:not(.dark) .admin-shell .text-white\/75,
+html:not(.dark) .admin-shell .text-white\/80 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+html:not(.dark) .admin-shell .border-white\/10,
+html:not(.dark) .admin-shell .border-white\/15,
+html:not(.dark) .admin-shell .border-white\/20 {
+  border-color: hsl(var(--border)) !important;
+}
+
+html:not(.dark) .admin-shell .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(var(--border)) !important;
+}
+
+html:not(.dark) .admin-shell .bg-white\/\[0\.02\],
+html:not(.dark) .admin-shell .bg-white\/\[0\.025\],
+html:not(.dark) .admin-shell .bg-white\/\[0\.03\],
+html:not(.dark) .admin-shell .bg-white\/\[0\.04\],
+html:not(.dark) .admin-shell .bg-white\/\[0\.05\],
+html:not(.dark) .admin-shell .bg-white\/5,
+html:not(.dark) .admin-shell .bg-white\/10 {
+  background-color: hsl(var(--foreground) / 0.035) !important;
+}
+
+html:not(.dark) .admin-shell .hover\:bg-white\/\[0\.025\]:hover,
+html:not(.dark) .admin-shell .hover\:bg-white\/\[0\.03\]:hover,
+html:not(.dark) .admin-shell .hover\:bg-white\/\[0\.05\]:hover,
+html:not(.dark) .admin-shell .hover\:bg-white\/5:hover {
+  background-color: hsl(var(--foreground) / 0.06) !important;
+}
+
+html:not(.dark) .admin-shell .hover\:text-white:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
+.admin-shell input,
+.admin-shell textarea,
+.admin-shell select,
+.admin-shell button,
+.admin-shell a {
+  min-width: 0;
+}
+
+.admin-shell input,
+.admin-shell textarea,
+.admin-shell select {
+  color: hsl(var(--foreground));
+}
+
+html:not(.dark) .admin-shell select option {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+@media (max-width: 767px) {
+  .admin-shell h1,
+  .admin-shell h2 {
+    overflow-wrap: anywhere;
+  }
+
+  .admin-shell form,
+  .admin-shell section,
+  .admin-shell article,
+  .admin-shell [class*="rounded-"] {
+    max-width: 100%;
+  }
+
+  .admin-shell [class*="grid-cols-["] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-shell .overflow-x-auto {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-shell textarea {
+    min-height: 8rem;
+  }
+}
