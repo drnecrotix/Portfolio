@@ -2,12 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Menu, ShieldCheck } from 'lucide-react';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 
 export type AdminNavItem = readonly [label: string, href: string];
 export type AdminNavGroup = readonly [label: string, items: readonly AdminNavItem[]];
+
+function activeGroupForPath(pathname: string, navGroups: readonly AdminNavGroup[]) {
+    return navGroups.find(([groupLabel, items]) => items.some(([, href]) => pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`))))?.[0] ?? null;
+}
 
 export function AdminMobileNavigation({
     siteName,
@@ -24,6 +28,7 @@ export function AdminMobileNavigation({
 }) {
     const pathname = usePathname();
     const detailsRef = useRef<HTMLDetailsElement>(null);
+    const [openGroup, setOpenGroup] = useState<string | null>(() => activeGroupForPath(pathname, navGroups));
 
     const closeMenu = () => {
         detailsRef.current?.removeAttribute('open');
@@ -31,7 +36,8 @@ export function AdminMobileNavigation({
 
     useEffect(() => {
         detailsRef.current?.removeAttribute('open');
-    }, [pathname]);
+        setOpenGroup(activeGroupForPath(pathname, navGroups));
+    }, [pathname, navGroups]);
 
     const linkClass = (active: boolean) => `block min-w-0 rounded-xl border px-3 py-2.5 text-sm transition-colors ${active ? 'border-foreground/15 bg-foreground/[0.08] font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:border-foreground/10 hover:bg-foreground/[0.05] hover:text-foreground'}`;
 
@@ -49,7 +55,7 @@ export function AdminMobileNavigation({
                         </span>
                     </summary>
 
-                    <div className="absolute inset-x-3 top-[calc(100%+0.35rem)] max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-foreground/10 bg-background p-3 shadow-2xl">
+                    <div className="absolute inset-x-3 top-[calc(100%+0.35rem)] max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-2xl border border-foreground/10 bg-background p-3 shadow-2xl">
                         <div className="mb-3 flex items-center gap-2 px-2 py-2 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
                             <ShieldCheck className="size-3.5" />
                             Admin navigation
@@ -59,19 +65,26 @@ export function AdminMobileNavigation({
                             <Link href={dashboardItem[1]} onClick={closeMenu} className={linkClass(pathname === dashboardItem[1])}>{dashboardItem[0]}</Link>
 
                             {navGroups.map(([groupLabel, items]) => {
-                                const groupActive = items.some(([, href]) => pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`)));
+                                const isOpen = openGroup === groupLabel;
                                 return (
-                                    <details key={groupLabel} className="group/nav rounded-xl border border-foreground/10 bg-foreground/[0.018]" open={groupActive || undefined}>
-                                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground [&::-webkit-details-marker]:hidden">
+                                    <section key={groupLabel} className="overflow-hidden rounded-xl border border-foreground/10 bg-foreground/[0.018]">
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenGroup((current) => current === groupLabel ? null : groupLabel)}
+                                            className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground transition hover:text-foreground"
+                                            aria-expanded={isOpen}
+                                        >
                                             <span>{groupLabel}</span>
-                                            <ChevronDown className="size-4 transition-transform group-open/nav:rotate-180" />
-                                        </summary>
-                                        <div className="grid gap-1 border-t border-foreground/10 p-2">
-                                            {items.map(([label, href]) => (
-                                                <Link key={href} href={href} onClick={closeMenu} className={linkClass(pathname === href)}>{label}</Link>
-                                            ))}
-                                        </div>
-                                    </details>
+                                            <ChevronDown className={`size-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                                        </button>
+                                        {isOpen && (
+                                            <div className="grid gap-1 border-t border-foreground/10 p-2">
+                                                {items.map(([label, href]) => (
+                                                    <Link key={href} href={href} onClick={closeMenu} className={linkClass(pathname === href)}>{label}</Link>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </section>
                                 );
                             })}
                         </nav>
