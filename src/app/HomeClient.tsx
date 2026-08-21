@@ -16,10 +16,14 @@ export default function HomeClient({ content, identity }: { content: HomepageCon
 
     useEffect(() => {
         const hasLoaded = sessionStorage.getItem('portfolioLoaded');
-        if (hasLoaded) {
+        if (!hasLoaded) return;
+
+        const frame = window.requestAnimationFrame(() => {
             setSkipAnimation(true);
             setIsLoading(false);
-        }
+        });
+
+        return () => window.cancelAnimationFrame(frame);
     }, []);
 
     const isReadyToAnimate = isLoading ? isInitialLoadingExit : phase === 'reveal' || phase === 'done';
@@ -37,7 +41,7 @@ export default function HomeClient({ content, identity }: { content: HomepageCon
                 initial={skipAnimation ? false : { opacity: 0, y: 40 }}
                 animate={skipAnimation ? { opacity: 1, y: 0 } : isReadyToAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
                 transition={{ duration: skipAnimation ? 0 : 1.4, ease: skipAnimation ? 'linear' : [0.16, 1, 0.3, 1], opacity: { duration: skipAnimation ? 0 : 0.8 } }}
-                className="relative h-[100svh] overflow-hidden will-change-transform will-change-opacity"
+                className="home-hero-container relative flex min-h-0 flex-1 overflow-hidden will-change-transform will-change-opacity"
             >
                 <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
             </motion.main>

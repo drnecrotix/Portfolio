@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Check, Copy } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Heart } from 'lucide-react';
 
 export type RelatedBlogPost = {
     slug: string;
@@ -17,6 +17,9 @@ export type RelatedBlogPost = {
 };
 
 export function BlogArticleFrame({
+    postId,
+    initialLikeCount,
+    initiallyLiked,
     title,
     excerpt,
     featuredImage,
@@ -28,6 +31,9 @@ export function BlogArticleFrame({
     relatedPosts,
     children,
 }: {
+    postId: string;
+    initialLikeCount: number;
+    initiallyLiked: boolean;
     title: string;
     excerpt: string | null;
     featuredImage: string | null;
@@ -41,11 +47,32 @@ export function BlogArticleFrame({
 }) {
     const router = useRouter();
     const [copied, setCopied] = useState(false);
+    const [liked, setLiked] = useState(initiallyLiked);
+    const [likeCount, setLikeCount] = useState(initialLikeCount);
+    const [liking, setLiking] = useState(false);
 
     const copyLink = async () => {
         await navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1800);
+    };
+
+    const toggleLike = async () => {
+        if (liking) return;
+        setLiking(true);
+        try {
+            const response = await fetch('/api/blog/likes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ postId }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Unable to update like.');
+            setLiked(Boolean(data.liked));
+            setLikeCount(Number(data.count) || 0);
+        } finally {
+            setLiking(false);
+        }
     };
 
     const goBack = () => {
@@ -106,13 +133,39 @@ export function BlogArticleFrame({
                             <time className="font-bold" dateTime={publishedAt}>{new Date(publishedAt).toLocaleDateString()}</time>
                         </div>
                     </div>
-                    <button
-                        onClick={copyLink}
-                        className="flex items-center gap-2 rounded-lg bg-foreground/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-all hover:bg-foreground/[0.1] hover:text-foreground"
-                    >
-                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        <span>{copied ? 'Copied!' : 'Copy link'}</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="inline-flex items-center gap-2">
+                            <motion.button
+                                type="button"
+                                onClick={() => void toggleLike()}
+                                disabled={liking}
+                                aria-pressed={liked}
+                                aria-label={liked ? 'Unlike this publication' : 'Like this publication'}
+                                whileTap={{ scale: 0.88 }}
+                                animate={liked ? { scale: [1, 1.22, 0.96, 1] } : { scale: 1 }}
+                                transition={{ duration: 0.42, ease: 'easeOut' }}
+                                className={`group flex size-10 items-center justify-center rounded-full border transition disabled:opacity-60 ${liked ? 'border-rose-500/25 bg-rose-500/12 text-rose-500' : 'border-foreground/10 bg-foreground/[0.05] text-muted-foreground hover:bg-foreground/[0.09] hover:text-foreground'}`}
+                            >
+                                <Heart className={`h-5 w-5 transition-transform duration-200 group-hover:scale-110 ${liked ? 'fill-current' : ''}`} strokeWidth={1.8} />
+                            </motion.button>
+                            <motion.span
+                                key={likeCount}
+                                initial={{ scale: 0.8, opacity: 0.5 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="inline-flex min-w-8 items-center justify-center rounded-full border border-foreground/10 bg-foreground/[0.045] px-2.5 py-1 text-xs font-bold tabular-nums text-muted-foreground"
+                                aria-label={`${likeCount} likes`}
+                            >
+                                {likeCount}
+                            </motion.span>
+                        </div>
+                        <button
+                            onClick={copyLink}
+                            className="flex items-center gap-2 rounded-lg bg-foreground/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-all hover:bg-foreground/[0.1] hover:text-foreground"
+                        >
+                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            <span>{copied ? 'Copied!' : 'Copy link'}</span>
+                        </button>
+                    </div>
                 </motion.div>
             </div>
 
