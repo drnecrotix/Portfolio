@@ -22,10 +22,15 @@ type Props = {
     lockKind?: boolean;
 };
 
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif';
+const VIDEO_ACCEPT = 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-m4v,.mp4,.webm,.ogg,.ogv,.mov,.m4v';
+const ZIP_ACCEPT = 'application/zip,application/x-zip-compressed,.zip';
+
 function acceptsForKind(kind: MediaKind) {
-    if (kind === 'image') return 'image/jpeg,image/png,image/webp,image/gif,image/avif';
-    if (kind === 'video') return 'video/mp4,video/webm,video/ogg,video/quicktime';
-    return undefined;
+    if (kind === 'image') return IMAGE_ACCEPT;
+    if (kind === 'video') return VIDEO_ACCEPT;
+    if (kind === 'file') return ZIP_ACCEPT;
+    return `${IMAGE_ACCEPT},${VIDEO_ACCEPT},${ZIP_ACCEPT}`;
 }
 
 export function MediaPicker({ value = '', onChange, inputName, label = 'Media', initialKind = 'all', lockKind = false }: Props) {
@@ -148,7 +153,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                 }}
                                 className="block w-full min-w-0 cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30"
                             />
-                            <p className="mt-3 text-[11px] leading-relaxed text-white/30">Upload directly to the shared Media Library. Maximum file size: 10 MB.</p>
+                            <p className="mt-3 text-[11px] leading-relaxed text-white/30">Allowed: images, videos and ZIP archives. Maximum file size: 10 MB.</p>
                             {uploading && <p className="mt-3 break-words text-xs text-sky-300">Uploading and adding to library…</p>}
                             {uploadError && <p className="mt-3 max-w-full break-words text-xs text-red-300">{uploadError}</p>}
                         </div>
@@ -160,7 +165,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                     <div className="flex flex-wrap gap-2">
                                         {(['all', 'image', 'video', 'file'] as const).map((value) => (
                                             <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${activeKind === value ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55 hover:bg-white/[0.05]'}`}>
-                                                {value}
+                                                {value === 'file' ? 'zip' : value}
                                             </button>
                                         ))}
                                     </div>
@@ -174,7 +179,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={asset.url} alt={asset.altText || asset.fileName} className="aspect-video w-full object-cover" />
                                         ) : (
-                                            <div className="flex aspect-video items-center justify-center text-xs text-white/35">{asset.mimeType.startsWith('video/') ? 'VIDEO' : 'FILE'}</div>
+                                            <div className="flex aspect-video items-center justify-center text-xs text-white/35">{asset.mimeType.startsWith('video/') ? 'VIDEO' : 'ZIP'}</div>
                                         )}
                                         <div className="truncate px-3 pt-2 text-xs text-white/70" title={asset.fileName}>{asset.fileName}</div>
                                         <div className="truncate px-3 pb-2 pt-1 font-mono text-[10px] text-white/30">{asset.mimeType}</div>
