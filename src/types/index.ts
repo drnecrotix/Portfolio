@@ -15,6 +15,7 @@ export interface Project {
     tools: string[];
     status: 'ongoing' | 'completed' | 'planned';
     demoUrl?: string;
+    downloadUrl?: string;
     repoUrl?: string;
     startDate: string;
     endDate?: string;
