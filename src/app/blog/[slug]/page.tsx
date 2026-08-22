@@ -25,22 +25,23 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     if (!cmsPost || !isPublicPost(cmsPost)) return { robots: { index: false, follow: false } };
 
     const content = (cmsPost.content ?? {}) as PostContent;
-    const description = cmsPost.excerpt || undefined;
+    const title = cmsPost.seoTitle?.trim() || cmsPost.title;
+    const description = cmsPost.seoDescription?.trim() || cmsPost.excerpt || undefined;
     const publishedTime = (cmsPost.publishedAt ?? cmsPost.createdAt).toISOString();
 
     return {
-        title: cmsPost.title,
+        title,
         description,
         alternates: { canonical },
         authors: [{ name: cmsPost.authorName }],
         robots: { index: true, follow: true },
         openGraph: {
-            type: 'article', url: canonical, title: cmsPost.title, description, publishedTime,
+            type: 'article', url: canonical, title, description, publishedTime,
             authors: [cmsPost.authorName],
             images: content.featuredImage ? [{ url: content.featuredImage, alt: cmsPost.title }] : undefined,
         },
         twitter: {
-            card: content.featuredImage ? 'summary_large_image' : 'summary', title: cmsPost.title, description,
+            card: content.featuredImage ? 'summary_large_image' : 'summary', title, description,
             images: content.featuredImage ? [content.featuredImage] : undefined,
         },
     };
@@ -62,23 +63,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                     orderBy: { createdAt: 'asc' },
                     select: { id: true, parentId: true, authorName: true, content: true, createdAt: true },
                 },
-                likes: {
-                    where: { visitorId },
-                    select: { id: true },
-                    take: 1,
-                },
+                likes: { where: { visitorId }, select: { id: true }, take: 1 },
                 _count: { select: { likes: true } },
             },
         }),
         prisma.post.findMany({
-            where: {
-                slug: { not: slug },
-                status: 'PUBLISHED',
-                OR: [{ publishedAt: null }, { publishedAt: { lte: now } }],
-            },
-            include: {
-                categoryRef: { select: { name: true } },
-            },
+            where: { slug: { not: slug }, status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] },
+            include: { categoryRef: { select: { name: true } } },
             orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
             take: 2,
         }),
@@ -102,10 +93,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             date: (post.publishedAt ?? post.createdAt).toISOString(),
         };
     });
-    const comments: PublicBlogComment[] = cmsPost.comments.map((comment) => ({
-        ...comment,
-        createdAt: comment.createdAt.toISOString(),
-    }));
+    const comments: PublicBlogComment[] = cmsPost.comments.map((comment) => ({ ...comment, createdAt: comment.createdAt.toISOString() }));
 
     return (
         <BlogArticleFrame

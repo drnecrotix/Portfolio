@@ -17,9 +17,7 @@ function safeLink(value: string, fallback: string) {
     if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) throw new Error('Invalid homepage link.');
     if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
     const parsed = new URL(raw);
-    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
-        throw new Error('Homepage links must be local paths or HTTP/HTTPS URLs without embedded credentials.');
-    }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error('Homepage links must be local paths or HTTP/HTTPS URLs without embedded credentials.');
     return parsed.toString();
 }
 
@@ -42,14 +40,13 @@ export async function updateHomepage(form: FormData) {
         profileTitle: getString(form, 'profileTitle', 160) || defaultHomepageContent.profileTitle,
         profileDescription: getString(form, 'profileDescription', 600) || defaultHomepageContent.profileDescription,
         profileImage: safeCmsMediaUrl(getString(form, 'profileImage', 2048)),
+        socialImage: safeCmsMediaUrl(getString(form, 'socialImage', 2048)),
+        openGraphImage: safeCmsMediaUrl(getString(form, 'openGraphImage', 2048)),
+        twitterImage: safeCmsMediaUrl(getString(form, 'twitterImage', 2048)),
+        customMetaTags: getString(form, 'customMetaTags', 12000),
     };
 
-    await prisma.siteSettings.upsert({
-        where: { id: 'default' },
-        create: { id: 'default', homepageContent },
-        update: { homepageContent },
-    });
-
+    await prisma.siteSettings.upsert({ where: { id: 'default' }, create: { id: 'default', homepageContent }, update: { homepageContent } });
     revalidatePath('/');
     revalidatePath('/admin/homepage');
 }

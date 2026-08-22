@@ -5,6 +5,7 @@ import { ThemeProvider, I18nProvider, SmoothScrollProvider } from '@/providers';
 import { prisma } from '@/lib/prisma';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 import { defaultGeneralSiteSettings, normalizeGeneralSiteSettings } from '@/lib/site-settings';
+import { defaultHomepageContent, normalizeHomepageContent, parseCustomMetaTags } from '@/lib/homepage-content';
 
 import '@/styles/globals.css';
 import '@/styles/mobile-polish.css';
@@ -20,17 +21,22 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 export async function generateMetadata(): Promise<Metadata> {
     let seo = defaultSeoDefaults;
     let general = defaultGeneralSiteSettings;
+    let homepage = defaultHomepageContent;
 
     try {
         const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
         seo = normalizeSeoDefaults(settings?.seoDefaults);
         general = normalizeGeneralSiteSettings(settings);
+        homepage = normalizeHomepageContent(settings?.homepageContent);
     } catch {
         // Keep the public site renderable when the CMS database is temporarily unavailable.
     }
 
-    const ogImages = seo.ogImage ? [{ url: seo.ogImage }] : undefined;
-    const twitterImages = seo.twitterImage ? [seo.twitterImage] : seo.ogImage ? [seo.ogImage] : undefined;
+    const defaultSocialImage = homepage.socialImage || seo.ogImage;
+    const ogImage = homepage.openGraphImage || defaultSocialImage;
+    const twitterImage = homepage.twitterImage || defaultSocialImage;
+    const ogImages = ogImage ? [{ url: ogImage }] : undefined;
+    const twitterImages = twitterImage ? [twitterImage] : undefined;
     const favicon = general.faviconUrl || defaultGeneralSiteSettings.faviconUrl;
 
     return {
@@ -82,16 +88,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     const locale = await getLocale();
     const messages = await getMessages();
     let general = defaultGeneralSiteSettings;
+    let homepage = defaultHomepageContent;
 
     try {
         const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
         general = normalizeGeneralSiteSettings(settings);
+        homepage = normalizeHomepageContent(settings?.homepageContent);
     } catch {
         // Theme and public rendering keep safe defaults when CMS storage is unavailable.
     }
 
+    const customMetaTags = parseCustomMetaTags(homepage.customMetaTags);
+
     return (
         <html lang={locale} data-scroll-behavior="smooth" suppressHydrationWarning>
+            <head>
+                {customMetaTags.map((tag, index) => tag.attribute === 'property'
+                    ? <meta key={`${tag.attribute}-${tag.key}-${index}`} property={tag.key} content={tag.content} />
+                    : <meta key={`${tag.attribute}-${tag.key}-${index}`} name={tag.key} content={tag.content} />)}
+            </head>
             <body className={`${inter.variable} ${jetbrainsMono.variable} ${playfair.variable} ${signature.variable} font-sans relative`}>
                 <ThemeProvider defaultTheme={general.defaultTheme} allowDayMode={general.allowDayMode}>
                     <I18nProvider locale={locale} messages={messages}>

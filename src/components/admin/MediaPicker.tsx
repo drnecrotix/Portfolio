@@ -10,7 +10,7 @@ type MediaAsset = {
     altText?: string | null;
 };
 
-type MediaKind = 'all' | 'image' | 'file';
+type MediaKind = 'all' | 'image' | 'video' | 'file';
 type PickerTab = 'library' | 'upload';
 
 type Props = {
@@ -21,6 +21,12 @@ type Props = {
     initialKind?: MediaKind;
     lockKind?: boolean;
 };
+
+function acceptsForKind(kind: MediaKind) {
+    if (kind === 'image') return 'image/jpeg,image/png,image/webp,image/gif,image/avif';
+    if (kind === 'video') return 'video/mp4,video/webm,video/ogg,video/quicktime';
+    return undefined;
+}
 
 export function MediaPicker({ value = '', onChange, inputName, label = 'Media', initialKind = 'all', lockKind = false }: Props) {
     const [assets, setAssets] = useState<MediaAsset[]>([]);
@@ -34,6 +40,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
     const [uploadMessage, setUploadMessage] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const selected = onChange ? value : internalSelected;
+    const activeKind = lockKind ? initialKind : kind;
 
     useEffect(() => {
         fetch('/api/media', { cache: 'no-store' })
@@ -45,16 +52,19 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
         return assets.filter((asset) => {
-            const typeMatch = kind === 'all'
-                || (kind === 'image' && asset.mimeType.startsWith('image/'))
-                || (kind === 'file' && !asset.mimeType.startsWith('image/'));
+            const isImage = asset.mimeType.startsWith('image/');
+            const isVideo = asset.mimeType.startsWith('video/');
+            const typeMatch = activeKind === 'all'
+                || (activeKind === 'image' && isImage)
+                || (activeKind === 'video' && isVideo)
+                || (activeKind === 'file' && !isImage && !isVideo);
             const queryMatch = !q
                 || asset.fileName.toLowerCase().includes(q)
                 || asset.altText?.toLowerCase().includes(q)
                 || asset.mimeType.toLowerCase().includes(q);
             return typeMatch && queryMatch;
         });
-    }, [assets, kind, query]);
+    }, [activeKind, assets, query]);
 
     const setSelection = (url: string) => {
         if (!onChange) setInternalSelected(url);
@@ -109,8 +119,12 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
             {inputName && <input type="hidden" name={inputName} value={selected} />}
             {selected && (
                 <div className="flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={selected} alt="Selected media preview" className="h-14 w-20 shrink-0 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                    {activeKind === 'video' ? (
+                        <div className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-[10px] font-medium uppercase tracking-wider text-white/40">Video</div>
+                    ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={selected} alt="Selected media preview" className="h-14 w-20 shrink-0 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                    )}
                     <span className="min-w-0 flex-1 truncate text-xs text-white/60" title={selected}>{selected}</span>
                 </div>
             )}
@@ -126,7 +140,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                             <input
                                 ref={fileInputRef}
                                 type="file"
-                                accept={lockKind || kind === 'image' ? 'image/jpeg,image/png,image/webp,image/gif,image/avif' : undefined}
+                                accept={acceptsForKind(activeKind)}
                                 disabled={uploading}
                                 onChange={(event) => {
                                     const file = event.target.files?.[0];
@@ -144,8 +158,8 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search media..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
                                 {!lockKind && (
                                     <div className="flex flex-wrap gap-2">
-                                        {(['all', 'image', 'file'] as const).map((value) => (
-                                            <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${kind === value ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55 hover:bg-white/[0.05]'}`}>
+                                        {(['all', 'image', 'video', 'file'] as const).map((value) => (
+                                            <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${activeKind === value ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55 hover:bg-white/[0.05]'}`}>
                                                 {value}
                                             </button>
                                         ))}
@@ -160,7 +174,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={asset.url} alt={asset.altText || asset.fileName} className="aspect-video w-full object-cover" />
                                         ) : (
-                                            <div className="flex aspect-video items-center justify-center text-xs text-white/35">FILE</div>
+                                            <div className="flex aspect-video items-center justify-center text-xs text-white/35">{asset.mimeType.startsWith('video/') ? 'VIDEO' : 'FILE'}</div>
                                         )}
                                         <div className="truncate px-3 pt-2 text-xs text-white/70" title={asset.fileName}>{asset.fileName}</div>
                                         <div className="truncate px-3 pb-2 pt-1 font-mono text-[10px] text-white/30">{asset.mimeType}</div>

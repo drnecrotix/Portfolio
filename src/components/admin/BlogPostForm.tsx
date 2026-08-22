@@ -7,6 +7,8 @@ import type { ContentStatus, PostType } from '@prisma/client';
 import { PostEditor } from '@/components/admin/PostEditor';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { TagInput } from '@/components/admin/TagInput';
+import { SeoEditor } from '@/components/admin/SeoEditor';
+import { UnsavedContentPreview } from '@/components/admin/UnsavedContentPreview';
 
 export type BlogTypeOption = { id: string; name: string; slug: string; editorMode: PostType };
 export type BlogCategoryOption = { id: string; name: string; slug: string };
@@ -58,6 +60,8 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
     const [title, setTitle] = useState(value.title ?? '');
     const [slug, setSlug] = useState(value.slug ?? '');
     const [slugTouched, setSlugTouched] = useState(Boolean(value.slug));
+    const [excerpt, setExcerpt] = useState(value.excerpt ?? '');
+    const [featuredImage, setFeaturedImage] = useState(value.content?.featuredImage ?? '');
     const [saveState, setSaveState] = useState<'idle' | 'saved' | 'error'>('idle');
     const [saveMessage, setSaveMessage] = useState('');
     const [isPending, startTransition] = useTransition();
@@ -117,13 +121,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                         <PostEditor key={selectedTypeId || editorMode} name="content" initialValue={initialContent} poetry={poetry} />
                     </section>
 
-                    <section className={panelClass}>
-                        <h3 className="text-sm font-semibold">SEO</h3>
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-                            <label className="block text-xs text-white/45">SEO title<input name="seoTitle" defaultValue={value.seoTitle ?? ''} className={inputClass} /></label>
-                            <label className="block text-xs text-white/45">SEO description<textarea name="seoDescription" rows={3} defaultValue={value.seoDescription ?? ''} className={inputClass} /></label>
-                        </div>
-                    </section>
+                    <SeoEditor sourceTitle={title} sourceDescription={excerpt} slug={slug} hasImage={Boolean(featuredImage)} initialTitle={value.seoTitle} initialDescription={value.seoDescription} />
                 </div>
 
                 <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
@@ -135,7 +133,10 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                             <label className="block text-xs text-white/45">Publish date<input name="publishedAt" type="datetime-local" defaultValue={dateValue(value.publishedAt)} className={inputClass} /></label>
                             <label className="block text-xs text-white/45">Schedule<input name="scheduledAt" type="datetime-local" defaultValue={dateValue(value.scheduledAt)} className={inputClass} /></label>
                         </div>
-                        <button disabled={isPending} className="mt-5 w-full rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-wait disabled:opacity-60">{isPending ? 'Saving…' : submitLabel}</button>
+                        <div className="mt-5 grid grid-cols-2 gap-2">
+                            <UnsavedContentPreview kind="blog" />
+                            <button disabled={isPending} className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-wait disabled:opacity-60">{isPending ? 'Saving…' : submitLabel}</button>
+                        </div>
                         <div aria-live="polite" className={`mt-3 min-h-5 text-center text-xs transition-opacity duration-200 ${saveState === 'idle' && !isPending ? 'opacity-0' : 'opacity-100'} ${saveState === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>
                             {isPending ? 'Saving changes without reloading…' : saveMessage || 'Saved'}
                         </div>
@@ -151,13 +152,13 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                     </section>
 
                     <section className={panelClass}>
-                        <MediaPicker value={value.content?.featuredImage ?? ''} inputName="featuredImage" label="Featured image" initialKind="image" lockKind />
+                        <MediaPicker value={featuredImage} onChange={setFeaturedImage} inputName="featuredImage" label="Featured image" initialKind="image" lockKind />
                         <p className="mt-3 text-[11px] text-white/30">Choose an existing image or upload a new one here; uploads are saved to the shared Media Library automatically.</p>
                     </section>
 
                     <section className={panelClass}>
                         <h3 className="text-sm font-semibold">Excerpt</h3>
-                        <textarea name="excerpt" rows={5} defaultValue={value.excerpt ?? ''} className={inputClass} placeholder="Optional short summary used in cards and search results." />
+                        <textarea name="excerpt" rows={5} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} className={inputClass} placeholder="Optional short summary used in cards and search results." />
                     </section>
                 </aside>
             </div>

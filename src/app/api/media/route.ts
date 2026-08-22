@@ -7,6 +7,7 @@ const allowedRoles = new Set(['OWNER', 'ADMIN', 'EDITOR']);
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const ALLOWED_UPLOAD_TYPES = new Set([
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
     'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json',
     'application/zip', 'application/x-zip-compressed',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -14,7 +15,8 @@ const ALLOWED_UPLOAD_TYPES = new Set([
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 const ALLOWED_UPLOAD_EXTENSIONS = new Set([
-    'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'pdf', 'txt', 'md', 'csv', 'json', 'zip', 'docx', 'xlsx', 'pptx',
+    'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'mp4', 'webm', 'ogg', 'ogv', 'mov',
+    'pdf', 'txt', 'md', 'csv', 'json', 'zip', 'docx', 'xlsx', 'pptx',
 ]);
 
 async function requireEditor() {

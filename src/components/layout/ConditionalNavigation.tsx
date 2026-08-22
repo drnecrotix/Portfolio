@@ -23,7 +23,7 @@ export function ConditionalNavigation({ children }: { children: React.ReactNode 
     const shellClassName = !useShell
         ? 'contents'
         : isHome
-            ? 'relative flex min-h-[100svh] flex-col overflow-x-hidden'
+            ? 'relative flex min-h-[100dvh] flex-col overflow-x-hidden'
             : 'relative flex min-h-screen flex-col';
     const contentClassName = !useShell
         ? 'contents'

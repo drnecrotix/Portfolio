@@ -13,7 +13,13 @@ export type HomepageContent = {
     profileTitle: string;
     profileDescription: string;
     profileImage: string;
+    socialImage: string;
+    openGraphImage: string;
+    twitterImage: string;
+    customMetaTags: string;
 };
+
+export type CustomMetaTag = { attribute: 'name' | 'property'; key: string; content: string };
 
 export const defaultHomepageContent: HomepageContent = {
     intro: "Hi, I'm Dr Necrotix. I build digital systems, creative projects and communities.",
@@ -30,9 +36,25 @@ export const defaultHomepageContent: HomepageContent = {
     profileTitle: 'Developer, Creator & Community Builder',
     profileDescription: 'Dr Necrotix builds software, digital experiences, creative projects and online communities with a focus on practical execution and distinctive identity.',
     profileImage: '',
+    socialImage: '',
+    openGraphImage: '',
+    twitterImage: '',
+    customMetaTags: '',
 };
 
 export function normalizeHomepageContent(value: unknown): HomepageContent {
     const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Partial<HomepageContent> : {};
     return { ...defaultHomepageContent, ...source };
+}
+
+export function parseCustomMetaTags(value: string): CustomMetaTag[] {
+    return value.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 50).flatMap((line) => {
+        const match = line.match(/^(name|property)\s*:\s*([^=]+?)\s*=\s*(.+)$/i);
+        if (!match) return [];
+        const attribute = match[1].toLowerCase() as 'name' | 'property';
+        const key = match[2].trim().replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 120);
+        const content = match[3].trim().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 1000);
+        if (!key || !content) return [];
+        return [{ attribute, key, content }];
+    });
 }
