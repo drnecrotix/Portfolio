@@ -1,4 +1,6 @@
 import type { Config } from 'tailwindcss';
+import typography from '@tailwindcss/typography';
+import tailwindcssAnimate from 'tailwindcss-animate';
 
 const config: Config = {
 	content: [
@@ -120,100 +122,48 @@ const config: Config = {
 					'100%': { top: '100%' }
 				},
 				fadeIn: {
-					'0%': {
-						opacity: '0'
-					},
-					'100%': {
-						opacity: '1'
-					}
+					'0%': { opacity: '0' },
+					'100%': { opacity: '1' }
 				},
 				fadeUp: {
-					'0%': {
-						opacity: '0',
-						transform: 'translateY(20px)'
-					},
-					'100%': {
-						opacity: '1',
-						transform: 'translateY(0)'
-					}
+					'0%': { opacity: '0', transform: 'translateY(20px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
 				},
 				slideInLeft: {
-					'0%': {
-						opacity: '0',
-						transform: 'translateX(-30px)'
-					},
-					'100%': {
-						opacity: '1',
-						transform: 'translateX(0)'
-					}
+					'0%': { opacity: '0', transform: 'translateX(-30px)' },
+					'100%': { opacity: '1', transform: 'translateX(0)' }
 				},
 				slideInRight: {
-					'0%': {
-						opacity: '0',
-						transform: 'translateX(30px)'
-					},
-					'100%': {
-						opacity: '1',
-						transform: 'translateX(0)'
-					}
+					'0%': { opacity: '0', transform: 'translateX(30px)' },
+					'100%': { opacity: '1', transform: 'translateX(0)' }
 				},
 				scaleIn: {
-					'0%': {
-						opacity: '0',
-						transform: 'scale(0.9)'
-					},
-					'100%': {
-						opacity: '1',
-						transform: 'scale(1)'
-					}
+					'0%': { opacity: '0', transform: 'scale(0.9)' },
+					'100%': { opacity: '1', transform: 'scale(1)' }
 				},
 				glowPulse: {
-					'0%, 100%': {
-						boxShadow: '0 0 20px rgba(0, 255, 255, 0.3)'
-					},
-					'50%': {
-						boxShadow: '0 0 40px rgba(0, 255, 255, 0.6)'
-					}
+					'0%, 100%': { boxShadow: '0 0 20px rgba(0, 255, 255, 0.3)' },
+					'50%': { boxShadow: '0 0 40px rgba(0, 255, 255, 0.6)' }
 				},
 				float: {
-					'0%, 100%': {
-						transform: 'translateY(0px)'
-					},
-					'50%': {
-						transform: 'translateY(-20px)'
-					}
+					'0%, 100%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-20px)' }
 				},
 				rotateSlow: {
-					'0%': {
-						transform: 'rotate(0deg)'
-					},
-					'100%': {
-						transform: 'rotate(360deg)'
-					}
+					'0%': { transform: 'rotate(0deg)' },
+					'100%': { transform: 'rotate(360deg)' }
 				},
 				gradientShift: {
-					'0%, 100%': {
-						backgroundPosition: '0% 50%'
-					},
-					'50%': {
-						backgroundPosition: '100% 50%'
-					}
+					'0%, 100%': { backgroundPosition: '0% 50%' },
+					'50%': { backgroundPosition: '100% 50%' }
 				},
 				marquee: {
-					'0%': {
-						transform: 'translateX(0%)'
-					},
-					'100%': {
-						transform: 'translateX(-50%)'
-					}
+					'0%': { transform: 'translateX(0%)' },
+					'100%': { transform: 'translateX(-50%)' }
 				},
 				marqueeReverse: {
-					'0%': {
-						transform: 'translateX(-50%)'
-					},
-					'100%': {
-						transform: 'translateX(0%)'
-					}
+					'0%': { transform: 'translateX(-50%)' },
+					'100%': { transform: 'translateX(0%)' }
 				}
 			},
 			backgroundImage: {
@@ -222,9 +172,7 @@ const config: Config = {
 				'glass-gradient': 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
 				'mesh-gradient': 'radial-gradient(at 40% 20%, hsla(280,100%,70%,1) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,1) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%)'
 			},
-			backdropBlur: {
-				xs: '2px'
-			},
+			backdropBlur: { xs: '2px' },
 			boxShadow: {
 				glass: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
 				'glow-sm': '0 0 10px rgba(0, 255, 255, 0.3)',
@@ -239,7 +187,7 @@ const config: Config = {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [tailwindcssAnimate, typography],
 };
 
 export default config;
