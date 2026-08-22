@@ -13,22 +13,19 @@ const ALLOWED_UPLOAD_TYPES = new Set([
     'image/webp',
     'image/gif',
     'image/avif',
-    'application/pdf',
-    'text/plain',
-    'text/markdown',
-    'text/csv',
-    'application/json',
+    'video/mp4',
+    'video/webm',
+    'video/ogg',
+    'video/quicktime',
+    'video/x-m4v',
     'application/zip',
     'application/x-zip-compressed',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 
 const ALLOWED_UPLOAD_EXTENSIONS = new Set([
     'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif',
-    'pdf', 'txt', 'md', 'csv', 'json', 'zip',
-    'docx', 'xlsx', 'pptx',
+    'mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v',
+    'zip',
 ]);
 
 async function requireEditor() {
@@ -68,7 +65,10 @@ function uploadExtension(fileName: string) {
 }
 
 function uploadTypeAllowed(file: File) {
-    return ALLOWED_UPLOAD_TYPES.has(file.type) || ALLOWED_UPLOAD_EXTENSIONS.has(uploadExtension(file.name));
+    const ext = uploadExtension(file.name);
+    if (!ALLOWED_UPLOAD_EXTENSIONS.has(ext)) return false;
+    if (!file.type || file.type === 'application/octet-stream') return true;
+    return ALLOWED_UPLOAD_TYPES.has(file.type);
 }
 
 function mediaDestination(kind: string, error?: unknown) {
@@ -87,7 +87,7 @@ export async function uploadMediaAsset(formData: FormData) {
         const file = formData.get('file');
         if (!(file instanceof File) || file.size === 0) throw new Error('Choose a file to upload.');
         if (file.size > MAX_UPLOAD_BYTES) throw new Error('Maximum upload size is 10 MB.');
-        if (!uploadTypeAllowed(file)) throw new Error('Unsupported file type. Use an image, PDF, text/CSV/JSON, ZIP, DOCX, XLSX or PPTX file.');
+        if (!uploadTypeAllowed(file)) throw new Error('Unsupported file type. Upload an image, video, or ZIP archive.');
 
         const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
         const requestedKey = `media/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${fileName}`;

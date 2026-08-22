@@ -22,6 +22,7 @@ type Asset = {
 };
 
 const field = 'mt-1.5 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm outline-none focus:border-white/30';
+const MEDIA_UPLOAD_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/ogg,video/quicktime,video/x-m4v,application/zip,application/x-zip-compressed,.jpg,.jpeg,.png,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v,.zip';
 
 function bytes(size: number) {
   if (!size) return '—';
@@ -52,7 +53,7 @@ export function MediaLibraryWorkspace({ assets }: { assets: Asset[] }) {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => setUploadOpen((v) => !v)} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black"><Upload className="size-4" /> Add media</button>
-          {(['all','image','file'] as const).map((value) => <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-xl border px-3 py-2 text-sm ${kind === value ? 'border-white/40 bg-white/10 text-white' : 'border-white/10 text-white/45'}`}>{value === 'all' ? 'All media' : value === 'image' ? 'Images' : 'Files'}</button>)}
+          {(['all','image','file'] as const).map((value) => <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-xl border px-3 py-2 text-sm ${kind === value ? 'border-white/40 bg-white/10 text-white' : 'border-white/10 text-white/45'}`}>{value === 'all' ? 'All media' : value === 'image' ? 'Images' : 'Videos / ZIP'}</button>)}
         </div>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2 md:max-w-xl">
           <div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-white/30" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search media..." className="w-full rounded-xl border border-white/10 bg-black/20 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-white/30" /></div>
@@ -62,8 +63,8 @@ export function MediaLibraryWorkspace({ assets }: { assets: Asset[] }) {
       </div>
 
       {uploadOpen && <form action={uploadMediaAssets} className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-6">
-        <div className="flex items-start justify-between gap-4"><div><h3 className="font-semibold">Upload media</h3><p className="mt-1 text-xs text-white/35">Select up to 30 files. Maximum 10 MB each.</p></div><button type="button" onClick={() => setUploadOpen(false)} className="text-white/40"><X className="size-5" /></button></div>
-        <input type="file" name="files" multiple required className="mt-5 block w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm" />
+        <div className="flex items-start justify-between gap-4"><div><h3 className="font-semibold">Upload media</h3><p className="mt-1 text-xs text-white/35">Images, videos and ZIP archives only. Select up to 30 files. Maximum 10 MB each.</p></div><button type="button" onClick={() => setUploadOpen(false)} className="text-white/40"><X className="size-5" /></button></div>
+        <input type="file" name="files" accept={MEDIA_UPLOAD_ACCEPT} multiple required className="mt-5 block w-full rounded-xl border border-white/10 bg-black/20 p-3 text-sm" />
         <button className="mt-4 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black">Upload selected files</button>
       </form>}
 

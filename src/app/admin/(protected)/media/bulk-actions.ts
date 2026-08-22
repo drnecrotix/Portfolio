@@ -7,7 +7,16 @@ import { prisma } from '@/lib/prisma';
 import { deleteMediaFile, isManagedMediaKey, uploadMediaFile } from '@/lib/media-storage';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ALLOWED = new Set(['jpg','jpeg','png','webp','gif','avif','pdf','txt','md','csv','json','zip','docx','xlsx','pptx']);
+const ALLOWED_EXTENSIONS = new Set([
+  'jpg','jpeg','png','webp','gif','avif',
+  'mp4','webm','ogg','ogv','mov','m4v',
+  'zip',
+]);
+const ALLOWED_TYPES = new Set([
+  'image/jpeg','image/png','image/webp','image/gif','image/avif',
+  'video/mp4','video/webm','video/ogg','video/quicktime','video/x-m4v',
+  'application/zip','application/x-zip-compressed',
+]);
 
 async function user() {
   const session = await auth();
@@ -21,6 +30,12 @@ function safeFileName(name: string) {
 
 function ext(name: string) { return name.toLowerCase().split('.').pop() || ''; }
 
+function allowed(file: File) {
+  if (!ALLOWED_EXTENSIONS.has(ext(file.name))) return false;
+  if (!file.type || file.type === 'application/octet-stream') return true;
+  return ALLOWED_TYPES.has(file.type);
+}
+
 export async function uploadMediaAssets(formData: FormData) {
   let destination = '/admin/media?saved=uploaded';
   try {
@@ -30,7 +45,7 @@ export async function uploadMediaAssets(formData: FormData) {
 
     for (const file of files) {
       if (file.size > MAX_UPLOAD_BYTES) throw new Error(`${file.name}: maximum upload size is 10 MB.`);
-      if (!ALLOWED.has(ext(file.name))) throw new Error(`${file.name}: unsupported file type.`);
+      if (!allowed(file)) throw new Error(`${file.name}: unsupported file type. Upload images, videos, or ZIP archives only.`);
       const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
       const requestedKey = `media/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${Math.random().toString(36).slice(2,7)}-${fileName}`;
       const stored = await uploadMediaFile(file, requestedKey);
