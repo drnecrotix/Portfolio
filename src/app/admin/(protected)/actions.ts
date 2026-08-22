@@ -62,7 +62,20 @@ export async function purgeApplicationCache() {
     try {
         await requireAdmin();
         revalidatePath('/', 'layout');
-        for (const path of ['/projects', '/blog', '/contact', '/admin']) revalidatePath(path);
+        for (const path of [
+            '/',
+            '/projects',
+            '/blog',
+            '/gallery',
+            '/experience',
+            '/achievements',
+            '/resume',
+            '/contact',
+            '/sitemap.xml',
+            '/rss.xml',
+            '/robots.txt',
+            '/admin',
+        ]) revalidatePath(path);
     } catch (error) {
         destination = `/admin?error=${encodeURIComponent(error instanceof Error ? error.message : 'Cache purge failed.')}`;
     }
