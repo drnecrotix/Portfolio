@@ -31,7 +31,6 @@ export default async function EditProjectPage({ params }: { params: Promise<{ id
             <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div><p className="text-xs uppercase tracking-[0.3em] text-white/35">Projects</p><h2 className="mt-2 text-4xl font-semibold">{project.title}</h2><p className="mt-2 text-sm text-white/40">Last updated {project.updatedAt.toLocaleString()}</p></div>
                 <div className="flex gap-3">
-                    <Link href={`/admin/projects/${project.id}/preview`} className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 hover:text-white">Preview</Link>
                     <Link href="/admin/projects" className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/70 hover:text-white">Back</Link>
                 </div>
             </div>
