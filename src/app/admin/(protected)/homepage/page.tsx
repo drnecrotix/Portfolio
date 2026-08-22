@@ -17,9 +17,12 @@ export default async function HomepageAdminPage() {
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/35">Protected visual editor</p>
                     <h2 className="mt-2 text-4xl font-semibold">Homepage</h2>
-                    <p className="mt-3 max-w-2xl text-sm text-white/45">Edit hero content, profile details and the metadata used when the site is shared or crawled.</p>
+                    <p className="mt-3 max-w-2xl text-sm text-white/45">Edit the homepage hero, profile card and navigation prompts. Sharing, metadata and crawler settings are managed from SEO.</p>
                 </div>
-                <Link href="/" target="_blank" className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/70 hover:text-white">Preview</Link>
+                <div className="flex gap-2">
+                    <Link href="/admin/seo" className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/55 hover:text-white">SEO settings</Link>
+                    <Link href="/" target="_blank" className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/70 hover:text-white">Preview</Link>
+                </div>
             </div>
 
             <form action={updateHomepage} className="space-y-8">
@@ -42,24 +45,6 @@ export default async function HomepageAdminPage() {
                     <label className="text-sm text-white/60">Profile card title<input name="profileTitle" defaultValue={content.profileTitle} className={input} /></label>
                     <label className="text-sm text-white/60 md:col-span-2">Profile card description<textarea name="profileDescription" defaultValue={content.profileDescription} rows={4} className={input} /></label>
                     <div className="md:col-span-2"><MediaPicker value={content.profileImage} inputName="profileImage" label="Profile card image" /></div>
-                </section>
-
-                <section className={section}>
-                    <div className="mb-5">
-                        <p className="text-xs uppercase tracking-[0.25em] text-white/35">Sharing & discovery</p>
-                        <h3 className="mt-1 text-xl font-semibold">Social thumbnails & meta tags</h3>
-                        <p className="mt-2 max-w-3xl text-xs leading-5 text-white/35">Default image is the fallback. Open Graph is used by Facebook, LinkedIn, Discord and many other preview clients. X/Twitter can use its own image.</p>
-                    </div>
-                    <div className="grid gap-5 md:grid-cols-2">
-                        <div><MediaPicker value={content.socialImage} inputName="socialImage" label="Default social thumbnail" initialKind="image" lockKind /></div>
-                        <div><MediaPicker value={content.openGraphImage} inputName="openGraphImage" label="Open Graph thumbnail (optional override)" initialKind="image" lockKind /></div>
-                        <div className="md:col-span-2"><MediaPicker value={content.twitterImage} inputName="twitterImage" label="X / Twitter thumbnail (optional override)" initialKind="image" lockKind /></div>
-                        <label className="text-sm text-white/60 md:col-span-2">
-                            Custom meta tags
-                            <textarea name="customMetaTags" defaultValue={content.customMetaTags} rows={8} className={`${input} font-mono text-xs`} placeholder={'name:application-name=Necrotix Lab\nname:theme-color=#0a0a0f\nproperty:profile:username=drnecrotix'} />
-                            <span className="mt-2 block text-[11px] leading-5 text-white/30">One tag per line: <code>name:key=value</code> or <code>property:key=value</code>. Only structured name/property + content values are rendered; raw HTML is not accepted.</span>
-                        </label>
-                    </div>
                 </section>
 
                 <button className="rounded-xl bg-white px-5 py-3 font-semibold text-black">Save homepage</button>
