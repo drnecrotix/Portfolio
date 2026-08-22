@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowDownUp, ChevronLeft, ChevronRight, ImageIcon, LayoutGrid, ListFilter, Maximize2, Minimize2, Play, Sparkles, StretchHorizontal, Video, X } from "lucide-react";
+import { ArrowDownUp, ChevronLeft, ChevronRight, ImageIcon, LayoutGrid, ListFilter, Maximize2, Play, Sparkles, StretchHorizontal, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAllGalleryImages } from "@/app/actions/getGalleryImages";
 import MagneticEffect from "@/components/ui/MagneticEffect";
 import { InfiniteImageField } from "@/components/ui/infinite-image-field";
+import { GalleryLightbox } from "@/components/sections/gallery/GalleryLightbox";
 import type { GallerySettings } from '@/lib/gallery-settings';
 
 type FilterType = 'all' | 'image' | 'video';
@@ -26,7 +27,6 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterType>('all');
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
-    const [isLightboxMaximized, setIsLightboxMaximized] = useState(false);
     const [visibleCount, setVisibleCount] = useState(12);
     const [fallbackItems, setFallbackItems] = useState<GalleryItem[]>([]);
     const scrollContainerRef = useRef<Record<string, HTMLDivElement | null>>({});
@@ -84,13 +84,9 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     const currentIndex = flattenedFilteredItems.findIndex((item) => item.id === selectedId);
     const currentItem = currentIndex >= 0 ? flattenedFilteredItems[currentIndex] : null;
 
-    const openLightbox = (id: string) => {
-        setSelectedId(id);
-        setIsLightboxMaximized(false);
-    };
+    const openLightbox = (id: string) => setSelectedId(id);
     const closeLightbox = () => setSelectedId(null);
-    const moveLightbox = (direction: number, event: React.MouseEvent) => {
-        event.stopPropagation();
+    const moveLightbox = (direction: number) => {
         if (!flattenedFilteredItems.length || currentIndex < 0) return;
         const next = (currentIndex + direction + flattenedFilteredItems.length) % flattenedFilteredItems.length;
         setSelectedId(flattenedFilteredItems[next].id);
@@ -198,27 +194,14 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                 </div>
             </div>
 
-            <AnimatePresence>
-                {selectedId && currentItem && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={cn('fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/95 transition-all duration-300', !isLowPowerMode && 'backdrop-blur-xl', isLightboxMaximized && 'bg-black')} onClick={closeLightbox}>
-                        <div className="absolute left-0 top-0 z-[110] flex w-full items-center justify-between p-6" onClick={(event) => event.stopPropagation()}>
-                            <div className="font-mono text-sm text-foreground/70">{currentIndex + 1} / {flattenedFilteredItems.length}</div>
-                            <div className="flex items-center gap-4">
-                                <button onClick={(event) => { event.stopPropagation(); setIsLightboxMaximized((value) => !value); }} className="group rounded-full bg-foreground/5 p-3 transition-colors hover:bg-foreground/10" title={isLightboxMaximized ? content.minimizeTitle : content.maximizeTitle}>{isLightboxMaximized ? <Minimize2 className="h-5 w-5 text-foreground" /> : <Maximize2 className="h-5 w-5 text-foreground" />}</button>
-                                <button onClick={closeLightbox} className="rounded-full bg-foreground/5 p-3 transition-colors hover:bg-red-500/10 hover:text-red-500"><X className="h-5 w-5" /></button>
-                            </div>
-                        </div>
-                        <button onClick={(event) => moveLightbox(-1, event)} className="absolute left-6 top-1/2 z-[110] hidden -translate-y-1/2 rounded-full border border-white/20 bg-black/50 p-4 text-white backdrop-blur-sm transition-all hover:bg-black/80 md:block"><ChevronLeft className="h-8 w-8" /></button>
-                        <button onClick={(event) => moveLightbox(1, event)} className="absolute right-6 top-1/2 z-[110] hidden -translate-y-1/2 rounded-full border border-white/20 bg-black/50 p-4 text-white backdrop-blur-sm transition-all hover:bg-black/80 md:block"><ChevronRight className="h-8 w-8" /></button>
-                        <motion.div layout className={cn('relative w-full transition-all duration-500', isLightboxMaximized ? 'h-screen w-screen px-0 py-0' : 'h-[70vh] max-w-5xl px-6')} onClick={(event) => event.stopPropagation()}>
-                            <div className={cn('relative flex h-full w-full items-center justify-center overflow-hidden', isLightboxMaximized ? 'rounded-none' : 'rounded-sm')}>
-                                {currentItem.type === 'video' ? <iframe src={`${currentItem.url}${currentItem.url.includes('?') ? '&' : '?'}autoplay=1&rel=0`} className="h-full w-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen /> : <div className="relative h-full w-full"><Image src={currentItem.url} alt={currentItem.title} fill sizes="100vw" className="object-contain" priority /></div>}
-                            </div>
-                        </motion.div>
-                        {!isLightboxMaximized && <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 max-w-2xl px-6 text-center" onClick={(event) => event.stopPropagation()}><h3 className="mb-2 font-serif text-2xl text-foreground">{currentItem.title}</h3><p className="text-sm leading-relaxed text-muted-foreground">{currentItem.description}</p></motion.div>}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <GalleryLightbox
+                item={currentItem}
+                currentIndex={Math.max(currentIndex, 0)}
+                total={flattenedFilteredItems.length}
+                onClose={closeLightbox}
+                onPrevious={() => moveLightbox(-1)}
+                onNext={() => moveLightbox(1)}
+            />
         </section>
     );
 }
