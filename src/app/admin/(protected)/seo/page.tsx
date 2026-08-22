@@ -4,17 +4,29 @@ import { normalizeSeoDefaults } from '@/lib/seo-settings';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { updateSeoSettings } from './actions';
 import { MediaPicker } from '@/components/admin/MediaPicker';
+import { StatusToast } from '@/components/admin/StatusToast';
+import { SeoSaveButton } from '@/components/admin/SeoSaveButton';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
 const section = 'rounded-2xl border border-white/10 bg-white/[0.025] p-6';
 
-export default async function SeoAdminPage() {
-    const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+type SearchParams = Promise<{ saved?: string; error?: string }>;
+
+export default async function SeoAdminPage({ searchParams }: { searchParams: SearchParams }) {
+    const [settings, params] = await Promise.all([
+        prisma.siteSettings.findUnique({ where: { id: 'default' } }),
+        searchParams,
+    ]);
     const seo = normalizeSeoDefaults(settings?.seoDefaults);
     const homepage = normalizeHomepageContent(settings?.homepageContent);
 
     return (
         <div className="mx-auto max-w-5xl">
+            <StatusToast
+                type={params.error ? 'error' : params.saved ? 'success' : undefined}
+                message={params.error || (params.saved ? 'SEO settings saved successfully and public metadata cache refreshed.' : undefined)}
+            />
+
             <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/35">Search & sharing</p>
@@ -46,15 +58,22 @@ export default async function SeoAdminPage() {
                 <section className={`${section} grid gap-5 md:grid-cols-2`}>
                     <div className="md:col-span-2">
                         <p className="text-xs uppercase tracking-[0.25em] text-white/35">Social previews</p>
-                        <h3 className="mt-1 text-xl font-semibold">Default thumbnail & Open Graph</h3>
-                        <p className="mt-2 text-xs leading-5 text-white/35">Blog posts and projects use their own main image first. If none exists, they fall back to the default social thumbnail below.</p>
+                        <h3 className="mt-1 text-xl font-semibold">Images used when pages are shared</h3>
+                        <p className="mt-2 text-xs leading-5 text-white/35">Priority is simple: a Blog/Project featured image wins first, then the optional site-wide Open Graph or Twitter override, then the Default social image. Homepage uses the same site-wide rules - there is no separate duplicate homepage override.</p>
                     </div>
-                    <div className="md:col-span-2"><MediaPicker inputName="socialImage" value={homepage.socialImage} label="Default social thumbnail" initialKind="image" lockKind /></div>
+
+                    <div className="md:col-span-2 rounded-xl border border-white/10 bg-black/10 p-4">
+                        <MediaPicker inputName="socialImage" value={homepage.socialImage} label="Default social image" initialKind="image" lockKind />
+                        <p className="mt-2 text-[11px] leading-5 text-white/30">Fallback image used when a more specific Open Graph, Twitter/X, Blog or Project image is not available.</p>
+                    </div>
+
                     <label className="text-sm text-white/60">Open Graph title<input name="ogTitle" defaultValue={seo.ogTitle} className={input} /></label>
                     <div />
                     <label className="text-sm text-white/60 md:col-span-2">Open Graph description<textarea name="ogDescription" rows={3} defaultValue={seo.ogDescription} className={input} /></label>
-                    <div><MediaPicker inputName="ogImage" value={seo.ogImage} label="Global Open Graph image" initialKind="image" lockKind /></div>
-                    <div><MediaPicker inputName="homepageOpenGraphImage" value={homepage.openGraphImage} label="Homepage Open Graph override" initialKind="image" lockKind /></div>
+                    <div className="md:col-span-2">
+                        <MediaPicker inputName="ogImage" value={seo.ogImage} label="Open Graph image override - optional" initialKind="image" lockKind />
+                        <p className="mt-2 text-[11px] leading-5 text-white/30">Leave empty to use Default social image. This applies site-wide, including Homepage, unless the individual Blog post or Project has its own image.</p>
+                    </div>
                 </section>
 
                 <section className={`${section} grid gap-5 md:grid-cols-2`}>
@@ -65,8 +84,10 @@ export default async function SeoAdminPage() {
                     <label className="text-sm text-white/60">Twitter/X title<input name="twitterTitle" defaultValue={seo.twitterTitle} className={input} /></label>
                     <label className="text-sm text-white/60">Twitter/X creator<input name="twitterCreator" placeholder="@username" defaultValue={seo.twitterCreator} className={input} /></label>
                     <label className="text-sm text-white/60 md:col-span-2">Twitter/X description<textarea name="twitterDescription" rows={3} defaultValue={seo.twitterDescription} className={input} /></label>
-                    <div><MediaPicker inputName="twitterImage" value={seo.twitterImage} label="Global Twitter/X image" initialKind="image" lockKind /></div>
-                    <div><MediaPicker inputName="homepageTwitterImage" value={homepage.twitterImage} label="Homepage Twitter/X override" initialKind="image" lockKind /></div>
+                    <div className="md:col-span-2">
+                        <MediaPicker inputName="twitterImage" value={seo.twitterImage} label="Twitter/X image override - optional" initialKind="image" lockKind />
+                        <p className="mt-2 text-[11px] leading-5 text-white/30">Leave empty to use Default social image. Homepage follows this same setting automatically.</p>
+                    </div>
                 </section>
 
                 <section className={`${section} grid gap-5 md:grid-cols-2`}>
@@ -105,7 +126,7 @@ export default async function SeoAdminPage() {
                     <label className="text-sm text-white/60 md:col-span-2">RSS description<textarea name="rssDescription" rows={3} defaultValue={seo.rssDescription} className={input} /></label>
                 </section>
 
-                <button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Save SEO settings</button>
+                <SeoSaveButton />
             </form>
         </div>
     );
