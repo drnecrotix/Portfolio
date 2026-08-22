@@ -5,7 +5,7 @@ import { Extension } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Redo2, Undo2 } from 'lucide-react';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Minus, Redo2, Undo2 } from 'lucide-react';
 
 const tool = 'inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-xs text-white/65 transition hover:border-white/25 hover:bg-white/[0.05] hover:text-white disabled:cursor-not-allowed disabled:opacity-30';
 const activeTool = `${tool} border-white/25 bg-white/[0.08] text-white`;
@@ -42,37 +42,38 @@ type Props = {
     initialValue?: string;
     poetry?: boolean;
     shortcodes?: EditorShortcode[];
+    variant?: 'default' | 'journal';
 };
 
 type Alignment = 'left' | 'center' | 'right' | 'justify';
 
-export function PostEditor({ name, initialValue = '', poetry = false, shortcodes = [] }: Props) {
+export function PostEditor({ name, initialValue = '', poetry = false, shortcodes = [], variant = 'default' }: Props) {
     if (poetry) {
         return (
             <textarea
                 name={name}
                 defaultValue={initialValue}
                 rows={22}
-                className="min-h-[34rem] w-full whitespace-pre-wrap rounded-2xl border border-white/10 bg-white/[0.025] px-6 py-6 font-serif text-lg leading-8 text-white outline-none focus:border-white/25"
+                className={`min-h-[34rem] w-full whitespace-pre-wrap rounded-2xl border border-white/10 px-6 py-6 font-serif text-lg leading-8 text-white outline-none focus:border-white/25 ${variant === 'journal' ? 'bg-[#0d0d0d] shadow-[0_20px_80px_rgba(0,0,0,0.22)]' : 'bg-white/[0.025]'}`}
                 placeholder="Write the poem exactly as it should appear. Line breaks and stanzas are preserved."
             />
         );
     }
 
-    return <RichEditor name={name} initialValue={initialValue} shortcodes={shortcodes} />;
+    return <RichEditor name={name} initialValue={initialValue} shortcodes={shortcodes} variant={variant} />;
 }
 
-function RichEditor({ name, initialValue, shortcodes }: { name: string; initialValue: string; shortcodes: EditorShortcode[] }) {
+function RichEditor({ name, initialValue, shortcodes, variant }: { name: string; initialValue: string; shortcodes: EditorShortcode[]; variant: 'default' | 'journal' }) {
     const [html, setHtml] = useState(initialValue);
+    const editorClass = variant === 'journal'
+        ? 'min-h-[38rem] mx-auto max-w-3xl px-6 py-10 sm:px-10 outline-none prose prose-lg prose-invert prose-headings:font-black prose-headings:tracking-tight prose-h2:mt-14 prose-h2:mb-5 prose-p:my-6 prose-p:text-[1.05rem] prose-p:leading-8 prose-p:text-white/78 prose-a:text-sky-300 prose-hr:my-12 prose-hr:border-white/10 prose-blockquote:my-10 prose-blockquote:rounded-r-2xl prose-blockquote:border-l-4 prose-blockquote:border-fuchsia-300/80 prose-blockquote:bg-white/[0.035] prose-blockquote:px-7 prose-blockquote:py-5 prose-blockquote:text-xl prose-blockquote:italic prose-blockquote:leading-9 prose-blockquote:text-white/90 prose-blockquote:[quotes:none] prose-blockquote:before:content-none prose-blockquote:after:content-none prose-code:text-pink-200'
+        : 'min-h-[34rem] max-w-none px-6 py-6 outline-none prose prose-invert prose-headings:tracking-tight prose-a:text-sky-300 prose-blockquote:my-7 prose-blockquote:rounded-r-xl prose-blockquote:border-l-4 prose-blockquote:border-emerald-400 prose-blockquote:bg-emerald-400/[0.07] prose-blockquote:px-6 prose-blockquote:py-4 prose-blockquote:text-lg prose-blockquote:italic prose-blockquote:leading-8 prose-blockquote:text-white/85 prose-blockquote:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] prose-blockquote:[quotes:none] prose-blockquote:before:content-none prose-blockquote:after:content-none';
+
     const editor = useEditor({
         immediatelyRender: false,
         extensions: [StarterKit, TextAlignment, Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true })],
         content: initialValue || '<p></p>',
-        editorProps: {
-            attributes: {
-                class: 'min-h-[34rem] max-w-none px-6 py-6 outline-none prose prose-invert prose-headings:tracking-tight prose-a:text-sky-300 prose-blockquote:my-7 prose-blockquote:rounded-r-xl prose-blockquote:border-l-4 prose-blockquote:border-emerald-400 prose-blockquote:bg-emerald-400/[0.07] prose-blockquote:px-6 prose-blockquote:py-4 prose-blockquote:text-lg prose-blockquote:italic prose-blockquote:leading-8 prose-blockquote:text-white/85 prose-blockquote:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] prose-blockquote:[quotes:none] prose-blockquote:before:content-none prose-blockquote:after:content-none',
-            },
-        },
+        editorProps: { attributes: { class: editorClass } },
         onUpdate: ({ editor }) => setHtml(editor.getHTML()),
     });
 
@@ -124,7 +125,7 @@ function RichEditor({ name, initialValue, shortcodes }: { name: string; initialV
     const currentAlignment = (alignment: Alignment) => editor?.isActive({ textAlign: alignment }) ?? false;
 
     return (
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.025]">
+        <div className={`min-w-0 overflow-hidden rounded-2xl border border-white/10 ${variant === 'journal' ? 'bg-[#0b0b0b] shadow-[0_24px_80px_rgba(0,0,0,0.26)]' : 'bg-white/[0.025]'}`}>
             <div className="sticky top-0 z-10 flex min-w-0 flex-wrap gap-2 border-b border-white/10 bg-[#101010]/95 p-3 backdrop-blur-xl">
                 <select
                     aria-label="Text style"
@@ -147,8 +148,9 @@ function RichEditor({ name, initialValue, shortcodes }: { name: string; initialV
                 <button type="button" onClick={() => editor?.chain().focus().toggleStrike().run()} className={editor?.isActive('strike') ? activeTool : tool}>Strike</button>
                 <span className="mx-1 h-8 w-px bg-white/10" />
                 <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={editor?.isActive('bulletList') ? activeTool : tool}>Bullets</button>
-                <button type="button" title="WordPress-style quote block" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={editor?.isActive('blockquote') ? activeTool : tool}>Quote</button>
+                <button type="button" title="Editorial pull quote" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={editor?.isActive('blockquote') ? activeTool : tool}>Quote</button>
                 <button type="button" onClick={() => editor?.chain().focus().toggleOrderedList().run()} className={editor?.isActive('orderedList') ? activeTool : tool}>Numbered</button>
+                {variant === 'journal' && <button type="button" title="Insert a visual pause" onClick={() => editor?.chain().focus().setHorizontalRule().run()} className={tool}><Minus className="h-3.5 w-3.5" />Divider</button>}
                 <button type="button" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} className={editor?.isActive('codeBlock') ? activeTool : tool}>Code</button>
                 <button type="button" onClick={setLink} className={editor?.isActive('link') ? activeTool : tool}>Link</button>
                 <span className="mx-1 h-8 w-px bg-white/10" />
@@ -159,19 +161,9 @@ function RichEditor({ name, initialValue, shortcodes }: { name: string; initialV
                 {shortcodes.length > 0 && (
                     <>
                         <span className="mx-1 h-8 w-px bg-white/10" />
-                        <select
-                            aria-label="Insert content block"
-                            defaultValue=""
-                            onChange={(event) => {
-                                insertShortcode(event.target.value);
-                                event.target.value = '';
-                            }}
-                            className="min-h-8 rounded-md border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5 text-xs text-emerald-200 outline-none [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white"
-                        >
+                        <select aria-label="Insert content block" defaultValue="" onChange={(event) => { insertShortcode(event.target.value); event.target.value = ''; }} className="min-h-8 rounded-md border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1.5 text-xs text-emerald-200 outline-none [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white">
                             <option value="" disabled>Insert project block…</option>
-                            {shortcodes.map((shortcode) => (
-                                <option key={shortcode.value} value={shortcode.value}>{shortcode.label}</option>
-                            ))}
+                            {shortcodes.map((shortcode) => <option key={shortcode.value} value={shortcode.value}>{shortcode.label}</option>)}
                         </select>
                     </>
                 )}
@@ -180,6 +172,7 @@ function RichEditor({ name, initialValue, shortcodes }: { name: string; initialV
                 <button type="button" title="Redo" disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} className={tool}><Redo2 className="h-3.5 w-3.5" />Redo</button>
                 <button type="button" onClick={() => editor?.chain().focus().unsetAllMarks().clearNodes().run()} className={tool}>Clear</button>
             </div>
+            {variant === 'journal' && <div className="border-b border-white/5 px-6 py-3 text-center font-mono text-[10px] uppercase tracking-[0.28em] text-white/25">Journal canvas · write first, format second</div>}
             <EditorContent editor={editor} />
             <input type="hidden" name={name} value={html} readOnly />
         </div>
