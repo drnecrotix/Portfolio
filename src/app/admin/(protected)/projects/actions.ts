@@ -65,6 +65,10 @@ function readProjectForm(formData: FormData) {
     if (imageUrl) content.image = imageUrl;
     else delete content.image;
 
+    const downloadUrl = normalizeProjectUrl(formData.get('downloadUrl'));
+    if (downloadUrl) content.downloadUrl = downloadUrl;
+    else delete content.downloadUrl;
+
     const rawSortOrder = Number(formData.get('sortOrder') ?? 0);
     const sortOrder = Number.isFinite(rawSortOrder) ? Math.max(-10_000, Math.min(10_000, Math.trunc(rawSortOrder))) : 0;
 
