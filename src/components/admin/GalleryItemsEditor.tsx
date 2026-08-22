@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Image as ImageIcon, Video } from 'lucide-react';
+import { Image as ImageIcon, Link2, Video } from 'lucide-react';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import type { GalleryItemSetting } from '@/lib/gallery-settings';
 
@@ -69,7 +69,7 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
       <div className="flex flex-col gap-4 border-b border-foreground/10 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold">Media library</h3>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Add a photo or video, choose its file, then set the title and description. Only video items can use a custom thumbnail.</p>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">Add photos, uploaded videos or public social-media URLs. Video URLs from YouTube, Vimeo, TikTok, Instagram, Facebook, X/Twitter, Pinterest and Dailymotion are recognized automatically.</p>
         </div>
         <button type="button" onClick={addItem} className="rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background">+ Add media</button>
       </div>
@@ -96,7 +96,7 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
               <div className="space-y-4">
                 <label className="block text-xs text-muted-foreground">
-                  Collection / category
+                  Media type
                   <select value={item.type} onChange={(e) => setType(index, e.target.value === 'video' ? 'video' : 'image')} className={input}>
                     <option value="image">Photo</option>
                     <option value="video">Video</option>
@@ -106,13 +106,26 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
                 <MediaPicker
                   value={item.mediaUrl}
                   onChange={(url) => update(index, { mediaUrl: url, thumbnailUrl: item.type === 'image' ? url : item.thumbnailUrl })}
-                  label={item.type === 'video' ? 'Video file' : 'Photo'}
+                  label={item.type === 'video' ? 'Video file from Media Library' : 'Photo'}
                   initialKind={item.type}
                   lockKind
                 />
 
                 {item.type === 'video' && (
-                  <MediaPicker value={item.thumbnailUrl} onChange={(url) => update(index, { thumbnailUrl: url })} label="Thumbnail override (optional)" initialKind="image" lockKind />
+                  <>
+                    <label className="block text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5"><Link2 className="h-3.5 w-3.5" />Social / external media URL</span>
+                      <input
+                        type="url"
+                        value={item.mediaUrl.startsWith('http') ? item.mediaUrl : ''}
+                        onChange={(e) => update(index, { mediaUrl: e.target.value.trim() })}
+                        placeholder="https://www.instagram.com/reel/... or https://www.pinterest.com/pin/..."
+                        className={input}
+                      />
+                      <span className="mt-2 block text-[11px] leading-relaxed text-muted-foreground/70">Paste a normal public post/video URL. Supported: YouTube, Vimeo, TikTok, Instagram, Facebook, X/Twitter, Pinterest and Dailymotion. Pinterest short links from pin.it are accepted, but a full /pin/ URL is more reliable for embedding.</span>
+                    </label>
+                    <MediaPicker value={item.thumbnailUrl} onChange={(url) => update(index, { thumbnailUrl: url })} label="Thumbnail override (recommended for social URLs)" initialKind="image" lockKind />
+                  </>
                 )}
               </div>
 
