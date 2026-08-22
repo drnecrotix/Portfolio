@@ -2,6 +2,8 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const useN0cWasmSwc = process.env.NEXT_N0C_WASM_SWC === '1';
+const publicAssetCacheHeader = { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' };
+const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'woff', 'woff2'];
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -43,12 +45,10 @@ const nextConfig = {
                     { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
-            {
-                source: '/:path*.(?:ico|svg|png|jpg|jpeg|gif|webp|avif|woff|woff2)',
-                headers: [
-                    { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
-                ],
-            },
+            ...publicAssetExtensions.map((extension) => ({
+                source: `/:path*.${extension}`,
+                headers: [publicAssetCacheHeader],
+            })),
         ];
     },
     images: {
