@@ -41,6 +41,12 @@ function readCategory(formData: FormData) {
     return text(formData.get('newCategory'), 120, 'New category', true);
 }
 
+function revalidateProjectDiscovery() {
+    revalidatePath('/projects');
+    revalidatePath('/sitemap.xml');
+    revalidatePath('/rss.xml');
+}
+
 function readProjectForm(formData: FormData) {
     const title = text(formData.get('title'), 160, 'Title', true);
     const slug = text(formData.get('slug'), 120, 'Slug', true).toLowerCase();
@@ -90,7 +96,7 @@ export async function createProject(formData: FormData): Promise<ProjectSaveResu
     const data = readProjectForm(formData);
     const project = await prisma.project.create({ data });
     revalidatePath('/admin/projects');
-    revalidatePath('/projects');
+    revalidateProjectDiscovery();
     return { ok: true, id: project.id, created: true, savedAt: new Date().toISOString() };
 }
 
@@ -98,6 +104,7 @@ export async function updateProject(projectId: string, formData: FormData): Prom
     const user = await requireEditor();
     const current = await prisma.project.findUnique({ where: { id: projectId } });
     if (!current) throw new Error('Project not found.');
+    const nextData = readProjectForm(formData);
 
     await prisma.$transaction(async (tx) => {
         await tx.revision.create({
@@ -110,13 +117,14 @@ export async function updateProject(projectId: string, formData: FormData): Prom
                 note: 'Snapshot before project update',
             },
         });
-        await tx.project.update({ where: { id: projectId }, data: readProjectForm(formData) });
+        await tx.project.update({ where: { id: projectId }, data: nextData });
     });
 
     revalidatePath('/admin/projects');
     revalidatePath(`/admin/projects/${projectId}`);
-    revalidatePath('/projects');
+    revalidateProjectDiscovery();
     revalidatePath(`/projects/${current.slug}`);
+    if (current.slug !== nextData.slug) revalidatePath(`/projects/${nextData.slug}`);
     return { ok: true, id: projectId, created: false, savedAt: new Date().toISOString() };
 }
 
@@ -129,6 +137,6 @@ export async function deleteProject(projectId: string) {
 
     await prisma.project.delete({ where: { id: projectId } });
     revalidatePath('/admin/projects');
-    revalidatePath('/projects');
+    revalidateProjectDiscovery();
     redirect('/admin/projects');
 }

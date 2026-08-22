@@ -16,6 +16,14 @@ export type SeoDefaults = {
     indexSite: boolean;
     followLinks: boolean;
     googleVerification: string;
+    sitemapEnabled: boolean;
+    sitemapAutoUpdate: boolean;
+    rssEnabled: boolean;
+    rssAutoUpdate: boolean;
+    rssTitle: string;
+    rssDescription: string;
+    rssItemLimit: number;
+    rssIncludeProjects: boolean;
 };
 
 export const defaultSeoDefaults: SeoDefaults = {
@@ -36,10 +44,19 @@ export const defaultSeoDefaults: SeoDefaults = {
     indexSite: true,
     followLinks: true,
     googleVerification: '',
+    sitemapEnabled: true,
+    sitemapAutoUpdate: true,
+    rssEnabled: true,
+    rssAutoUpdate: true,
+    rssTitle: 'Necrotix Lab',
+    rssDescription: 'Latest publications and projects from Necrotix Lab.',
+    rssItemLimit: 30,
+    rssIncludeProjects: true,
 };
 
 export function normalizeSeoDefaults(value: unknown): SeoDefaults {
     const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Partial<SeoDefaults> : {};
+    const parsedRssItemLimit = Number(source.rssItemLimit);
     return {
         ...defaultSeoDefaults,
         ...source,
@@ -48,6 +65,14 @@ export function normalizeSeoDefaults(value: unknown): SeoDefaults {
             : defaultSeoDefaults.keywords,
         indexSite: typeof source.indexSite === 'boolean' ? source.indexSite : defaultSeoDefaults.indexSite,
         followLinks: typeof source.followLinks === 'boolean' ? source.followLinks : defaultSeoDefaults.followLinks,
+        sitemapEnabled: typeof source.sitemapEnabled === 'boolean' ? source.sitemapEnabled : defaultSeoDefaults.sitemapEnabled,
+        sitemapAutoUpdate: typeof source.sitemapAutoUpdate === 'boolean' ? source.sitemapAutoUpdate : defaultSeoDefaults.sitemapAutoUpdate,
+        rssEnabled: typeof source.rssEnabled === 'boolean' ? source.rssEnabled : defaultSeoDefaults.rssEnabled,
+        rssAutoUpdate: typeof source.rssAutoUpdate === 'boolean' ? source.rssAutoUpdate : defaultSeoDefaults.rssAutoUpdate,
+        rssIncludeProjects: typeof source.rssIncludeProjects === 'boolean' ? source.rssIncludeProjects : defaultSeoDefaults.rssIncludeProjects,
+        rssItemLimit: Number.isFinite(parsedRssItemLimit)
+            ? Math.min(100, Math.max(1, Math.round(parsedRssItemLimit)))
+            : defaultSeoDefaults.rssItemLimit,
     };
 }
 

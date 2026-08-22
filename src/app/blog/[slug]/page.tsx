@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { PostBody } from '@/components/blog/PostBody';
 import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComments';
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
+import { normalizeHomepageContent } from '@/lib/homepage-content';
+import { normalizeSeoDefaults } from '@/lib/seo-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,14 +19,30 @@ function isPublicPost(post: { status: string; publishedAt: Date | null }) {
     return post.status === 'PUBLISHED' && (!post.publishedAt || post.publishedAt <= new Date());
 }
 
+function absoluteImageUrl(value?: string) {
+    if (!value) return undefined;
+    try {
+        return new URL(value, `${siteUrl}/`).toString();
+    } catch {
+        return undefined;
+    }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
     const canonical = `${siteUrl}/blog/${slug}`;
-    const cmsPost = await prisma.post.findUnique({ where: { slug } });
+    const [cmsPost, settings] = await Promise.all([
+        prisma.post.findUnique({ where: { slug } }),
+        prisma.siteSettings.findUnique({ where: { id: 'default' } }),
+    ]);
 
     if (!cmsPost || !isPublicPost(cmsPost)) return { robots: { index: false, follow: false } };
 
     const content = (cmsPost.content ?? {}) as PostContent;
+    const homepage = normalizeHomepageContent(settings?.homepageContent);
+    const seo = normalizeSeoDefaults(settings?.seoDefaults);
+    const defaultSocialImage = homepage.socialImage || seo.ogImage || undefined;
+    const image = absoluteImageUrl(content.featuredImage || defaultSocialImage);
     const title = cmsPost.seoTitle?.trim() || cmsPost.title;
     const description = cmsPost.seoDescription?.trim() || cmsPost.excerpt || undefined;
     const publishedTime = (cmsPost.publishedAt ?? cmsPost.createdAt).toISOString();
@@ -36,13 +54,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         authors: [{ name: cmsPost.authorName }],
         robots: { index: true, follow: true },
         openGraph: {
-            type: 'article', url: canonical, title, description, publishedTime,
+            type: 'article',
+            url: canonical,
+            title,
+            description,
+            publishedTime,
             authors: [cmsPost.authorName],
-            images: content.featuredImage ? [{ url: content.featuredImage, alt: cmsPost.title }] : undefined,
+            images: image ? [{ url: image, alt: cmsPost.title }] : undefined,
         },
         twitter: {
-            card: content.featuredImage ? 'summary_large_image' : 'summary', title, description,
-            images: content.featuredImage ? [content.featuredImage] : undefined,
+            card: image ? 'summary_large_image' : 'summary',
+            title,
+            description,
+            images: image ? [image] : undefined,
         },
     };
 }
