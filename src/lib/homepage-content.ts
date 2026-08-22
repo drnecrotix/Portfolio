@@ -13,6 +13,10 @@ export type HomepageContent = {
     profileTitle: string;
     profileDescription: string;
     profileImage: string;
+    showBlogPosts: boolean;
+    homeBlogTitle: string;
+    homeBlogSubtitle: string;
+    homeBlogPostLimit: number;
     socialImage: string;
     openGraphImage: string;
     twitterImage: string;
@@ -36,6 +40,10 @@ export const defaultHomepageContent: HomepageContent = {
     profileTitle: 'Developer, Creator & Community Builder',
     profileDescription: 'Dr Necrotix builds software, digital experiences, creative projects and online communities with a focus on practical execution and distinctive identity.',
     profileImage: '',
+    showBlogPosts: true,
+    homeBlogTitle: 'Latest from the blog',
+    homeBlogSubtitle: 'Recent publications, notes and ideas.',
+    homeBlogPostLimit: 6,
     socialImage: '',
     openGraphImage: '',
     twitterImage: '',
@@ -44,7 +52,13 @@ export const defaultHomepageContent: HomepageContent = {
 
 export function normalizeHomepageContent(value: unknown): HomepageContent {
     const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Partial<HomepageContent> : {};
-    return { ...defaultHomepageContent, ...source };
+    const limit = Number(source.homeBlogPostLimit);
+    return {
+        ...defaultHomepageContent,
+        ...source,
+        showBlogPosts: source.showBlogPosts !== false,
+        homeBlogPostLimit: Number.isFinite(limit) ? Math.max(1, Math.min(12, Math.round(limit))) : defaultHomepageContent.homeBlogPostLimit,
+    };
 }
 
 export function parseCustomMetaTags(value: string): CustomMetaTag[] {
