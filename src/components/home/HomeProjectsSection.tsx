@@ -11,8 +11,8 @@ export function HomeProjectsSection({ projects, title, subtitle }: Props) {
     if (!projects.length) return null;
 
     return (
-        <section id="home-projects" className="scroll-mt-20 border-t border-foreground/10 bg-background px-6 py-14 md:px-16 md:py-18 lg:px-24">
-            <div className="mx-auto max-w-[1400px]">
+        <section id="home-projects" className="flex min-h-[100svh] items-center border-t border-foreground/10 bg-background px-6 py-16 md:px-16 lg:px-24">
+            <div className="mx-auto w-full max-w-[1400px]">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-foreground/10 pb-5">
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
@@ -20,8 +20,8 @@ export function HomeProjectsSection({ projects, title, subtitle }: Props) {
                             <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Projects</p>
                             <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[9px] text-muted-foreground">{projects.length}</span>
                         </div>
-                        <p className="mt-2 text-sm font-medium text-foreground/80">{title}</p>
-                        {subtitle ? <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p> : null}
+                        <p className="mt-1 text-[11px] font-medium text-foreground/70">{title}</p>
+                        {subtitle ? <p className="mt-1 text-[10px] text-muted-foreground">{subtitle}</p> : null}
                     </div>
                     <Link href="/projects" className="group inline-flex items-center gap-2 text-xs font-medium text-foreground/60 transition hover:text-foreground">
                         View all projects <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
