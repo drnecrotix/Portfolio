@@ -5,12 +5,14 @@ import { motion } from 'framer-motion';
 import { LoadingScreen } from '@/components/layout';
 import { HeroVisual } from '@/components/sections/HeroVisual';
 import { HomeBlogSection } from '@/components/home/HomeBlogSection';
+import { HomeProjectsSection } from '@/components/home/HomeProjectsSection';
 import { usePreloadState } from '@/components/ui/arc-preloader-hero';
 import type { HomepageContent } from '@/lib/homepage-content';
 import type { PublicIdentity } from '@/lib/public-identity';
 import type { PublicPost } from '@/lib/cms-posts';
+import type { Project } from '@/types';
 
-export default function HomeClient({ content, identity, posts }: { content: HomepageContent; identity: PublicIdentity; posts: PublicPost[] }) {
+export default function HomeClient({ content, identity, posts, projects }: { content: HomepageContent; identity: PublicIdentity; posts: PublicPost[]; projects: Project[] }) {
     const { phase } = usePreloadState();
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialLoadingExit, setIsInitialLoadingExit] = useState(false);
@@ -20,17 +22,13 @@ export default function HomeClient({ content, identity, posts }: { content: Home
     useEffect(() => {
         const hasLoaded = sessionStorage.getItem('portfolioLoaded');
         if (!hasLoaded) return;
-
-        const frame = window.requestAnimationFrame(() => {
-            setSkipAnimation(true);
-            setIsLoading(false);
-        });
-
+        const frame = window.requestAnimationFrame(() => { setSkipAnimation(true); setIsLoading(false); });
         return () => window.cancelAnimationFrame(frame);
     }, []);
 
     const isReadyToAnimate = isLoading ? isInitialLoadingExit : phase === 'reveal' || phase === 'done';
     const showBlog = content.showBlogPosts && posts.length > 0;
+    const showProjects = content.showProjects && projects.length > 0;
 
     const handleLoadingComplete = () => {
         setIsLoading(false);
@@ -38,14 +36,28 @@ export default function HomeClient({ content, identity, posts }: { content: Home
         sessionStorage.setItem('portfolioLoaded', 'true');
     };
 
-    const handleHeroWheel = (event: React.WheelEvent<HTMLElement>) => {
-        if (!showBlog || event.deltaY < 12 || autoScrollInProgress.current || window.scrollY > 120) return;
-        const section = document.getElementById('home-blog');
-        if (!section) return;
-        event.preventDefault();
+    const smoothTo = (id: string) => {
+        const section = document.getElementById(id);
+        if (!section || autoScrollInProgress.current) return;
         autoScrollInProgress.current = true;
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
         window.setTimeout(() => { autoScrollInProgress.current = false; }, 900);
+    };
+
+    const handleHeroWheel = (event: React.WheelEvent<HTMLElement>) => {
+        if (event.deltaY < 12 || autoScrollInProgress.current || window.scrollY > 120) return;
+        const target = showBlog ? 'home-blog' : showProjects ? 'home-projects' : '';
+        if (!target) return;
+        event.preventDefault();
+        smoothTo(target);
+    };
+
+    const handleBlogWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+        if (!showProjects || event.deltaY < 12 || autoScrollInProgress.current) return;
+        const blog = document.getElementById('home-blog');
+        if (!blog || blog.getBoundingClientRect().bottom > window.innerHeight + 120) return;
+        event.preventDefault();
+        smoothTo('home-projects');
     };
 
     return (
@@ -60,7 +72,8 @@ export default function HomeClient({ content, identity, posts }: { content: Home
             >
                 <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
             </motion.main>
-            {showBlog && <HomeBlogSection posts={posts} title={content.homeBlogTitle} subtitle={content.homeBlogSubtitle} />}
+            {showBlog && <div onWheel={handleBlogWheel}><HomeBlogSection posts={posts} title={content.homeBlogTitle} subtitle={content.homeBlogSubtitle} /></div>}
+            {showProjects && <HomeProjectsSection projects={projects} title={content.homeProjectsTitle} subtitle={content.homeProjectsSubtitle} />}
         </>
     );
 }
