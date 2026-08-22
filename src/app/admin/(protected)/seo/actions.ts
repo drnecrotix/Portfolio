@@ -28,10 +28,29 @@ function safeKeywords(form: FormData) {
     return keywords;
 }
 
-export async function updateSeoSettings(form: FormData) {
+async function requireAdmin() {
     const session = await auth();
     if (!session?.user) throw new Error('Unauthorized');
     if (!['OWNER', 'ADMIN'].includes(session.user.role)) throw new Error('Forbidden');
+}
+
+function revalidatePublicCache() {
+    revalidatePath('/', 'layout');
+    revalidatePath('/');
+    revalidatePath('/blog');
+    revalidatePath('/projects');
+    revalidatePath('/sitemap.xml');
+    revalidatePath('/rss.xml');
+    revalidatePath('/robots.txt');
+}
+
+export async function purgePublicCache() {
+    await requireAdmin();
+    revalidatePublicCache();
+}
+
+export async function updateSeoSettings(form: FormData) {
+    await requireAdmin();
 
     const locale = value(form, 'locale', 20) || defaultSeoDefaults.locale;
     if (!/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z]{2,8})?$/.test(locale)) throw new Error('SEO locale is invalid.');
@@ -95,7 +114,5 @@ export async function updateSeoSettings(form: FormData) {
 
     revalidatePath('/admin/seo');
     revalidatePath('/admin/homepage');
-    revalidatePath('/', 'layout');
-    revalidatePath('/sitemap.xml');
-    revalidatePath('/rss.xml');
+    revalidatePublicCache();
 }
