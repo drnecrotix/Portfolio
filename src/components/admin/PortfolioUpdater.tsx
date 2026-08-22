@@ -25,6 +25,7 @@ type StartResult = {
 };
 
 const activeStates = new Set(['starting', 'running']);
+const transientCheckMessage = 'Update check was interrupted. Please try again.';
 
 function statusLabel(state?: string) {
     switch (state) {
@@ -37,6 +38,15 @@ function statusLabel(state?: string) {
         case 'checking': return 'Checking';
         default: return 'Ready';
     }
+}
+
+function wait(ms: number) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function rejectedActionMessage(error: unknown, fallback: string) {
+    if (error instanceof Error && error.message && !/server action|failed to fetch|network/i.test(error.message)) return error.message;
+    return fallback;
 }
 
 export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVersion: string; initialStatus: PortfolioUpdateStatus | null }) {
@@ -68,14 +78,31 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
 
     const isUpdating = activeStates.has(status?.state || '') || isStarting;
 
+    const checkWithRetry = useCallback(async (): Promise<CheckResult> => {
+        let lastError: unknown;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+                return await checkForPortfolioUpdate() as CheckResult;
+            } catch (error) {
+                lastError = error;
+                if (attempt === 0) await wait(650);
+            }
+        }
+        return {
+            ok: false,
+            state: 'error',
+            message: rejectedActionMessage(lastError, transientCheckMessage),
+        };
+    }, []);
+
     const runCheck = useCallback((notifyWhenCurrent: boolean) => {
         setCheckResult(null);
         startCheck(async () => {
-            const result = await checkForPortfolioUpdate() as CheckResult;
+            const result = await checkWithRetry();
             setCheckResult(result);
             if (notifyWhenCurrent || result.state === 'available' || result.state === 'error') showNotice();
         });
-    }, [showNotice]);
+    }, [checkWithRetry, showNotice]);
 
     useEffect(() => {
         if (!isUpdating) return;
@@ -90,7 +117,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     useEffect(() => {
         if (autoCheckStarted.current || isUpdating) return;
         autoCheckStarted.current = true;
-        const timer = setTimeout(() => runCheck(false), 250);
+        const timer = setTimeout(() => runCheck(false), 750);
         return () => clearTimeout(timer);
     }, [isUpdating, runCheck]);
 
@@ -113,10 +140,19 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
         if (!canInstall) return;
         setCheckResult(null);
         startInstall(async () => {
-            const result = await installPortfolioUpdate() as StartResult;
-            setStatus({ state: result.state, message: result.message, updatedAt: new Date().toISOString() });
-            if (result.state === 'current') setCheckResult({ ok: true, state: 'current', message: result.message, localVersion: currentVersion, remoteVersion: currentVersion });
-            showNotice();
+            try {
+                const result = await installPortfolioUpdate() as StartResult;
+                setStatus({ state: result.state, message: result.message, updatedAt: new Date().toISOString() });
+                if (result.state === 'current') setCheckResult({ ok: true, state: 'current', message: result.message, localVersion: currentVersion, remoteVersion: currentVersion });
+            } catch (error) {
+                setStatus({
+                    state: 'error',
+                    message: rejectedActionMessage(error, 'The update request was interrupted. Check updater status before trying again.'),
+                    updatedAt: new Date().toISOString(),
+                });
+            } finally {
+                showNotice();
+            }
         });
     }
 
