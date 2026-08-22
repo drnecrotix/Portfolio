@@ -24,6 +24,10 @@ function validTimezone(value: string) {
     try { new Intl.DateTimeFormat('en-US', { timeZone: value }).format(); return true; } catch { return false; }
 }
 
+function validEmail(value: string) {
+    return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export async function updateGeneralSettings(form: FormData) {
     let destination = '/admin/settings?saved=1';
     try {
@@ -45,14 +49,22 @@ export async function updateGeneralSettings(form: FormData) {
         if (accentColor && !/^#[0-9a-fA-F]{6}$/.test(accentColor)) throw new Error('Accent color must be a 6-digit hex color.');
 
         const email = field(form, 'email', 254);
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Contact email is invalid.');
+        const formRecipientEmail = field(form, 'formRecipientEmail', 254);
+        if (!validEmail(email)) throw new Error('Contact email is invalid.');
+        if (!validEmail(formRecipientEmail)) throw new Error('Contact form recipient email is invalid.');
 
         const socialLinks = {
             github: urlOrEmpty(field(form, 'github', 2048)), instagram: urlOrEmpty(field(form, 'instagram', 2048)),
             linkedin: urlOrEmpty(field(form, 'linkedin', 2048)), twitter: urlOrEmpty(field(form, 'twitter', 2048)),
             discord: urlOrEmpty(field(form, 'discord', 2048)), spotify: urlOrEmpty(field(form, 'spotify', 2048)),
         };
-        const contactDetails = { email, phone: field(form, 'phone', 64), location: field(form, 'location', 160), website: urlOrEmpty(field(form, 'website', 2048)) };
+        const contactDetails = {
+            email,
+            formRecipientEmail,
+            phone: field(form, 'phone', 64),
+            location: field(form, 'location', 160),
+            website: urlOrEmpty(field(form, 'website', 2048)),
+        };
 
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
