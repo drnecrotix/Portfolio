@@ -14,6 +14,7 @@ This documentation is split into focused pages so installation, administration a
 - [SEO and Meta Tags](SEO-and-Meta-Tags.md) — SEO fields, social previews and custom meta tags.
 - [Troubleshooting](Troubleshooting.md) — common errors and known fixes.
 - [Updates and CI](Updates-and-CI.md) — versioning, updater detection and GitHub Actions checks.
+- [License and Credits](License-and-Credits.md) — original foundation, derivative authorship, contributors, third-party software and redistribution guidance.
 
 ## Project stack
 
@@ -35,6 +36,8 @@ For a new installation:
 8. Read **Troubleshooting** before making hosting-specific workarounds.
 
 For content editors, start with **Admin Dashboard** and **SEO and Meta Tags**.
+
+Before redistributing or publishing a fork, read **License and Credits** and preserve the required notices.
 
 ## Important production rule
 

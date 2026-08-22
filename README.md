@@ -2,7 +2,7 @@
 
 A full-stack personal portfolio and content-management system built with **Next.js, PostgreSQL, Prisma and Auth.js**. It combines a protected visual portfolio with a custom CMS for Projects, Blog, Gallery, Pages, navigation, media, SEO, comments, redirects, site modes, users and production updates.
 
-> This repository is a heavily modified derivative of the MIT-licensed **PersonalBlog** project by **Syahril Arfian Almazril (Arfazrll)**. See [License and credits](#license-and-credits).
+> This repository is a heavily modified derivative of the MIT-licensed **PersonalBlog** project by **Syahril Arfian Almazril (Arfazrll)**. See [License and credits](docs/wiki/License-and-Credits.md).
 
 ## Live preview
 
@@ -101,6 +101,7 @@ Detailed documentation is intentionally kept outside the README so the repositor
 | [SEO and Meta Tags](docs/wiki/SEO-and-Meta-Tags.md) | SEO editor, social previews and custom meta-tag syntax. |
 | [Troubleshooting](docs/wiki/Troubleshooting.md) | Known N0C, Passenger, Prisma, CI, Gallery and Home issues/fixes. |
 | [Updates and CI](docs/wiki/Updates-and-CI.md) | Versioning, updater detection, PR workflow and GitHub Actions. |
+| [License and Credits](docs/wiki/License-and-Credits.md) | Original foundation, derivative work, contributors, dependencies and attribution rules. |
 
 The files under `docs/wiki/` are structured as GitHub-Wiki-ready pages and remain version-controlled with the application.
 
@@ -145,20 +146,11 @@ Never commit production secrets, database credentials, Auth secrets or private A
 
 ## License and credits
 
-This repository is distributed under the MIT License. See [`LICENSE`](LICENSE).
+This repository is distributed under the MIT License. The original MIT notice for **PersonalBlog** is preserved in [`LICENSE`](LICENSE), together with an additional attribution notice for the substantially modified Portfolio derivative.
 
-### Original project / foundation
+- **Original foundation:** PersonalBlog by Syahril Arfian Almazril (`Arfazrll`).
+- **Current derivative / project-specific development:** Dr Necrotix.
+- **Additional contributions:** respective repository contributors.
+- **Third-party libraries and services:** remain subject to their own licenses, terms and trademarks.
 
-- **Project:** PersonalBlog
-- **Original author:** Syahril Arfian Almazril
-- **GitHub:** `Arfazrll`
-- **Original repository:** `https://github.com/Arfazrll/PersonalBlog`
-- **Original license:** MIT License, copyright (c) 2026 S. A. Almazril
-
-The original MIT copyright and permission notice are preserved in this repository.
-
-### Current derivative
-
-The repository has since been substantially adapted by **Dr Necrotix** into a database-backed portfolio/CMS with authentication, editorial workflows, Site Modes, media management, SEO, comments, redirects, user roles, revisions, deployment hardening and a redesigned content architecture.
-
-Original authorship is credited for the foundation; subsequent changes and project-specific content belong to their respective authors/contributors under the terms of the repository license.
+See the full [License and Credits documentation](docs/wiki/License-and-Credits.md) for attribution, redistribution guidance and third-party notices.
