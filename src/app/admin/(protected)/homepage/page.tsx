@@ -17,7 +17,7 @@ export default async function HomepageAdminPage() {
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/35">Protected visual editor</p>
                     <h2 className="mt-2 text-4xl font-semibold">Homepage</h2>
-                    <p className="mt-3 max-w-2xl text-sm text-white/45">Edit the homepage hero, profile card and navigation prompts. Sharing, metadata and crawler settings are managed from SEO.</p>
+                    <p className="mt-3 max-w-2xl text-sm text-white/45">Edit the homepage hero, profile card, Blog and Projects sections. Sharing, metadata and crawler settings are managed from SEO.</p>
                 </div>
                 <div className="flex gap-2">
                     <Link href="/admin/seo" className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/55 hover:text-white">SEO settings</Link>
@@ -45,6 +45,28 @@ export default async function HomepageAdminPage() {
                     <label className="text-sm text-white/60">Profile card title<input name="profileTitle" defaultValue={content.profileTitle} className={input} /></label>
                     <label className="text-sm text-white/60 md:col-span-2">Profile card description<textarea name="profileDescription" defaultValue={content.profileDescription} rows={4} className={input} /></label>
                     <div className="md:col-span-2"><MediaPicker value={content.profileImage} inputName="profileImage" label="Profile card image" /></div>
+                </section>
+
+                <section className={`${section} grid gap-5 md:grid-cols-2`}>
+                    <div className="md:col-span-2">
+                        <p className="text-xs uppercase tracking-[0.25em] text-white/35">Homepage Blog</p>
+                        <label className="mt-4 flex items-center gap-3 text-sm text-white/70"><input type="checkbox" name="showBlogPosts" defaultChecked={content.showBlogPosts} className="size-4" /> Show blog posts on homepage</label>
+                    </div>
+                    <label className="text-sm text-white/60">Section title<input name="homeBlogTitle" defaultValue={content.homeBlogTitle} className={input} /></label>
+                    <label className="text-sm text-white/60">Posts to show<input type="number" min={1} max={12} name="homeBlogPostLimit" defaultValue={content.homeBlogPostLimit} className={input} /></label>
+                    <label className="text-sm text-white/60 md:col-span-2">Section subtitle<textarea name="homeBlogSubtitle" defaultValue={content.homeBlogSubtitle} rows={2} className={input} /></label>
+                    <p className="text-xs leading-relaxed text-white/35 md:col-span-2">When enabled, scrolling down from the hero smoothly moves to the Blog section.</p>
+                </section>
+
+                <section className={`${section} grid gap-5 md:grid-cols-2`}>
+                    <div className="md:col-span-2">
+                        <p className="text-xs uppercase tracking-[0.25em] text-white/35">Homepage Projects</p>
+                        <label className="mt-4 flex items-center gap-3 text-sm text-white/70"><input type="checkbox" name="showProjects" defaultChecked={content.showProjects} className="size-4" /> Show projects on homepage</label>
+                    </div>
+                    <label className="text-sm text-white/60">Section title<input name="homeProjectsTitle" defaultValue={content.homeProjectsTitle} className={input} /></label>
+                    <label className="text-sm text-white/60">Projects to show<input type="number" min={1} max={12} name="homeProjectLimit" defaultValue={content.homeProjectLimit} className={input} /></label>
+                    <label className="text-sm text-white/60 md:col-span-2">Section subtitle<textarea name="homeProjectsSubtitle" defaultValue={content.homeProjectsSubtitle} rows={2} className={input} /></label>
+                    <p className="text-xs leading-relaxed text-white/35 md:col-span-2">Projects are rendered as a compact list. Scrolling past the Blog section transitions smoothly into Projects; if Blog is hidden, the hero transitions directly to Projects.</p>
                 </section>
 
                 <button className="rounded-xl bg-white px-5 py-3 font-semibold text-black">Save homepage</button>
