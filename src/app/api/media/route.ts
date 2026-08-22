@@ -7,16 +7,13 @@ const allowedRoles = new Set(['OWNER', 'ADMIN', 'EDITOR']);
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const ALLOWED_UPLOAD_TYPES = new Set([
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
-    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
-    'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json',
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-m4v',
     'application/zip', 'application/x-zip-compressed',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 const ALLOWED_UPLOAD_EXTENSIONS = new Set([
-    'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'mp4', 'webm', 'ogg', 'ogv', 'mov',
-    'pdf', 'txt', 'md', 'csv', 'json', 'zip', 'docx', 'xlsx', 'pptx',
+    'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif',
+    'mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v',
+    'zip',
 ]);
 
 async function requireEditor() {
@@ -36,7 +33,10 @@ function extension(fileName: string) {
 }
 
 function typeAllowed(file: File) {
-    return ALLOWED_UPLOAD_TYPES.has(file.type) || ALLOWED_UPLOAD_EXTENSIONS.has(extension(file.name));
+    const ext = extension(file.name);
+    if (!ALLOWED_UPLOAD_EXTENSIONS.has(ext)) return false;
+    if (!file.type || file.type === 'application/octet-stream') return true;
+    return ALLOWED_UPLOAD_TYPES.has(file.type);
 }
 
 export async function GET() {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Maximum upload size is 10 MB.' }, { status: 413 });
         }
         if (!typeAllowed(file)) {
-            return NextResponse.json({ error: 'Unsupported file type.' }, { status: 415 });
+            return NextResponse.json({ error: 'Unsupported file type. Upload an image, video, or ZIP archive.' }, { status: 415 });
         }
 
         const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
