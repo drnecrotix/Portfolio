@@ -28,40 +28,43 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [isLightboxMaximized, setIsLightboxMaximized] = useState(false);
     const [visibleCount, setVisibleCount] = useState(12);
-    const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+    const [fallbackItems, setFallbackItems] = useState<GalleryItem[]>([]);
     const scrollContainerRef = useRef<Record<string, HTMLDivElement | null>>({});
 
+    const configuredItems = useMemo<GalleryItem[]>(() => content.items
+        .filter((item) => item.isVisible && item.mediaUrl)
+        .sort((a, b) => a.order - b.order)
+        .map((item) => ({
+            id: item.id,
+            title: item.title,
+            type: item.type,
+            category: item.type === 'video' ? 'Video' : 'Photo',
+            thumbnail: item.type === 'video' ? (item.thumbnailUrl || item.mediaUrl) : item.mediaUrl,
+            url: item.mediaUrl,
+            description: item.description,
+        })), [content.items]);
+
     useEffect(() => {
-        const configuredItems = content.items
-            .filter((item) => item.isVisible && item.mediaUrl)
-            .sort((a, b) => a.order - b.order)
-            .map((item) => ({
-                id: item.id,
-                title: item.title,
-                type: item.type,
-                category: item.type === 'video' ? 'Video' : 'Photo',
-                thumbnail: item.type === 'video' ? (item.thumbnailUrl || item.mediaUrl) : item.mediaUrl,
-                url: item.mediaUrl,
-                description: item.description,
-            }));
-
-        if (configuredItems.length) {
-            setGalleryItems(configuredItems);
-            return;
-        }
-
+        if (configuredItems.length) return;
+        let cancelled = false;
         getAllGalleryImages()
-            .then((images) => setGalleryItems(images.map((img, index) => ({
-                id: `gallery-${index}`,
-                title: img.filename.split('.')[0].replace(/-/g, ' '),
-                type: 'image' as const,
-                category: 'Photo',
-                thumbnail: img.src,
-                url: img.src,
-                description: content.defaultImageDescription,
-            }))))
+            .then((images) => {
+                if (cancelled) return;
+                setFallbackItems(images.map((img, index) => ({
+                    id: `gallery-${index}`,
+                    title: img.filename.split('.')[0].replace(/-/g, ' '),
+                    type: 'image' as const,
+                    category: 'Photo',
+                    thumbnail: img.src,
+                    url: img.src,
+                    description: content.defaultImageDescription,
+                })));
+            })
             .catch((error) => console.error('Failed to load gallery images', error));
-    }, [content.items, content.defaultImageDescription]);
+        return () => { cancelled = true; };
+    }, [configuredItems, content.defaultImageDescription]);
+
+    const galleryItems = configuredItems.length ? configuredItems : fallbackItems;
 
     const groupedItems = useMemo(() => {
         const groups: Record<string, GalleryItem[]> = {};
@@ -80,8 +83,6 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     const visibleItems = useMemo(() => viewMode === 'rows' ? [] : flattenedFilteredItems.slice(0, visibleCount), [flattenedFilteredItems, visibleCount, viewMode]);
     const currentIndex = flattenedFilteredItems.findIndex((item) => item.id === selectedId);
     const currentItem = currentIndex >= 0 ? flattenedFilteredItems[currentIndex] : null;
-
-    useEffect(() => setVisibleCount(12), [filter]);
 
     const openLightbox = (id: string) => {
         setSelectedId(id);
@@ -102,6 +103,10 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     const scrollHorizontal = (category: string, direction: 'left' | 'right') => {
         scrollContainerRef.current[category]?.scrollBy({ left: direction === 'left' ? -400 : 400, behavior: 'smooth' });
     };
+    const changeFilter = (next: FilterType) => {
+        setFilter(next);
+        setVisibleCount(12);
+    };
 
     const filterLabel = (value: FilterType) => value === 'all' ? content.filterAll : value === 'image' ? content.filterPhotos : content.filterVideos;
 
@@ -119,7 +124,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                 <div className="flex w-full flex-wrap items-center gap-4 md:w-auto md:gap-8">
                     <div className="flex items-center gap-1 rounded-full border border-black/5 bg-black/5 p-1 shadow-inner backdrop-blur-md transition-colors duration-300 dark:border-white/5 dark:bg-white/5">
                         {(['all', 'image', 'video'] as FilterType[]).map((item) => (
-                            <button key={item} onClick={() => setFilter(item)} className={cn('rounded-full px-5 py-2 text-xs font-medium tracking-wide transition-all duration-300', filter === item ? 'bg-white text-foreground shadow-md ring-1 ring-black/5 dark:bg-neutral-800 dark:ring-white/10' : 'text-muted-foreground hover:bg-white/50 hover:text-foreground dark:hover:bg-white/10')}>{filterLabel(item)}</button>
+                            <button key={item} onClick={() => changeFilter(item)} className={cn('rounded-full px-5 py-2 text-xs font-medium tracking-wide transition-all duration-300', filter === item ? 'bg-white text-foreground shadow-md ring-1 ring-black/5 dark:bg-neutral-800 dark:ring-white/10' : 'text-muted-foreground hover:bg-white/50 hover:text-foreground dark:hover:bg-white/10')}>{filterLabel(item)}</button>
                         ))}
                     </div>
 
