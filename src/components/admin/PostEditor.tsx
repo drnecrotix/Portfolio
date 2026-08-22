@@ -70,7 +70,7 @@ function RichEditor({ name, initialValue, shortcodes }: { name: string; initialV
         content: initialValue || '<p></p>',
         editorProps: {
             attributes: {
-                class: 'min-h-[34rem] max-w-none px-6 py-6 outline-none prose prose-invert prose-headings:tracking-tight prose-a:text-sky-300 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:border-emerald-400/70 prose-blockquote:bg-emerald-400/[0.04] prose-blockquote:py-2 prose-blockquote:pl-5 prose-blockquote:pr-4 prose-blockquote:text-white/80',
+                class: 'min-h-[34rem] max-w-none px-6 py-6 outline-none prose prose-invert prose-headings:tracking-tight prose-a:text-sky-300 prose-blockquote:my-7 prose-blockquote:rounded-r-xl prose-blockquote:border-l-4 prose-blockquote:border-emerald-400 prose-blockquote:bg-emerald-400/[0.07] prose-blockquote:px-6 prose-blockquote:py-4 prose-blockquote:text-lg prose-blockquote:italic prose-blockquote:leading-8 prose-blockquote:text-white/85 prose-blockquote:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] prose-blockquote:[quotes:none] prose-blockquote:before:content-none prose-blockquote:after:content-none',
             },
         },
         onUpdate: ({ editor }) => setHtml(editor.getHTML()),
@@ -147,8 +147,8 @@ function RichEditor({ name, initialValue, shortcodes }: { name: string; initialV
                 <button type="button" onClick={() => editor?.chain().focus().toggleStrike().run()} className={editor?.isActive('strike') ? activeTool : tool}>Strike</button>
                 <span className="mx-1 h-8 w-px bg-white/10" />
                 <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={editor?.isActive('bulletList') ? activeTool : tool}>Bullets</button>
+                <button type="button" title="WordPress-style quote block" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={editor?.isActive('blockquote') ? activeTool : tool}>Quote</button>
                 <button type="button" onClick={() => editor?.chain().focus().toggleOrderedList().run()} className={editor?.isActive('orderedList') ? activeTool : tool}>Numbered</button>
-                <button type="button" onClick={() => editor?.chain().focus().toggleBlockquote().run()} className={editor?.isActive('blockquote') ? activeTool : tool}>Quote</button>
                 <button type="button" onClick={() => editor?.chain().focus().toggleCodeBlock().run()} className={editor?.isActive('codeBlock') ? activeTool : tool}>Code</button>
                 <button type="button" onClick={setLink} className={editor?.isActive('link') ? activeTool : tool}>Link</button>
                 <span className="mx-1 h-8 w-px bg-white/10" />
