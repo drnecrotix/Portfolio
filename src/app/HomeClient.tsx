@@ -41,11 +41,23 @@ export default function HomeClient({ content, identity, posts, projects }: { con
         if (!section || autoScrollInProgress.current) return;
         autoScrollInProgress.current = true;
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.setTimeout(() => { autoScrollInProgress.current = false; }, 900);
+        window.setTimeout(() => { autoScrollInProgress.current = false; }, 950);
+    };
+
+    const isAtSectionTop = (id: string) => {
+        const section = document.getElementById(id);
+        if (!section) return false;
+        return section.getBoundingClientRect().top >= -4;
+    };
+
+    const isAtSectionBottom = (id: string) => {
+        const section = document.getElementById(id);
+        if (!section) return false;
+        return section.getBoundingClientRect().bottom <= window.innerHeight + 4;
     };
 
     const handleHeroWheel = (event: React.WheelEvent<HTMLElement>) => {
-        if (event.deltaY < 12 || autoScrollInProgress.current || window.scrollY > 120) return;
+        if (event.deltaY < 12 || autoScrollInProgress.current || !isAtSectionTop('home-hero')) return;
         const target = showBlog ? 'home-blog' : showProjects ? 'home-projects' : '';
         if (!target) return;
         event.preventDefault();
@@ -53,27 +65,41 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     };
 
     const handleBlogWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-        if (!showProjects || event.deltaY < 12 || autoScrollInProgress.current) return;
-        const blog = document.getElementById('home-blog');
-        if (!blog || blog.getBoundingClientRect().bottom > window.innerHeight + 120) return;
+        if (Math.abs(event.deltaY) < 12 || autoScrollInProgress.current) return;
+
+        if (event.deltaY < 0 && isAtSectionTop('home-blog')) {
+            event.preventDefault();
+            smoothTo('home-hero');
+            return;
+        }
+
+        if (event.deltaY > 0 && showProjects && isAtSectionBottom('home-blog')) {
+            event.preventDefault();
+            smoothTo('home-projects');
+        }
+    };
+
+    const handleProjectsWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+        if (event.deltaY > -12 || autoScrollInProgress.current || !isAtSectionTop('home-projects')) return;
         event.preventDefault();
-        smoothTo('home-projects');
+        smoothTo(showBlog ? 'home-blog' : 'home-hero');
     };
 
     return (
         <>
             {isLoading && <LoadingScreen onComplete={handleLoadingComplete} onExitStart={() => setIsInitialLoadingExit(true)} duration={2500} />}
             <motion.main
+                id="home-hero"
                 initial={skipAnimation ? false : { opacity: 0, y: 40 }}
                 animate={skipAnimation ? { opacity: 1, y: 0 } : isReadyToAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
                 transition={{ duration: skipAnimation ? 0 : 1.4, ease: skipAnimation ? 'linear' : [0.16, 1, 0.3, 1], opacity: { duration: skipAnimation ? 0 : 0.8 } }}
-                className="home-hero-container relative flex min-h-0 flex-1 overflow-hidden will-change-transform will-change-opacity [&>div]:!min-h-0"
+                className="home-hero-container relative flex h-[100svh] min-h-[100svh] flex-none overflow-hidden will-change-transform will-change-opacity [&>div]:!min-h-full"
                 onWheel={handleHeroWheel}
             >
                 <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
             </motion.main>
             {showBlog && <div onWheel={handleBlogWheel}><HomeBlogSection posts={posts} title={content.homeBlogTitle} subtitle={content.homeBlogSubtitle} /></div>}
-            {showProjects && <HomeProjectsSection projects={projects} title={content.homeProjectsTitle} subtitle={content.homeProjectsSubtitle} />}
+            {showProjects && <div onWheel={handleProjectsWheel}><HomeProjectsSection projects={projects} title={content.homeProjectsTitle} subtitle={content.homeProjectsSubtitle} /></div>}
         </>
     );
 }
