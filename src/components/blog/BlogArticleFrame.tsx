@@ -176,12 +176,6 @@ export function BlogArticleFrame({
                             ))}
                         </section>
                     )}
-
-                    <footer className="mt-12 rounded-2xl border border-foreground/10 bg-foreground/[0.025] p-6 sm:p-7">
-                        <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Written by</p>
-                        <p className="mt-3 text-lg font-semibold">{author}</p>
-                        <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">A personal note from the Digital Lab journal - part thought, part archive, part work in progress.</p>
-                    </footer>
                 </motion.article>
             </div>
 
