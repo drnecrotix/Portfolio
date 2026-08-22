@@ -16,7 +16,7 @@ export function ConditionalNavigation({ children }: { children: React.ReactNode 
     const blogIndex = segments.indexOf('blog');
     const isBlogDetail = blogIndex !== -1 && segments.length > blogIndex + 1;
 
-    const showNavbar = !isAdmin && !isProjectDetail && !isSiteStatus;
+    const showNavbar = !isAdmin && !isSiteStatus;
     const showFooter = !isAdmin && !isProjectDetail && !isBlogDetail && !isSiteStatus;
     const showBackToTop = showFooter && !isHome;
     const useShell = showNavbar || showFooter || showBackToTop;
