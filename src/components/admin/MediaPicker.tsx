@@ -25,6 +25,7 @@ type Props = {
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif';
 const VIDEO_ACCEPT = 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-m4v,.mp4,.webm,.ogg,.ogv,.mov,.m4v';
 const ZIP_ACCEPT = 'application/zip,application/x-zip-compressed,.zip';
+const MEDIA_LIBRARY_EVENT = 'portfolio:media-library-updated';
 
 function acceptsForKind(kind: MediaKind) {
     if (kind === 'image') return IMAGE_ACCEPT;
@@ -48,10 +49,28 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
     const activeKind = lockKind ? initialKind : kind;
 
     useEffect(() => {
-        fetch('/api/media', { cache: 'no-store' })
-            .then((response) => response.ok ? response.json() : [])
-            .then((data) => setAssets(Array.isArray(data) ? data : []))
-            .catch(() => setAssets([]));
+        let active = true;
+        const loadAssets = () => {
+            fetch('/api/media', { cache: 'no-store' })
+                .then((response) => response.ok ? response.json() : [])
+                .then((data) => { if (active) setAssets(Array.isArray(data) ? data : []); })
+                .catch(() => { if (active) setAssets([]); });
+        };
+        const handleLibraryUpdate = (event: Event) => {
+            const asset = (event as CustomEvent<MediaAsset>).detail;
+            if (asset?.id) {
+                setAssets((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+            } else {
+                loadAssets();
+            }
+        };
+
+        loadAssets();
+        window.addEventListener(MEDIA_LIBRARY_EVENT, handleLibraryUpdate);
+        return () => {
+            active = false;
+            window.removeEventListener(MEDIA_LIBRARY_EVENT, handleLibraryUpdate);
+        };
     }, []);
 
     const filtered = useMemo(() => {
@@ -95,6 +114,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
             if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Upload failed.');
             const asset = data as MediaAsset;
             setAssets((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
+            window.dispatchEvent(new CustomEvent<MediaAsset>(MEDIA_LIBRARY_EVENT, { detail: asset }));
             setSelection(asset.url);
             setUploadMessage(`${asset.fileName} uploaded and selected.`);
             setTab('library');
@@ -112,11 +132,9 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                 <span className="text-sm text-white/60">{label}</span>
                 <div className="flex flex-wrap gap-2">
                     {selected && (
-                        <button type="button" onClick={clear} className="rounded-lg border border-red-500/20 px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10">
-                            Clear selection
-                        </button>
+                        <button type="button" onClick={clear} className="rounded-lg border border-red-500/20 px-3 py-1.5 text-xs text-red-300 hover:bg-red-500/10">Clear selection</button>
                     )}
-                    <button type="button" onClick={() => setOpen((value) => !value)} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/[0.05] hover:text-white">
+                    <button type="button" onClick={() => setOpen((current) => !current)} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/[0.05] hover:text-white">
                         {open ? 'Close media' : 'Select media'}
                     </button>
                 </div>
@@ -142,17 +160,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
 
                     {tab === 'upload' ? (
                         <div className="min-w-0 py-4">
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept={acceptsForKind(activeKind)}
-                                disabled={uploading}
-                                onChange={(event) => {
-                                    const file = event.target.files?.[0];
-                                    if (file) void uploadFile(file);
-                                }}
-                                className="block w-full min-w-0 cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30"
-                            />
+                            <input ref={fileInputRef} type="file" accept={acceptsForKind(activeKind)} disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file); }} className="block w-full min-w-0 cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30" />
                             <p className="mt-3 text-[11px] leading-relaxed text-white/30">Allowed: images, videos and ZIP archives. Maximum file size: 10 MB.</p>
                             {uploading && <p className="mt-3 break-words text-xs text-sky-300">Uploading and adding to library…</p>}
                             {uploadError && <p className="mt-3 max-w-full break-words text-xs text-red-300">{uploadError}</p>}
@@ -163,9 +171,9 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search media..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
                                 {!lockKind && (
                                     <div className="flex flex-wrap gap-2">
-                                        {(['all', 'image', 'video', 'file'] as const).map((value) => (
-                                            <button key={value} type="button" onClick={() => setKind(value)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${activeKind === value ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55 hover:bg-white/[0.05]'}`}>
-                                                {value === 'file' ? 'zip' : value}
+                                        {(['all', 'image', 'video', 'file'] as const).map((mediaKind) => (
+                                            <button key={mediaKind} type="button" onClick={() => setKind(mediaKind)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${activeKind === mediaKind ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55 hover:bg-white/[0.05]'}`}>
+                                                {mediaKind === 'file' ? 'zip' : mediaKind}
                                             </button>
                                         ))}
                                     </div>
