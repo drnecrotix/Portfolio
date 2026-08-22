@@ -9,6 +9,7 @@ import {
     Box,
     Clock,
     Code,
+    Download,
     ExternalLink,
     Github,
     Layers,
@@ -28,10 +29,12 @@ const BLOCK_TOKEN = /^\[\[(mission|features|chronicles|installation)\]\]$/i;
 const BLOCK_SPLIT = /(\[\[(?:mission|features|chronicles|installation)\]\])/gi;
 
 function normalizeLayout(layout: string) {
-    return layout.replace(
-        /<p[^>]*>\s*\[\[(mission|features|chronicles|installation)\]\]\s*<\/p>/gi,
-        '[[$1]]',
-    );
+    return layout
+        .replace(/&lbrack;&lbrack;(mission|features|chronicles|installation)&rbrack;&rbrack;/gi, '[[$1]]')
+        .replace(
+            /<p[^>]*>\s*(?:<(?:strong|em|s)[^>]*>\s*)*\[\[(mission|features|chronicles|installation)\]\](?:\s*<\/(?:strong|em|s)>)*\s*<\/p>/gi,
+            '[[$1]]',
+        );
 }
 
 function layoutParts(layout: string) {
@@ -218,7 +221,7 @@ export function ProjectComposerPage({ project }: { project: Project }) {
                             return (
                                 <div
                                     key={`copy-${index}`}
-                                    className="prose prose-lg max-w-none text-zinc-600 prose-headings:font-black prose-headings:tracking-tight prose-p:leading-loose prose-a:text-emerald-600 dark:prose-invert dark:text-muted-foreground dark:prose-a:text-emerald-400"
+                                    className="prose prose-lg max-w-none text-zinc-600 prose-headings:font-black prose-headings:tracking-tight prose-p:leading-loose prose-a:text-emerald-600 prose-blockquote:my-8 prose-blockquote:rounded-r-xl prose-blockquote:border-l-4 prose-blockquote:border-emerald-500 prose-blockquote:bg-secondary/25 prose-blockquote:px-6 prose-blockquote:py-4 prose-blockquote:text-lg prose-blockquote:italic prose-blockquote:text-foreground/80 dark:prose-invert dark:text-muted-foreground dark:prose-a:text-emerald-400 dark:prose-blockquote:bg-white/[0.04]"
                                     dangerouslySetInnerHTML={{ __html: part }}
                                 />
                             );
@@ -241,11 +244,12 @@ export function ProjectComposerPage({ project }: { project: Project }) {
 
                     <aside className="relative lg:col-span-4">
                         <div className="sticky top-20 space-y-8">
-                            {(project.demoUrl || project.repoUrl) && (
+                            {(project.demoUrl || project.repoUrl || project.downloadUrl) && (
                                 <div className="rounded-2xl border border-black/20 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-secondary/5 dark:shadow-none">
                                     <h3 className="mb-6 text-sm font-bold uppercase tracking-widest text-muted-foreground">{t('sections.projectAccess')}</h3>
                                     <div className="space-y-3">
                                         {project.demoUrl && <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-bold text-background"><span>{t('sections.liveDemo')}</span><ExternalLink className="h-4 w-4" /></a>}
+                                        {project.downloadUrl && <a href={project.downloadUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-500/15 dark:text-emerald-300"><Download className="h-4 w-4" /><span>Download</span></a>}
                                         {project.repoUrl && <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl border border-border/50 bg-secondary/10 px-4 py-3 text-sm font-medium transition hover:bg-secondary/20"><Github className="h-4 w-4" /><span>{t('sections.sourceCode')}</span></a>}
                                     </div>
                                 </div>
