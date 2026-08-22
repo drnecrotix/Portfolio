@@ -9,6 +9,7 @@ export type SocialSettings = {
 
 export type ContactSettings = {
     email: string;
+    formRecipientEmail: string;
     phone: string;
     location: string;
     website: string;
@@ -46,6 +47,7 @@ export const defaultGeneralSiteSettings: GeneralSiteSettings = {
     },
     contactDetails: {
         email: '',
+        formRecipientEmail: '',
         phone: '',
         location: 'Bulgaria',
         website: '',
@@ -94,6 +96,7 @@ export function normalizeGeneralSiteSettings(value?: {
         },
         contactDetails: {
             email: text(contact.email),
+            formRecipientEmail: text(contact.formRecipientEmail),
             phone: text(contact.phone),
             location: text(contact.location, defaultGeneralSiteSettings.contactDetails.location),
             website: text(contact.website),
