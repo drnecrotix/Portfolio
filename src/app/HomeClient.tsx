@@ -94,8 +94,8 @@ export default function HomeClient({ content, identity, posts, projects }: { con
             >
                 <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
             </motion.main>
-            {showBlog && <HomeBlogSection posts={posts} title={content.homeBlogTitle} subtitle={content.homeBlogSubtitle} />}
-            {showProjects && <HomeProjectsSection projects={projects} title={content.homeProjectsTitle} subtitle={content.homeProjectsSubtitle} />}
+            {showBlog && <HomeBlogSection posts={posts} />}
+            {showProjects && <HomeProjectsSection projects={projects} />}
         </>
     );
 }
