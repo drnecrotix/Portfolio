@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { RefreshCw, Send, ShieldCheck, X } from 'lucide-react';
+import { MessageCircle, RefreshCw, Send, ShieldCheck, X } from 'lucide-react';
 
 export type PublicBlogComment = {
     id: string;
@@ -115,7 +115,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
             </div>
             <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground">{comment.content}</p>
             {!isReply && (
-                <button type="button" onClick={() => startReply(comment)} className="mt-3 text-xs text-muted-foreground/70 transition hover:text-foreground" aria-label={`Reply to ${comment.authorName}`}>
+                <button type="button" onClick={() => startReply(comment)} className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/75 transition hover:text-foreground" aria-label={`Reply to ${comment.authorName}`}>
                     Reply
                 </button>
             )}
@@ -123,23 +123,35 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
     );
 
     return (
-        <section className="mx-auto w-full border-t border-foreground/10 pb-6 pt-8" aria-labelledby="comments-title">
-            <div className="mb-8 flex items-center justify-between gap-5">
-                <div className="flex items-baseline gap-3">
-                    <h3 id="comments-title" className="text-base font-semibold tracking-tight sm:text-lg">Comments</h3>
-                    <span className="font-mono text-[10px] text-muted-foreground">{comments.length}</span>
+        <section className="mx-auto w-full border-t border-foreground/10 pb-8 pt-8" aria-labelledby="comments-title">
+            <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <div className="flex items-center gap-2.5">
+                        <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                        <h3 id="comments-title" className="text-lg font-semibold tracking-tight">Comments</h3>
+                        <span className="rounded-full border border-foreground/10 px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{comments.length}</span>
+                    </div>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Join the conversation or reply to an existing comment.</p>
                 </div>
+
                 {!composerOpen && (
-                    <button type="button" onClick={openComposer} className="text-xs text-muted-foreground transition hover:text-foreground">
+                    <button
+                        type="button"
+                        onClick={openComposer}
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-foreground/15 bg-foreground/[0.035] px-4 py-2 text-xs font-semibold text-foreground transition hover:border-foreground/25 hover:bg-foreground/[0.06]"
+                    >
+                        <MessageCircle className="h-3.5 w-3.5" />
                         Leave a comment
                     </button>
                 )}
             </div>
 
             {comments.length === 0 ? (
-                <p className="mb-8 text-sm text-muted-foreground">No comments yet.</p>
+                <div className="mb-8 rounded-xl border border-dashed border-foreground/10 px-4 py-6 text-sm text-muted-foreground">
+                    No comments yet. Be the first to leave one.
+                </div>
             ) : (
-                <div className="mb-10">
+                <div className="mb-8 rounded-xl border border-foreground/10 px-4 py-1 sm:px-5">
                     {roots.map((comment) => {
                         const replies = comments.filter((item) => item.parentId === comment.id);
                         return <div key={comment.id}>{renderComment(comment)}{replies.map((reply) => renderComment(reply, true))}</div>;
@@ -148,7 +160,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
             )}
 
             {composerOpen && (
-                <form id="comment-composer" onSubmit={submit} className="border-t border-foreground/10 pt-7">
+                <form id="comment-composer" onSubmit={submit} className="rounded-xl border border-foreground/10 bg-foreground/[0.02] p-5 sm:p-6">
                     <div className="mb-6 flex items-start justify-between gap-4">
                         <div>
                             <h4 className="text-sm font-semibold">{replyTarget ? `Reply to ${replyTarget.authorName}` : 'Leave a comment'}</h4>
