@@ -19,7 +19,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <div className="mb-10">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/35">General Settings</p>
                 <h2 className="mt-2 text-4xl font-semibold">Site identity & preferences</h2>
-                <p className="mt-3 max-w-2xl text-sm text-white/45">Central settings for identity, theme defaults, contact details and social profiles. Changes now invalidate the public layout cache immediately.</p>
+                <p className="mt-3 max-w-2xl text-sm text-white/45">Central settings for identity, theme defaults, contact details, contact-form delivery and social profiles.</p>
             </div>
 
             <form action={updateGeneralSettings} className="space-y-8">
@@ -38,11 +38,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 </section>
 
                 <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
-                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Contact details</h3><p className="mt-1 text-xs text-white/40">Single source of truth for public contact and identity components.</p></div>
-                    <label className="text-sm text-white/60">Email<input type="email" name="email" defaultValue={settings.contactDetails.email} className={input} /></label>
+                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Contact details</h3><p className="mt-1 text-xs text-white/40">Public contact information shown across the portfolio.</p></div>
+                    <label className="text-sm text-white/60">Public email<input type="email" name="email" defaultValue={settings.contactDetails.email} className={input} /></label>
                     <label className="text-sm text-white/60">Phone<input name="phone" defaultValue={settings.contactDetails.phone} className={input} /></label>
                     <label className="text-sm text-white/60">Location<input name="location" defaultValue={settings.contactDetails.location} className={input} /></label>
                     <label className="text-sm text-white/60">Website<input type="url" name="website" defaultValue={settings.contactDetails.website} className={input} /></label>
+                </section>
+
+                <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
+                    <div className="md:col-span-2">
+                        <h3 className="text-lg font-semibold">Contact form delivery</h3>
+                        <p className="mt-1 max-w-2xl text-xs leading-5 text-white/40">Choose where messages submitted through the Contact form are delivered. This address is private and does not have to match the public contact email. If left empty, the public email is used, then EMAIL_USER as the final fallback.</p>
+                    </div>
+                    <label className="text-sm text-white/60 md:col-span-2">Recipient email<input type="email" name="formRecipientEmail" placeholder="inbox@example.com" defaultValue={settings.contactDetails.formRecipientEmail} className={input} /></label>
+                    <div className="md:col-span-2 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.035] px-4 py-3 text-xs leading-5 text-emerald-100/60">Bot protection is enabled on the public form with honeypot fields, same-origin validation, minimum completion time and submission rate limiting.</div>
                 </section>
 
                 <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
