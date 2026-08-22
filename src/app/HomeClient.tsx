@@ -41,38 +41,60 @@ export default function HomeClient({ content, identity, posts, projects }: { con
         if (!section || autoScrollInProgress.current) return;
         autoScrollInProgress.current = true;
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.setTimeout(() => { autoScrollInProgress.current = false; }, 900);
+        window.setTimeout(() => { autoScrollInProgress.current = false; }, 850);
     };
 
-    const handleHeroWheel = (event: React.WheelEvent<HTMLElement>) => {
-        if (event.deltaY < 12 || autoScrollInProgress.current || window.scrollY > 120) return;
-        const target = showBlog ? 'home-blog' : showProjects ? 'home-projects' : '';
-        if (!target) return;
-        event.preventDefault();
-        smoothTo(target);
-    };
+    useEffect(() => {
+        if (isLoading) return;
 
-    const handleBlogWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-        if (!showProjects || event.deltaY < 12 || autoScrollInProgress.current) return;
-        const blog = document.getElementById('home-blog');
-        if (!blog || blog.getBoundingClientRect().bottom > window.innerHeight + 120) return;
-        event.preventDefault();
-        smoothTo('home-projects');
-    };
+        const sectionIds = ['home-hero'];
+        if (showBlog) sectionIds.push('home-blog');
+        if (showProjects) sectionIds.push('home-projects');
+
+        const handleWheel = (event: WheelEvent) => {
+            if (Math.abs(event.deltaY) < 14 || autoScrollInProgress.current || event.ctrlKey) return;
+
+            const viewportCenter = window.scrollY + window.innerHeight / 2;
+            let currentIndex = 0;
+            let closestDistance = Number.POSITIVE_INFINITY;
+
+            sectionIds.forEach((id, index) => {
+                const section = document.getElementById(id);
+                if (!section) return;
+                const rect = section.getBoundingClientRect();
+                const sectionCenter = window.scrollY + rect.top + rect.height / 2;
+                const distance = Math.abs(sectionCenter - viewportCenter);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    currentIndex = index;
+                }
+            });
+
+            const nextIndex = event.deltaY > 0 ? currentIndex + 1 : currentIndex - 1;
+            const targetId = sectionIds[nextIndex];
+            if (!targetId) return;
+
+            event.preventDefault();
+            smoothTo(targetId);
+        };
+
+        window.addEventListener('wheel', handleWheel, { passive: false });
+        return () => window.removeEventListener('wheel', handleWheel);
+    }, [isLoading, showBlog, showProjects]);
 
     return (
         <>
             {isLoading && <LoadingScreen onComplete={handleLoadingComplete} onExitStart={() => setIsInitialLoadingExit(true)} duration={2500} />}
             <motion.main
+                id="home-hero"
                 initial={skipAnimation ? false : { opacity: 0, y: 40 }}
                 animate={skipAnimation ? { opacity: 1, y: 0 } : isReadyToAnimate ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
                 transition={{ duration: skipAnimation ? 0 : 1.4, ease: skipAnimation ? 'linear' : [0.16, 1, 0.3, 1], opacity: { duration: skipAnimation ? 0 : 0.8 } }}
-                className="home-hero-container relative flex min-h-0 flex-1 overflow-hidden will-change-transform will-change-opacity [&>div]:!min-h-0"
-                onWheel={handleHeroWheel}
+                className="home-hero-container relative flex h-[100svh] min-h-[100svh] flex-none overflow-hidden will-change-transform will-change-opacity [&>div]:!h-[100svh] [&>div]:!min-h-[100svh]"
             >
                 <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
             </motion.main>
-            {showBlog && <div onWheel={handleBlogWheel}><HomeBlogSection posts={posts} title={content.homeBlogTitle} subtitle={content.homeBlogSubtitle} /></div>}
+            {showBlog && <HomeBlogSection posts={posts} title={content.homeBlogTitle} subtitle={content.homeBlogSubtitle} />}
             {showProjects && <HomeProjectsSection projects={projects} title={content.homeProjectsTitle} subtitle={content.homeProjectsSubtitle} />}
         </>
     );
