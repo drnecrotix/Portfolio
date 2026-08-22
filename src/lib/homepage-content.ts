@@ -17,6 +17,10 @@ export type HomepageContent = {
     homeBlogTitle: string;
     homeBlogSubtitle: string;
     homeBlogPostLimit: number;
+    showProjects: boolean;
+    homeProjectsTitle: string;
+    homeProjectsSubtitle: string;
+    homeProjectLimit: number;
     socialImage: string;
     openGraphImage: string;
     twitterImage: string;
@@ -44,6 +48,10 @@ export const defaultHomepageContent: HomepageContent = {
     homeBlogTitle: 'Latest from the blog',
     homeBlogSubtitle: 'Recent publications, notes and ideas.',
     homeBlogPostLimit: 6,
+    showProjects: true,
+    homeProjectsTitle: 'Selected projects',
+    homeProjectsSubtitle: 'Current and completed work from the lab.',
+    homeProjectLimit: 6,
     socialImage: '',
     openGraphImage: '',
     twitterImage: '',
@@ -52,12 +60,15 @@ export const defaultHomepageContent: HomepageContent = {
 
 export function normalizeHomepageContent(value: unknown): HomepageContent {
     const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Partial<HomepageContent> : {};
-    const limit = Number(source.homeBlogPostLimit);
+    const blogLimit = Number(source.homeBlogPostLimit);
+    const projectLimit = Number(source.homeProjectLimit);
     return {
         ...defaultHomepageContent,
         ...source,
         showBlogPosts: source.showBlogPosts !== false,
-        homeBlogPostLimit: Number.isFinite(limit) ? Math.max(1, Math.min(12, Math.round(limit))) : defaultHomepageContent.homeBlogPostLimit,
+        homeBlogPostLimit: Number.isFinite(blogLimit) ? Math.max(1, Math.min(12, Math.round(blogLimit))) : defaultHomepageContent.homeBlogPostLimit,
+        showProjects: source.showProjects !== false,
+        homeProjectLimit: Number.isFinite(projectLimit) ? Math.max(1, Math.min(12, Math.round(projectLimit))) : defaultHomepageContent.homeProjectLimit,
     };
 }
 
