@@ -80,7 +80,7 @@ function safeId(value: unknown, fallback: string) {
 function normalizeUrl(value: unknown) {
   const url = String(value ?? '').trim().slice(0, 1200);
   if (!url) return '';
-  if (url.startsWith('/')) return url;
+  if (url.startsWith('/') && !url.startsWith('//')) return url;
   try {
     const parsed = new URL(url);
     return parsed.protocol === 'https:' ? parsed.toString() : '';
@@ -102,27 +102,28 @@ export function socialVideoEmbedUrl(value: unknown) {
     if (host === 'youtube.com' || host === 'm.youtube.com') {
       const id = url.searchParams.get('v') || (['shorts', 'embed', 'live'].includes(parts[0] || '') ? parts[1] : '');
       if (id) return `https://www.youtube.com/embed/${encodeURIComponent(id)}`;
+      return '';
     }
 
     if ((host === 'vimeo.com' || host === 'player.vimeo.com') && parts.length) {
       const id = [...parts].reverse().find((part) => /^\d+$/.test(part));
-      if (id) return `https://player.vimeo.com/video/${id}`;
+      return id ? `https://player.vimeo.com/video/${id}` : '';
     }
 
-    if (host === 'tiktok.com' || host === 'm.tiktok.com' || host === 'vm.tiktok.com') {
+    if (host === 'tiktok.com' || host === 'm.tiktok.com') {
       const videoIndex = parts.indexOf('video');
       const id = videoIndex >= 0 ? parts[videoIndex + 1] : '';
-      if (id && /^\d+$/.test(id)) return `https://www.tiktok.com/player/v1/${id}`;
-      return normalized;
+      return id && /^\d+$/.test(id) ? `https://www.tiktok.com/player/v1/${id}` : '';
     }
 
-    if (host === 'instagram.com') {
+    if (host === 'instagram.com' || host === 'm.instagram.com') {
       const kind = parts[0];
       const shortcode = parts[1];
       if (shortcode && ['p', 'reel', 'reels', 'tv'].includes(kind || '')) {
         const embedKind = kind === 'reels' ? 'reel' : kind;
         return `https://www.instagram.com/${embedKind}/${encodeURIComponent(shortcode)}/embed/`;
       }
+      return '';
     }
 
     if (host === 'facebook.com' || host === 'm.facebook.com' || host === 'fb.watch') {
@@ -132,23 +133,23 @@ export function socialVideoEmbedUrl(value: unknown) {
     if (host === 'x.com' || host === 'twitter.com' || host === 'mobile.twitter.com') {
       const statusIndex = parts.indexOf('status');
       const id = statusIndex >= 0 ? parts[statusIndex + 1] : '';
-      if (id && /^\d+$/.test(id)) return `https://platform.twitter.com/embed/Tweet.html?id=${id}`;
+      return id && /^\d+$/.test(id) ? `https://platform.twitter.com/embed/Tweet.html?id=${id}` : '';
     }
 
-    const isPinterest = host === 'pin.it' || /^([a-z0-9-]+\.)?pinterest\.[a-z.]+$/.test(host);
+    const isPinterest = /^([a-z0-9-]+\.)?pinterest\.[a-z.]+$/.test(host);
     if (isPinterest) {
       const pinIndex = parts.indexOf('pin');
       const id = pinIndex >= 0 ? parts[pinIndex + 1] : '';
-      if (id && /^\d+$/.test(id)) return `https://assets.pinterest.com/ext/embed.html?id=${id}`;
-      return normalized;
+      return id && /^\d+$/.test(id) ? `https://assets.pinterest.com/ext/embed.html?id=${id}` : '';
     }
 
     if (host === 'dailymotion.com' || host === 'dai.ly') {
       const id = host === 'dai.ly' ? parts[0] : parts[0] === 'video' ? parts[1] : '';
-      if (id) return `https://www.dailymotion.com/embed/video/${encodeURIComponent(id.split('_')[0])}`;
+      return id ? `https://www.dailymotion.com/embed/video/${encodeURIComponent(id.split('_')[0])}` : '';
     }
 
-    return normalized;
+    // Never pass an arbitrary external URL into a public iframe.
+    return '';
   } catch {
     return '';
   }
