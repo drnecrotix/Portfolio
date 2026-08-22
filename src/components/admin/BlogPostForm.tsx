@@ -9,6 +9,7 @@ import { MediaPicker } from '@/components/admin/MediaPicker';
 import { TagInput } from '@/components/admin/TagInput';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { UnsavedContentPreview } from '@/components/admin/UnsavedContentPreview';
+import { FormDraftGuard, markDraftCommitted } from '@/components/admin/FormDraftGuard';
 
 export type BlogTypeOption = { id: string; name: string; slug: string; editorMode: PostType };
 export type BlogCategoryOption = { id: string; name: string; slug: string };
@@ -56,6 +57,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
 }) {
     const router = useRouter();
     const initialTypeId = value.postTypeId || postTypes[0]?.id || '';
+    const draftKey = value.slug ? `blog:edit:${value.slug}` : 'blog:new';
     const [selectedTypeId, setSelectedTypeId] = useState(initialTypeId);
     const [title, setTitle] = useState(value.title ?? '');
     const [slug, setSlug] = useState(value.slug ?? '');
@@ -85,6 +87,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
         startTransition(async () => {
             try {
                 const result = await action(formData);
+                markDraftCommitted(draftKey);
                 setSaveState('saved');
                 setSaveMessage(`Saved ${new Date(result.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
                 if (result.created) router.replace(`/admin/blog/${result.id}`);
@@ -97,6 +100,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
 
     return (
         <form onSubmit={handleSubmit}>
+            <FormDraftGuard draftKey={draftKey} label="blog post" />
             <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_330px]">
                 <div className="min-w-0 space-y-6">
                     <section className={panelClass}>

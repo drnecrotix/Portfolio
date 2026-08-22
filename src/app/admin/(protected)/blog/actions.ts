@@ -32,6 +32,12 @@ function parseDate(value: FormDataEntryValue | null, field: string) {
     return date;
 }
 
+function revalidateBlogDiscovery() {
+    revalidatePath('/blog');
+    revalidatePath('/sitemap.xml');
+    revalidatePath('/rss.xml');
+}
+
 async function fields(form: FormData) {
     const rawStatus = String(form.get('status') || 'DRAFT');
     if (!contentStatuses.has(rawStatus as ContentStatus)) throw new Error('Invalid publication status.');
@@ -75,7 +81,7 @@ async function fields(form: FormData) {
 export async function createPost(form: FormData) {
     await requireEditor();
     const post = await prisma.post.create({ data: await fields(form) });
-    revalidatePath('/blog');
+    revalidateBlogDiscovery();
     revalidatePath('/admin/blog');
     return { ok: true as const, id: post.id, created: true as const, savedAt: new Date().toISOString() };
 }
@@ -100,7 +106,7 @@ export async function updatePost(id: string, form: FormData) {
         await tx.post.update({ where: { id }, data: nextFields });
     });
 
-    revalidatePath('/blog');
+    revalidateBlogDiscovery();
     revalidatePath('/admin/blog');
     revalidatePath(`/blog/${current.slug}`);
     if (current.slug !== nextFields.slug) revalidatePath(`/blog/${nextFields.slug}`);
@@ -114,6 +120,6 @@ export async function deletePost(id: string) {
     const post = await prisma.post.findUnique({ where: { id } });
     if (!post) return;
     await prisma.post.delete({ where: { id } });
-    revalidatePath('/blog');
+    revalidateBlogDiscovery();
     redirect('/admin/blog');
 }

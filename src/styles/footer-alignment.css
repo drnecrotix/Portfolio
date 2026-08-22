@@ -8,3 +8,30 @@ footer .flex.min-w-0.items-center.overflow-hidden.pl-1 > div > span {
   margin-top: -0.5em;
   line-height: 1;
 }
+
+/*
+ * Gallery lightbox safety.
+ * The gallery overlay is intentionally matched by its full layout signature so
+ * other fixed z-[100] UI elements keep their normal behaviour.
+ */
+html:has(div.fixed.inset-0.z-\[100\].flex.flex-col.items-center.justify-center),
+body:has(div.fixed.inset-0.z-\[100\].flex.flex-col.items-center.justify-center) {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+body:has(div.fixed.inset-0.z-\[100\].flex.flex-col.items-center.justify-center) {
+  touch-action: none;
+}
+
+/* Keep the gallery viewer above the global navbar, footer and floating UI. */
+div.fixed.inset-0.z-\[100\].flex.flex-col.items-center.justify-center {
+  z-index: 2147483000 !important;
+  overscroll-behavior: contain;
+  isolation: isolate;
+}
+
+/* Its controls must remain above the media surface even when maximized. */
+div.fixed.inset-0.z-\[100\].flex.flex-col.items-center.justify-center > .z-\[110\] {
+  z-index: 2147483001 !important;
+}

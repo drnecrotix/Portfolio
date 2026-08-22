@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { defaultHomepageContent, type HomepageContent } from '@/lib/homepage-content';
+import { defaultHomepageContent, normalizeHomepageContent, type HomepageContent } from '@/lib/homepage-content';
 import { safeCmsMediaUrl } from '@/lib/sanitize-cms-html';
 
 function getString(form: FormData, key: keyof HomepageContent, max: number) {
@@ -25,6 +25,9 @@ export async function updateHomepage(form: FormData) {
     const session = await auth();
     if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) throw new Error('Forbidden');
 
+    const current = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+    const existing = normalizeHomepageContent(current?.homepageContent);
+
     const homepageContent: HomepageContent = {
         intro: getString(form, 'intro', 320) || defaultHomepageContent.intro,
         lineOne: getString(form, 'lineOne', 80) || defaultHomepageContent.lineOne,
@@ -40,10 +43,10 @@ export async function updateHomepage(form: FormData) {
         profileTitle: getString(form, 'profileTitle', 160) || defaultHomepageContent.profileTitle,
         profileDescription: getString(form, 'profileDescription', 600) || defaultHomepageContent.profileDescription,
         profileImage: safeCmsMediaUrl(getString(form, 'profileImage', 2048)),
-        socialImage: safeCmsMediaUrl(getString(form, 'socialImage', 2048)),
-        openGraphImage: safeCmsMediaUrl(getString(form, 'openGraphImage', 2048)),
-        twitterImage: safeCmsMediaUrl(getString(form, 'twitterImage', 2048)),
-        customMetaTags: getString(form, 'customMetaTags', 12000),
+        socialImage: existing.socialImage,
+        openGraphImage: existing.openGraphImage,
+        twitterImage: existing.twitterImage,
+        customMetaTags: existing.customMetaTags,
     };
 
     await prisma.siteSettings.upsert({ where: { id: 'default' }, create: { id: 'default', homepageContent }, update: { homepageContent } });

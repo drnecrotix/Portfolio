@@ -40,7 +40,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     const updateStatus = readUpdateStatus();
     const currentVersion = installedPortfolioVersion();
     const error = typeof params.error === 'string' ? params.error : undefined;
-    const toastMessage = error ? error : params.cache === 'purged' ? 'Application cache purged and public routes revalidated.' : undefined;
+    const toastMessage = error ? error : params.cache === 'purged' ? 'Public cache revalidated successfully.' : undefined;
 
     return (
         <div className="mx-auto max-w-[1500px]">
@@ -71,9 +71,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
 
                 <div className={`${panelClass} p-5 sm:p-6 lg:col-span-3`}>
                     <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Cache</p>
-                    <h3 className="mt-2 text-lg font-semibold">Purge cache</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">Revalidates the public layout, projects, blog, contact page and dashboard without deleting user data.</p>
-                    <form action={purgeApplicationCache} className="mt-5"><button className="w-full rounded-xl border border-foreground/15 px-4 py-2.5 text-sm transition hover:bg-foreground/[0.05] sm:w-auto">Purge application cache</button></form>
+                    <h3 className="mt-2 text-lg font-semibold">Public cache</h3>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">Blog and Project pages stay dynamic. Sitemap and RSS refresh automatically within 1 hour, and content edits trigger them immediately. Use this button to force revalidation of all public routes, metadata, sitemap, RSS and robots.txt.</p>
+                    <form action={purgeApplicationCache} className="mt-5"><button className="w-full rounded-xl border border-foreground/15 px-4 py-2.5 text-sm transition hover:bg-foreground/[0.05] sm:w-auto">Purge public cache</button></form>
                 </div>
 
                 <div className={`${panelClass} p-5 sm:p-6 lg:col-span-4`}>

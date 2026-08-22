@@ -2,8 +2,10 @@ import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 
+export const dynamic = 'force-dynamic';
+
 export default async function robots(): Promise<MetadataRoute.Robots> {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
     let seo = defaultSeoDefaults;
 
     try {
@@ -19,6 +21,6 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
             allow: seo.indexSite ? '/' : undefined,
             disallow: seo.indexSite ? ['/admin/', '/api/'] : '/',
         },
-        sitemap: `${baseUrl.replace(/\/$/, '')}/sitemap.xml`,
+        sitemap: seo.sitemapEnabled ? `${baseUrl}/sitemap.xml` : undefined,
     };
 }

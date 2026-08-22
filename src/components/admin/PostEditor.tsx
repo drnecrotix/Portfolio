@@ -33,6 +33,10 @@ type EditorShortcode = {
     value: string;
 };
 
+type DraftRestoreDetail = {
+    fields?: Record<string, string[]>;
+};
+
 type Props = {
     name: string;
     initialValue?: string;
@@ -75,6 +79,19 @@ function RichEditor({ name, initialValue, shortcodes }: { name: string; initialV
     useEffect(() => {
         if (editor && initialValue && editor.getHTML() !== initialValue) editor.commands.setContent(initialValue);
     }, [editor, initialValue]);
+
+    useEffect(() => {
+        if (!editor) return;
+        const restoreDraft = (event: Event) => {
+            const detail = (event as CustomEvent<DraftRestoreDetail>).detail;
+            const restored = detail?.fields?.[name]?.[0];
+            if (typeof restored !== 'string') return;
+            editor.commands.setContent(restored || '<p></p>');
+            setHtml(restored);
+        };
+        window.addEventListener('necrotix:draft-restore', restoreDraft);
+        return () => window.removeEventListener('necrotix:draft-restore', restoreDraft);
+    }, [editor, name]);
 
     const setLink = () => {
         if (!editor) return;

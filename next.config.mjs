@@ -35,11 +35,36 @@ const nextConfig = {
               },
           }
         : {}),
+    async headers() {
+        return [
+            {
+                source: '/_next/static/:path*',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+                ],
+            },
+            {
+                source: '/:path*.(?:ico|svg|png|jpg|jpeg|gif|webp|avif|woff|woff2)',
+                headers: [
+                    { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+                ],
+            },
+        ];
+    },
     images: {
         remotePatterns: [
             { protocol: 'https', hostname: 'cdn.jsdelivr.net' },
             { protocol: 'https', hostname: 'images.unsplash.com' },
             { protocol: 'https', hostname: 'assets.aceternity.com' },
+            { protocol: 'https', hostname: 'i.ytimg.com' },
+            { protocol: 'https', hostname: '**.vimeocdn.com' },
+            { protocol: 'https', hostname: '**.tiktokcdn.com' },
+            { protocol: 'https', hostname: '**.tiktokcdn-us.com' },
+            { protocol: 'https', hostname: '**.cdninstagram.com' },
+            { protocol: 'https', hostname: '**.fbcdn.net' },
+            { protocol: 'https', hostname: 'pbs.twimg.com' },
+            { protocol: 'https', hostname: '**.pinimg.com' },
+            { protocol: 'https', hostname: '**.dmcdn.net' },
         ],
         formats: ['image/avif', 'image/webp'],
     },
