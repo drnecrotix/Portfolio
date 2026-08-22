@@ -16,17 +16,17 @@ export function HomeBlogSection({ posts, title, subtitle }: Props) {
     return (
         <section id="home-blog" className="flex min-h-[100svh] scroll-mt-0 items-center border-t border-foreground/10 bg-background px-6 py-10 md:px-16 md:py-12 lg:px-24">
             <div className="mx-auto w-full max-w-[1400px]">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-foreground/10 pb-4">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-5 border-b border-foreground/10 pb-6">
                     <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
-                            <span className="h-2 w-2 rounded-full bg-foreground/70" />
-                            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">Journal</p>
-                            <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[9px] text-muted-foreground">{posts.length}</span>
+                            <span className="h-2.5 w-2.5 rounded-full bg-foreground/70" />
+                            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">Journal</p>
+                            <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[10px] text-muted-foreground">{posts.length}</span>
                         </div>
-                        <p className="mt-1.5 text-xs font-medium text-foreground/75">{title}</p>
-                        {subtitle ? <p className="mt-1 text-[11px] text-muted-foreground">{subtitle}</p> : null}
+                        <p className="mt-2 text-sm font-semibold text-foreground/85 sm:text-base">{title}</p>
+                        {subtitle ? <p className="mt-1.5 text-xs text-muted-foreground sm:text-sm">{subtitle}</p> : null}
                     </div>
-                    <Link href="/blog" className="group inline-flex items-center gap-2 text-xs font-medium text-foreground/60 transition hover:text-foreground">
+                    <Link href="/blog" className="group inline-flex items-center gap-2 text-sm font-medium text-foreground/65 transition hover:text-foreground">
                         View all posts <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                     </Link>
                 </div>
@@ -36,11 +36,11 @@ export function HomeBlogSection({ posts, title, subtitle }: Props) {
                         <Link
                             key={post.id}
                             href={`/blog/${post.slug}`}
-                            className="group grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3 border-b border-foreground/10 px-1 py-3 transition-colors hover:bg-foreground/[0.025] sm:grid-cols-[38px_104px_minmax(0,1fr)_138px_24px] sm:gap-4 sm:px-3 sm:py-4"
+                            className="group grid grid-cols-[38px_minmax(0,1fr)_auto] items-center gap-4 border-b border-foreground/10 px-1 py-5 transition-colors hover:bg-foreground/[0.025] sm:grid-cols-[48px_160px_minmax(0,1fr)_160px_28px] sm:gap-6 sm:px-4 sm:py-6"
                         >
-                            <span className="font-mono text-[9px] tabular-nums text-muted-foreground/55">{String(index + 1).padStart(2, '0')}</span>
+                            <span className="font-mono text-[11px] tabular-nums text-muted-foreground/60 sm:text-xs">{String(index + 1).padStart(2, '0')}</span>
 
-                            <div className="hidden h-14 w-24 overflow-hidden rounded-md border border-foreground/10 bg-foreground/[0.025] sm:block">
+                            <div className="hidden h-24 w-40 overflow-hidden rounded-lg border border-foreground/10 bg-foreground/[0.025] sm:block">
                                 {post.content.featuredImage ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img src={post.content.featuredImage} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
@@ -48,17 +48,17 @@ export function HomeBlogSection({ posts, title, subtitle }: Props) {
                             </div>
 
                             <div className="min-w-0">
-                                <div className="mb-1 flex flex-wrap items-center gap-2 text-[8px] font-medium uppercase tracking-[0.15em] text-muted-foreground">
+                                <div className="mb-1.5 flex flex-wrap items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground sm:text-[11px]">
                                     <span>{post.category}</span>
                                     <span className="text-foreground/15">/</span>
                                     <time dateTime={post.date}>{new Date(post.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</time>
                                 </div>
-                                <h3 className="truncate text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-base">{post.title}</h3>
-                                {post.excerpt ? <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-muted-foreground sm:text-xs">{post.excerpt}</p> : null}
+                                <h3 className="truncate text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-xl">{post.title}</h3>
+                                {post.excerpt ? <p className="mt-1.5 line-clamp-2 text-sm leading-5 text-muted-foreground sm:text-[15px] sm:leading-6">{post.excerpt}</p> : null}
                             </div>
 
-                            <span className="hidden text-right text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground sm:block">Read publication</span>
-                            <ArrowUpRight className="size-3.5 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+                            <span className="hidden text-right text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground sm:block">Read publication</span>
+                            <ArrowUpRight className="size-4 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
                         </Link>
                     ))}
                 </div>
