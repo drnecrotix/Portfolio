@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AppleHelloEnglishEffect } from '@/components/ui/apple-hello-effect';
 
 interface LoadingScreenProps {
     onComplete?: () => void;
@@ -10,17 +9,16 @@ interface LoadingScreenProps {
     duration?: number;
 }
 
-export function LoadingScreen({ onComplete, onExitStart, duration }: LoadingScreenProps) {
+export function LoadingScreen({ onComplete, onExitStart, duration = 1.15 }: LoadingScreenProps) {
     const [isLoading, setIsLoading] = useState(true);
 
     const handleAnimationComplete = () => {
-        // Small pause at the end for impact before exiting
         setTimeout(() => {
             setIsLoading(false);
             onExitStart?.();
             setTimeout(() => {
                 onComplete?.();
-            }, 1200); // Increased slightly for smoother overlap
+            }, 1200);
         }, 300);
     };
 
@@ -30,33 +28,40 @@ export function LoadingScreen({ onComplete, onExitStart, duration }: LoadingScre
                 <motion.div
                     initial={{ y: 0 }}
                     exit={{
-                        y: "-100%",
+                        y: '-100%',
                         transition: {
                             duration: 1.2,
-                            ease: [0.7, 0, 0.3, 1]
-                        }
+                            ease: [0.7, 0, 0.3, 1],
+                        },
                     }}
-                    className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-background overflow-hidden will-change-transform"
+                    className="fixed inset-0 z-[1000] flex flex-col items-center justify-center overflow-hidden bg-background will-change-transform"
                 >
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, y: 18, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{
                             opacity: 0,
                             y: -40,
-                            transition: { duration: 0.6, ease: [0.33, 1, 0.68, 1] }
+                            transition: { duration: 0.6, ease: [0.33, 1, 0.68, 1] },
                         }}
-                        className="relative flex flex-col items-center justify-center w-full max-w-[400px] will-change-transform"
+                        transition={{ duration, ease: [0.22, 1, 0.36, 1] }}
+                        onAnimationComplete={handleAnimationComplete}
+                        className="relative flex w-full max-w-[480px] items-center justify-center px-6 will-change-transform"
                     >
-                        <AppleHelloEnglishEffect speed={1.2} onAnimationComplete={handleAnimationComplete} className="text-foreground h-16 sm:h-20 md:h-24 will-change-transform" />
+                        <span
+                            className="select-none text-[5rem] leading-none text-foreground sm:text-[6.5rem] md:text-[8rem]"
+                            style={{ fontFamily: 'var(--font-signature)' }}
+                            aria-label="Niko"
+                        >
+                            Niko
+                        </span>
                     </motion.div>
 
-                    {/* Subtle aesthetic dot */}
                     <motion.div
                         animate={{ opacity: [0.2, 0.5, 0.2] }}
                         transition={{ duration: 2, repeat: Infinity }}
                         exit={{ opacity: 0, transition: { duration: 0.3 } }}
-                        className="absolute bottom-12 w-1.5 h-1.5 rounded-full bg-foreground/10"
+                        className="absolute bottom-12 h-1.5 w-1.5 rounded-full bg-foreground/10"
                     />
                 </motion.div>
             )}
