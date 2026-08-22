@@ -102,27 +102,37 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
         <form onSubmit={handleSubmit}>
             <FormDraftGuard draftKey={draftKey} label="blog post" />
             <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_330px]">
-                <div className="min-w-0 space-y-6">
-                    <section className={panelClass}>
+                <div className="min-w-0 space-y-7">
+                    <section className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-transparent p-6 md:p-8">
+                        <div className="mb-7 flex items-center justify-between gap-4">
+                            <div>
+                                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-fuchsia-200/55">Journal entry</p>
+                                <p className="mt-2 text-sm text-white/35">Start with the thought. The publishing controls can wait.</p>
+                            </div>
+                            <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">{selectedType?.name || editorMode.replaceAll('_', ' ')}</span>
+                        </div>
                         <label className="block">
                             <span className="sr-only">Title</span>
-                            <input name="title" required value={title} onChange={(event) => changeTitle(event.target.value)} className="w-full border-0 bg-transparent px-0 py-2 text-3xl font-semibold tracking-tight text-white outline-none placeholder:text-white/20 md:text-4xl" placeholder="Add title" />
+                            <input name="title" required value={title} onChange={(event) => changeTitle(event.target.value)} className="w-full border-0 bg-transparent px-0 py-2 text-4xl font-black tracking-tight text-white outline-none placeholder:text-white/15 md:text-5xl" placeholder="Give this thought a name…" />
                         </label>
-                        <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4 sm:flex-row sm:items-center">
-                            <span className="text-xs font-medium uppercase tracking-[0.18em] text-white/30">Permalink</span>
-                            <div className="flex min-w-0 flex-1 items-center rounded-lg bg-black/25 px-3 py-2">
-                                <span className="shrink-0 text-xs text-white/25">/blog/</span>
-                                <input name="slug" required value={slug} onChange={(event) => { setSlugTouched(true); setSlug(event.target.value); }} className="min-w-0 flex-1 bg-transparent text-xs text-white/65 outline-none" placeholder="post-slug" />
+                        <div className="mt-5 flex flex-col gap-2 border-t border-white/8 pt-4 sm:flex-row sm:items-center">
+                            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/25">Permalink</span>
+                            <div className="flex min-w-0 flex-1 items-center rounded-lg bg-black/20 px-3 py-2">
+                                <span className="shrink-0 text-xs text-white/20">/blog/</span>
+                                <input name="slug" required value={slug} onChange={(event) => { setSlugTouched(true); setSlug(event.target.value); }} className="min-w-0 flex-1 bg-transparent text-xs text-white/55 outline-none" placeholder="post-slug" />
                             </div>
                         </div>
                     </section>
 
                     <section>
-                        <div className="mb-3 flex items-end justify-between gap-4">
-                            <div><p className="text-sm font-medium text-white/70">Content</p><p className="mt-1 text-xs text-white/35">{poetry ? 'Poetry editor preserves line breaks and stanza spacing.' : 'Visual rich-text editor with headings, lists, quotes, links and formatting.'}</p></div>
-                            <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-white/35">{selectedType?.name || editorMode.replaceAll('_', ' ')}</span>
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-white/75">Writing canvas</p>
+                                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-white/35">{poetry ? 'Poetry keeps your line breaks and stanza rhythm untouched.' : 'Use Quote for a pull quote, Divider for a quiet pause, and keep paragraphs short when you want that Tumblr-like journal rhythm.'}</p>
+                            </div>
+                            {!poetry && <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/25">Text · Quote · Pause · Image</span>}
                         </div>
-                        <PostEditor key={selectedTypeId || editorMode} name="content" initialValue={initialContent} poetry={poetry} />
+                        <PostEditor key={selectedTypeId || editorMode} name="content" initialValue={initialContent} poetry={poetry} variant="journal" />
                     </section>
 
                     <SeoEditor sourceTitle={title} sourceDescription={excerpt} slug={slug} hasImage={Boolean(featuredImage)} initialTitle={value.seoTitle} initialDescription={value.seoDescription} />
@@ -161,8 +171,9 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                     </section>
 
                     <section className={panelClass}>
-                        <h3 className="text-sm font-semibold">Excerpt</h3>
-                        <textarea name="excerpt" rows={5} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} className={inputClass} placeholder="Optional short summary used in cards and search results." />
+                        <h3 className="text-sm font-semibold">Opening thought</h3>
+                        <p className="mt-1 text-[11px] leading-relaxed text-white/30">A short optional line used as the post intro and archive excerpt.</p>
+                        <textarea name="excerpt" rows={5} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} className={inputClass} placeholder="A sentence that sets the mood…" />
                     </section>
                 </aside>
             </div>

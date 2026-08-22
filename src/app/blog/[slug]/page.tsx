@@ -133,9 +133,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             publishedAt={publishedAt}
             tags={cmsPost.tags}
             relatedPosts={relatedPosts}
+            comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
         >
             <PostBody type={cmsPost.type} content={content} />
-            <BlogComments postId={cmsPost.id} initialComments={comments} />
         </BlogArticleFrame>
     );
 }
