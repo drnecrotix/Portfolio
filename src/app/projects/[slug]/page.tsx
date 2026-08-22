@@ -4,6 +4,8 @@ import { ProjectComposerPage } from '@/components/projects/ProjectComposerPage';
 import { getProjectImages } from '@/app/actions/getProjectImages';
 import { prisma } from '@/lib/prisma';
 import { cmsProjectToPortfolioProject } from '@/lib/cms-projects';
+import { normalizeHomepageContent } from '@/lib/homepage-content';
+import { normalizeSeoDefaults } from '@/lib/seo-settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,16 +13,31 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').re
 
 type ProjectContent = { image?: string };
 
+function absoluteImageUrl(value?: string) {
+    if (!value) return undefined;
+    try {
+        return new URL(value, `${siteUrl}/`).toString();
+    } catch {
+        return undefined;
+    }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
-    const project = await prisma.project.findUnique({ where: { slug } });
+    const [project, settings] = await Promise.all([
+        prisma.project.findUnique({ where: { slug } }),
+        prisma.siteSettings.findUnique({ where: { id: 'default' } }),
+    ]);
     if (!project || project.status === 'ARCHIVED') return { robots: { index: false, follow: false } };
 
     const canonical = `${siteUrl}/projects/${slug}`;
     const content = (project.content ?? {}) as ProjectContent;
+    const homepage = normalizeHomepageContent(settings?.homepageContent);
+    const seo = normalizeSeoDefaults(settings?.seoDefaults);
+    const defaultSocialImage = homepage.socialImage || seo.ogImage || undefined;
+    const image = absoluteImageUrl(content.image || defaultSocialImage);
     const title = project.seoTitle?.trim() || project.title;
     const description = project.seoDescription?.trim() || project.description;
-    const image = content.image || undefined;
 
     return {
         title,
