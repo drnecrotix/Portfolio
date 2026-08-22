@@ -32,9 +32,9 @@ export async function generateMetadata(): Promise<Metadata> {
         // Keep the public site renderable when the CMS database is temporarily unavailable.
     }
 
-    const defaultSocialImage = homepage.socialImage || seo.ogImage;
-    const ogImage = homepage.openGraphImage || defaultSocialImage;
-    const twitterImage = homepage.twitterImage || defaultSocialImage;
+    const defaultSocialImage = homepage.socialImage;
+    const ogImage = seo.ogImage || defaultSocialImage;
+    const twitterImage = seo.twitterImage || defaultSocialImage;
     const ogImages = ogImage ? [{ url: ogImage }] : undefined;
     const twitterImages = twitterImage ? [twitterImage] : undefined;
     const favicon = general.faviconUrl || defaultGeneralSiteSettings.faviconUrl;
@@ -47,31 +47,16 @@ export async function generateMetadata(): Promise<Metadata> {
         authors: [{ name: seo.authorName }],
         creator: seo.creatorName,
         metadataBase: new URL(siteUrl),
-        alternates: seo.rssEnabled
-            ? { types: { 'application/rss+xml': `${normalizedSiteUrl}/rss.xml` } }
-            : undefined,
-        openGraph: {
-            type: 'website', locale: seo.locale, url: siteUrl, title: seo.ogTitle,
-            description: seo.ogDescription, siteName: general.siteName, images: ogImages,
-        },
-        twitter: {
-            card: 'summary_large_image', title: seo.twitterTitle, description: seo.twitterDescription,
-            creator: seo.twitterCreator || undefined, images: twitterImages,
-        },
+        alternates: seo.rssEnabled ? { types: { 'application/rss+xml': `${normalizedSiteUrl}/rss.xml` } } : undefined,
+        openGraph: { type: 'website', locale: seo.locale, url: siteUrl, title: seo.ogTitle, description: seo.ogDescription, siteName: general.siteName, images: ogImages },
+        twitter: { card: 'summary_large_image', title: seo.twitterTitle, description: seo.twitterDescription, creator: seo.twitterCreator || undefined, images: twitterImages },
         robots: {
             index: seo.indexSite,
             follow: seo.followLinks,
-            googleBot: {
-                index: seo.indexSite, follow: seo.followLinks, 'max-video-preview': -1,
-                'max-image-preview': 'large', 'max-snippet': -1,
-            },
+            googleBot: { index: seo.indexSite, follow: seo.followLinks, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
         },
         verification: seo.googleVerification ? { google: seo.googleVerification } : undefined,
-        icons: {
-            icon: [{ url: favicon }],
-            shortcut: [{ url: favicon }],
-            apple: [{ url: favicon }],
-        },
+        icons: { icon: [{ url: favicon }], shortcut: [{ url: favicon }], apple: [{ url: favicon }] },
     };
 }
 

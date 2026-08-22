@@ -20,19 +20,24 @@ type FormState = {
     message: string;
     privacyAccepted: boolean;
     company: string;
+    startedAt: number;
 };
 
-const initialForm: FormState = {
-    name: '',
-    email: '',
-    reason: 'PROJECT',
-    subject: '',
-    message: '',
-    privacyAccepted: false,
-    company: '',
-};
+function createInitialForm(): FormState {
+    return {
+        name: '',
+        email: '',
+        reason: 'PROJECT',
+        subject: '',
+        message: '',
+        privacyAccepted: false,
+        company: '',
+        startedAt: Date.now(),
+    };
+}
 
 const fieldClass = 'mt-2 w-full border-0 border-b border-foreground/20 bg-transparent px-0 py-3 text-lg text-foreground outline-none transition-colors focus:border-foreground placeholder:text-muted-foreground/45';
+const selectClass = `${fieldClass} cursor-pointer bg-background text-foreground [color-scheme:light] dark:bg-zinc-950 dark:text-white dark:[color-scheme:dark]`;
 
 const socialMeta = [
     ['github', 'GitHub', Github],
@@ -41,8 +46,22 @@ const socialMeta = [
     ['twitter', 'X / Twitter', Twitter],
 ] as const;
 
+const reasonOptions = [
+    ['PROJECT', 'Project / collaboration'],
+    ['DEVELOPMENT', 'Development / technical'],
+    ['CREATIVE', 'Creative work'],
+    ['COMMUNITY', 'Community'],
+    ['PARTNERSHIP', 'Partnership'],
+    ['BUSINESS', 'Business enquiry'],
+    ['SUPPORT', 'Technical support'],
+    ['MEDIA', 'Media / press'],
+    ['CAREER', 'Career / opportunity'],
+    ['FEEDBACK', 'Feedback / suggestion'],
+    ['OTHER', 'Other'],
+] as const;
+
 export function ContactV2({ contact, socials }: Props) {
-    const [form, setForm] = useState<FormState>(initialForm);
+    const [form, setForm] = useState<FormState>(() => createInitialForm());
     const [status, setStatus] = useState<Status>('idle');
     const [error, setError] = useState('');
 
@@ -79,7 +98,7 @@ export function ContactV2({ contact, socials }: Props) {
             }
 
             setStatus('success');
-            setForm(initialForm);
+            setForm(createInitialForm());
         } catch {
             setStatus('error');
             setError('The message could not be sent. Check your connection and try again.');
@@ -116,7 +135,7 @@ export function ContactV2({ contact, socials }: Props) {
                             <CheckCircle2 className="size-10" />
                             <h2 className="mt-6 text-4xl font-semibold tracking-tight md:text-5xl">Message received.</h2>
                             <p className="mt-4 max-w-xl text-lg leading-8 text-muted-foreground">Thanks for reaching out. Your message has been sent successfully and the conversation can continue from there.</p>
-                            <button type="button" onClick={() => setStatus('idle')} className="mt-10 flex w-fit items-center gap-2 border-b border-foreground pb-1 text-sm font-semibold">Send another message <ArrowUpRight className="size-4" /></button>
+                            <button type="button" onClick={() => { setStatus('idle'); setForm(createInitialForm()); }} className="mt-10 flex w-fit items-center gap-2 border-b border-foreground pb-1 text-sm font-semibold">Send another message <ArrowUpRight className="size-4" /></button>
                         </motion.div>
                     ) : (
                         <form onSubmit={submit} className="space-y-10" noValidate>
@@ -131,12 +150,8 @@ export function ContactV2({ contact, socials }: Props) {
 
                             <div className="grid gap-8 md:grid-cols-2">
                                 <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Reason
-                                    <select value={form.reason} onChange={(e) => update('reason', e.target.value)} className={fieldClass}>
-                                        <option value="PROJECT">Project / collaboration</option>
-                                        <option value="DEVELOPMENT">Development / technical</option>
-                                        <option value="CREATIVE">Creative work</option>
-                                        <option value="COMMUNITY">Community / partnership</option>
-                                        <option value="OTHER">Other</option>
+                                    <select value={form.reason} onChange={(e) => update('reason', e.target.value)} className={selectClass}>
+                                        {reasonOptions.map(([value, label]) => <option key={value} value={value} className="bg-white text-black dark:bg-zinc-950 dark:text-white">{label}</option>)}
                                     </select>
                                 </label>
                                 <label className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Subject
@@ -145,7 +160,7 @@ export function ContactV2({ contact, socials }: Props) {
                             </div>
 
                             <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Message
-                                <textarea value={form.message} onChange={(e) => update('message', e.target.value)} required minLength={20} maxLength={3000} rows={8} className={`${fieldClass} resize-y leading-7`} placeholder="Context, goal, timeline, links — whatever helps explain the idea." />
+                                <textarea value={form.message} onChange={(e) => update('message', e.target.value)} required minLength={20} maxLength={3000} rows={8} className={`${fieldClass} resize-y leading-7`} placeholder="Context, goal, timeline, links - whatever helps explain the idea." />
                                 <span className="mt-2 block text-right font-mono text-[10px] tracking-normal text-muted-foreground/60">{form.message.length} / 3000</span>
                             </label>
 
@@ -161,7 +176,7 @@ export function ContactV2({ contact, socials }: Props) {
                             {status === 'error' && <div role="alert" className="border-l-2 border-red-500 pl-4 text-sm text-red-400">{error}</div>}
 
                             <motion.button whileTap={{ scale: 0.99 }} disabled={status === 'loading'} type="submit" className="group flex w-full items-center justify-between border-y border-foreground py-7 text-left disabled:opacity-50">
-                                <span className="text-3xl font-semibold tracking-tight md:text-4xl">{status === 'loading' ? 'Sending…' : 'Send message'}</span>
+                                <span className="text-3xl font-semibold tracking-tight md:text-4xl">{status === 'loading' ? 'Sending...' : 'Send message'}</span>
                                 <span className="flex size-12 items-center justify-center rounded-full bg-foreground text-background transition-transform group-hover:rotate-45">
                                     {status === 'loading' ? <Loader2 className="size-5 animate-spin" /> : <Send className="size-5" />}
                                 </span>

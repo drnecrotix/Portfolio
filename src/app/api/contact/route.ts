@@ -7,7 +7,7 @@ import { isPublicWriteBlocked } from '@/lib/public-write-guard';
 
 export const runtime = 'nodejs';
 
-const reasons = ['PROJECT', 'DEVELOPMENT', 'CREATIVE', 'COMMUNITY', 'OTHER'] as const;
+const reasons = ['PROJECT', 'DEVELOPMENT', 'CREATIVE', 'COMMUNITY', 'PARTNERSHIP', 'BUSINESS', 'SUPPORT', 'MEDIA', 'CAREER', 'FEEDBACK', 'OTHER'] as const;
 
 const contactSchema = z.object({
     name: z.string().trim().min(2).max(80),
@@ -17,12 +17,13 @@ const contactSchema = z.object({
     message: z.string().trim().min(20).max(3000),
     privacyAccepted: z.literal(true),
     company: z.string().max(200).optional().default(''),
+    startedAt: z.number().int().positive(),
 });
 
 type RateEntry = { count: number; resetAt: number };
 const globalForContact = globalThis as unknown as { contactRateLimit?: Map<string, RateEntry> };
 const rateLimit = globalForContact.contactRateLimit ?? new Map<string, RateEntry>();
-if (process.env.NODE_ENV !== 'production') globalForContact.contactRateLimit = rateLimit;
+globalForContact.contactRateLimit = rateLimit;
 
 function escapeHtml(value: string) {
     return value
@@ -55,6 +56,18 @@ function isRateLimited(ip: string) {
     return current.count > 5;
 }
 
+function hasValidOrigin(request: Request) {
+    const origin = request.headers.get('origin');
+    if (!origin) return true;
+    const host = (request.headers.get('x-forwarded-host') || request.headers.get('host') || '').split(',')[0]?.trim();
+    if (!host) return true;
+    try {
+        return new URL(origin).host === host;
+    } catch {
+        return false;
+    }
+}
+
 export async function POST(request: Request) {
     if (await isPublicWriteBlocked()) {
         return NextResponse.json(
@@ -63,28 +76,38 @@ export async function POST(request: Request) {
         );
     }
 
+    if (!hasValidOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid submission origin.' }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+    }
+
+    if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+        return NextResponse.json({ error: 'Unsupported request format.' }, { status: 415, headers: { 'Cache-Control': 'no-store' } });
+    }
+
     const ip = getClientIp(request);
     if (isRateLimited(ip)) {
-        return NextResponse.json({ error: 'Too many messages were submitted. Please try again later.' }, { status: 429 });
+        return NextResponse.json({ error: 'Too many messages were submitted. Please try again later.' }, { status: 429, headers: { 'Cache-Control': 'no-store' } });
     }
 
     try {
         const parsed = contactSchema.safeParse(await request.json());
         if (!parsed.success) {
-            return NextResponse.json({ error: 'Please check the form fields and try again.' }, { status: 400 });
+            return NextResponse.json({ error: 'Please check the form fields and try again.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
         }
 
         const data = parsed.data;
+        const completionMs = Date.now() - data.startedAt;
 
-        // Honeypot: bots commonly fill every field. Return a neutral success response without sending mail.
-        if (data.company) {
-            return NextResponse.json({ message: 'Message received.' }, { status: 200 });
+        // Honeypot and timing checks return a neutral response so automated clients do not learn which check failed.
+        if (data.company || completionMs < 2500 || completionMs > 2 * 60 * 60 * 1000) {
+            return NextResponse.json({ message: 'Message received.' }, { status: 200, headers: { 'Cache-Control': 'no-store' } });
         }
 
         let recipient = process.env.EMAIL_USER || '';
         try {
             const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
-            recipient = normalizeGeneralSiteSettings(settings).contactDetails.email || recipient;
+            const contact = normalizeGeneralSiteSettings(settings).contactDetails;
+            recipient = contact.formRecipientEmail || contact.email || recipient;
         } catch {
             // Fall back to EMAIL_USER when CMS storage is unavailable.
         }
@@ -93,7 +116,7 @@ export async function POST(request: Request) {
         const emailPassword = process.env.EMAIL_APP_PASSWORD || '';
         if (!recipient || !emailUser || !emailPassword) {
             console.error('Contact form email delivery is not configured.');
-            return NextResponse.json({ error: 'Message delivery is temporarily unavailable.' }, { status: 503 });
+            return NextResponse.json({ error: 'Message delivery is temporarily unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
         }
 
         const transporter = nodemailer.createTransport({
@@ -128,9 +151,9 @@ export async function POST(request: Request) {
             `,
         });
 
-        return NextResponse.json({ message: 'Message sent successfully.' }, { status: 200 });
+        return NextResponse.json({ message: 'Message sent successfully.' }, { status: 200, headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
         console.error('Contact form delivery failed:', error);
-        return NextResponse.json({ error: 'The message could not be sent. Please try again later.' }, { status: 500 });
+        return NextResponse.json({ error: 'The message could not be sent. Please try again later.' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
     }
 }
