@@ -95,7 +95,9 @@ export async function GET() {
     return new Response(xml, {
         headers: {
             'Content-Type': 'application/rss+xml; charset=utf-8',
-            'Cache-Control': seo.rssAutoUpdate ? 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600' : 'public, max-age=3600',
+            'Cache-Control': seo.rssAutoUpdate
+                ? 'public, max-age=0, s-maxage=3600, stale-while-revalidate=300'
+                : 'public, max-age=3600',
         },
     });
 }
