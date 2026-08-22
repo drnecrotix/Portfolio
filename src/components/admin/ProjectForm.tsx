@@ -32,6 +32,7 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
     const router = useRouter();
     const rawContent = (project?.content ?? {}) as Record<string, unknown>;
     const initialImage = typeof rawContent.image === 'string' ? rawContent.image : '';
+    const initialDownloadUrl = typeof rawContent.downloadUrl === 'string' ? rawContent.downloadUrl : '';
     const content = JSON.stringify(rawContent, null, 2);
     const categoryOptions = [...categories];
     if (project?.category && !categoryOptions.includes(project.category)) categoryOptions.push(project.category);
@@ -110,6 +111,7 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
             <section className={`grid gap-5 md:grid-cols-2 ${panel}`}>
                 <label className="block"><span className="text-sm text-white/55">Repository URL</span><input className={field} type="url" name="repoUrl" defaultValue={project?.repoUrl ?? ''} /></label>
                 <label className="block"><span className="text-sm text-white/55">Demo URL</span><input className={field} type="url" name="demoUrl" defaultValue={project?.demoUrl ?? ''} /></label>
+                <label className="block"><span className="text-sm text-white/55">Download URL <span className="text-white/30">(optional)</span></span><input className={field} type="url" name="downloadUrl" defaultValue={initialDownloadUrl} placeholder="https://example.com/download.zip" /></label>
                 <label className="block"><span className="text-sm text-white/55">Role</span><input className={field} name="role" defaultValue={project?.role ?? ''} /></label>
                 <label className="block"><span className="text-sm text-white/55">Timeline</span><input className={field} name="timeline" defaultValue={project?.timeline ?? ''} /></label>
                 <label className="block"><span className="text-sm text-white/55">Team</span><input className={field} name="team" defaultValue={project?.team ?? ''} /></label>
@@ -118,7 +120,7 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
             <SeoEditor sourceTitle={title} sourceDescription={description} slug={slug} hasImage={Boolean(image)} initialTitle={project?.seoTitle} initialDescription={project?.seoDescription} />
 
             <section className={panel}>
-                <label className="block"><span className="text-sm text-white/55">Advanced content JSON</span><p className="mt-1 text-xs text-white/30">Optional data sources for project blocks: galleryImages, features, installation, challengesAndSolutions. A block renders only when its shortcode is placed in Long description.</p><textarea className={`${field} font-mono`} name="content" rows={16} defaultValue={content} /></label>
+                <label className="block"><span className="text-sm text-white/55">Advanced content JSON</span><p className="mt-1 text-xs text-white/30">Optional data sources for project blocks: galleryImages, features, installation, challengesAndSolutions. Download URL is managed by the dedicated field above. A block renders only when its shortcode is placed in Long description.</p><textarea className={`${field} font-mono`} name="content" rows={16} defaultValue={content} /></label>
             </section>
 
             <div className="sticky bottom-4 z-20 flex flex-col items-stretch gap-3 rounded-2xl border border-white/10 bg-[#101010]/95 p-4 shadow-2xl backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
