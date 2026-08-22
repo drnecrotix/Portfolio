@@ -8,6 +8,7 @@ import { PostEditor } from '@/components/admin/PostEditor';
 import { TagInput } from '@/components/admin/TagInput';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { UnsavedContentPreview } from '@/components/admin/UnsavedContentPreview';
+import { FormDraftGuard, markDraftCommitted } from '@/components/admin/FormDraftGuard';
 import type { ProjectSaveResult } from '@/app/admin/(protected)/projects/actions';
 
 const field = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/[0.05]';
@@ -36,6 +37,7 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
     if (project?.category && !categoryOptions.includes(project.category)) categoryOptions.push(project.category);
     categoryOptions.sort((a, b) => a.localeCompare(b));
 
+    const draftKey = project?.id ? `project:edit:${project.id}` : 'project:new';
     const [category, setCategory] = useState(project?.category ?? '');
     const [title, setTitle] = useState(project?.title ?? '');
     const [slug, setSlug] = useState(project?.slug ?? '');
@@ -54,6 +56,7 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
         startTransition(async () => {
             try {
                 const result = await action(formData);
+                markDraftCommitted(draftKey);
                 setSaveState('saved');
                 setSaveMessage(`Saved ${new Date(result.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
                 if (result.created) router.replace(`/admin/projects/${result.id}`);
@@ -66,6 +69,8 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
 
     return (
         <form onSubmit={handleSubmit} onInvalidCapture={() => { setSaveState('error'); setSaveMessage('Please complete the required fields before saving.'); }} className="space-y-8">
+            <FormDraftGuard draftKey={draftKey} label="project" />
+
             <section className={`grid gap-5 md:grid-cols-2 ${panel}`}>
                 <label className="block md:col-span-2"><span className="text-sm text-white/55">Title</span><input className={field} name="title" required value={title} onChange={(event) => setTitle(event.target.value)} /></label>
                 <label className="block"><span className="text-sm text-white/55">Slug</span><input className={field} name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value={slug} onChange={(event) => setSlug(event.target.value)} /></label>
