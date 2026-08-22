@@ -4,11 +4,18 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { defaultSeoDefaults, keywordsFromForm, type SeoDefaults } from '@/lib/seo-settings';
+import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { safeCmsMediaUrl } from '@/lib/sanitize-cms-html';
 
 function value(form: FormData, key: keyof SeoDefaults, max: number) {
     const result = String(form.get(key) ?? '').trim();
     if (result.length > max) throw new Error(`${String(key)} is too long.`);
+    return result;
+}
+
+function plainValue(form: FormData, key: string, max: number) {
+    const result = String(form.get(key) ?? '').trim();
+    if (result.length > max) throw new Error(`${key} is too long.`);
     return result;
 }
 
@@ -37,6 +44,11 @@ export async function updateSeoSettings(form: FormData) {
     const googleVerification = value(form, 'googleVerification', 256);
     if (/[<>\s]/.test(googleVerification)) throw new Error('Google verification token is invalid.');
 
+    const rssItemLimitRaw = Number(form.get('rssItemLimit') ?? defaultSeoDefaults.rssItemLimit);
+    const rssItemLimit = Number.isFinite(rssItemLimitRaw)
+        ? Math.min(100, Math.max(1, Math.round(rssItemLimitRaw)))
+        : defaultSeoDefaults.rssItemLimit;
+
     const seoDefaults: SeoDefaults = {
         titleDefault: value(form, 'titleDefault', 120) || defaultSeoDefaults.titleDefault,
         titleTemplate: value(form, 'titleTemplate', 160) || defaultSeoDefaults.titleTemplate,
@@ -55,14 +67,35 @@ export async function updateSeoSettings(form: FormData) {
         indexSite: form.get('indexSite') === 'on',
         followLinks: form.get('followLinks') === 'on',
         googleVerification,
+        sitemapEnabled: form.get('sitemapEnabled') === 'on',
+        sitemapAutoUpdate: form.get('sitemapAutoUpdate') === 'on',
+        rssEnabled: form.get('rssEnabled') === 'on',
+        rssAutoUpdate: form.get('rssAutoUpdate') === 'on',
+        rssTitle: value(form, 'rssTitle', 160) || defaultSeoDefaults.rssTitle,
+        rssDescription: value(form, 'rssDescription', 320) || defaultSeoDefaults.rssDescription,
+        rssItemLimit,
+        rssIncludeProjects: form.get('rssIncludeProjects') === 'on',
+    };
+
+    const current = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+    const homepage = normalizeHomepageContent(current?.homepageContent);
+    const homepageContent = {
+        ...homepage,
+        socialImage: safeCmsMediaUrl(plainValue(form, 'socialImage', 2048)),
+        openGraphImage: safeCmsMediaUrl(plainValue(form, 'homepageOpenGraphImage', 2048)),
+        twitterImage: safeCmsMediaUrl(plainValue(form, 'homepageTwitterImage', 2048)),
+        customMetaTags: plainValue(form, 'customMetaTags', 12000),
     };
 
     await prisma.siteSettings.upsert({
         where: { id: 'default' },
-        create: { id: 'default', seoDefaults },
-        update: { seoDefaults },
+        create: { id: 'default', seoDefaults, homepageContent },
+        update: { seoDefaults, homepageContent },
     });
 
     revalidatePath('/admin/seo');
+    revalidatePath('/admin/homepage');
     revalidatePath('/', 'layout');
+    revalidatePath('/sitemap.xml');
+    revalidatePath('/rss.xml');
 }
