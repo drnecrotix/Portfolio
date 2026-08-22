@@ -34,10 +34,7 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
                     <h2 className="mt-2 text-4xl font-semibold">Edit post</h2>
                     <p className="mt-2 text-sm text-white/40">Update content, publishing state, media and taxonomy from one writing workspace.</p>
                 </div>
-                <div className="flex gap-2">
-                    <Link href="/admin/blog/taxonomies" className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60 hover:text-white">Types & Categories</Link>
-                    <Link href={`/admin/blog/${post.id}/preview`} className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60 hover:text-white">Preview</Link>
-                </div>
+                <Link href="/admin/blog/taxonomies" className="rounded-xl border border-white/10 px-4 py-3 text-sm text-white/60 hover:text-white">Types & Categories</Link>
             </div>
 
             <BlogPostForm action={updatePost.bind(null, post.id)} value={{ ...post, content }} postTypes={availableTypes} categories={availableCategories} submitLabel="Update post" />
