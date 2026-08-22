@@ -98,9 +98,7 @@ export function socialVideoEmbedUrl(value: unknown) {
     const host = url.hostname.toLowerCase().replace(/^www\./, '');
     const parts = url.pathname.split('/').filter(Boolean);
 
-    if (host === 'youtu.be' && parts[0]) {
-      return `https://www.youtube.com/embed/${encodeURIComponent(parts[0])}`;
-    }
+    if (host === 'youtu.be' && parts[0]) return `https://www.youtube.com/embed/${encodeURIComponent(parts[0])}`;
     if (host === 'youtube.com' || host === 'm.youtube.com') {
       const id = url.searchParams.get('v') || (['shorts', 'embed', 'live'].includes(parts[0] || '') ? parts[1] : '');
       if (id) return `https://www.youtube.com/embed/${encodeURIComponent(id)}`;
@@ -135,6 +133,14 @@ export function socialVideoEmbedUrl(value: unknown) {
       const statusIndex = parts.indexOf('status');
       const id = statusIndex >= 0 ? parts[statusIndex + 1] : '';
       if (id && /^\d+$/.test(id)) return `https://platform.twitter.com/embed/Tweet.html?id=${id}`;
+    }
+
+    const isPinterest = host === 'pin.it' || /^([a-z0-9-]+\.)?pinterest\.[a-z.]+$/.test(host);
+    if (isPinterest) {
+      const pinIndex = parts.indexOf('pin');
+      const id = pinIndex >= 0 ? parts[pinIndex + 1] : '';
+      if (id && /^\d+$/.test(id)) return `https://assets.pinterest.com/ext/embed.html?id=${id}`;
+      return normalized;
     }
 
     if (host === 'dailymotion.com' || host === 'dai.ly') {
