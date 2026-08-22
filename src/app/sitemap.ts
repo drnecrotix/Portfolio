@@ -1,22 +1,44 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
+import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
+
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
-    const staticEntries: MetadataRoute.Sitemap = [
-        { url: baseUrl, changeFrequency: 'weekly', priority: 1 },
-        { url: `${baseUrl}/projects`, changeFrequency: 'weekly', priority: 0.9 },
-        { url: `${baseUrl}/blog`, changeFrequency: 'weekly', priority: 0.9 },
-    ];
+    let seo = defaultSeoDefaults;
 
     try {
+        const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+        seo = normalizeSeoDefaults(settings?.seoDefaults);
+    } catch {
+        // Keep sitemap available with safe defaults if settings cannot be loaded.
+    }
+
+    if (!seo.sitemapEnabled) return [];
+
+    const staticEntries: MetadataRoute.Sitemap = [
+        { url: baseUrl, changeFrequency: 'weekly', priority: 1 },
+        { url: `${baseUrl}/blog`, changeFrequency: 'daily', priority: 0.9 },
+        { url: `${baseUrl}/projects`, changeFrequency: 'weekly', priority: 0.9 },
+        { url: `${baseUrl}/gallery`, changeFrequency: 'weekly', priority: 0.7 },
+        { url: `${baseUrl}/experience`, changeFrequency: 'monthly', priority: 0.7 },
+        { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
+        { url: `${baseUrl}/resume`, changeFrequency: 'monthly', priority: 0.7 },
+        { url: `${baseUrl}/contact`, changeFrequency: 'monthly', priority: 0.5 },
+    ];
+
+    if (!seo.sitemapAutoUpdate) return staticEntries;
+
+    try {
+        const now = new Date();
         const [projects, posts, pages] = await Promise.all([
             prisma.project.findMany({
                 where: { status: { in: ['ONGOING', 'COMPLETED'] } },
                 select: { slug: true, updatedAt: true },
             }),
             prisma.post.findMany({
-                where: { status: 'PUBLISHED' },
+                where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] },
                 select: { slug: true, updatedAt: true },
             }),
             prisma.page.findMany({
@@ -37,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 url: `${baseUrl}/blog/${post.slug}`,
                 lastModified: post.updatedAt,
                 changeFrequency: 'monthly' as const,
-                priority: 0.7,
+                priority: 0.8,
             })),
             ...pages.map((page) => ({
                 url: `${baseUrl}/pages/${page.slug}`,
