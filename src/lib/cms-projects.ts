@@ -4,6 +4,7 @@ import type { Project, ProjectContentBlock } from '@/types';
 
 type ProjectContent = {
     image?: string;
+    downloadUrl?: string;
     galleryImages?: string[];
     features?: { title: string; items: string[] }[];
     installation?: { title: string; cmd?: string; code?: string; type: 'code' | 'text' }[];
@@ -29,6 +30,16 @@ function sanitizeProjectDescription(value?: string | null) {
     }).trim();
 }
 
+function normalizeProjectBlockMarkers(value?: string) {
+    if (!value) return undefined;
+    return value
+        .replace(/&lbrack;&lbrack;(mission|features|chronicles|installation)&rbrack;&rbrack;/gi, '[[$1]]')
+        .replace(
+            /<p[^>]*>\s*(?:<(?:strong|em|s)[^>]*>\s*)*\[\[(mission|features|chronicles|installation)\]\](?:\s*<\/(?:strong|em|s)>)*\s*<\/p>/gi,
+            '[[$1]]',
+        );
+}
+
 function extractProjectBlocks(value?: string | null): ProjectContentBlock[] {
     if (!value) return [];
     const found = new Set<ProjectContentBlock>();
@@ -40,11 +51,9 @@ function extractProjectBlocks(value?: string | null): ProjectContentBlock[] {
 }
 
 function projectDescriptionText(value?: string | null) {
-    const sanitized = sanitizeProjectDescription(value);
+    const sanitized = normalizeProjectBlockMarkers(sanitizeProjectDescription(value));
     if (!sanitized) return undefined;
-    const withoutBlocks = sanitized
-        .replace(/<p>\s*\[\[(?:mission|features|chronicles|installation)\]\]\s*<\/p>/gi, '')
-        .replace(BLOCK_PATTERN, '');
+    const withoutBlocks = sanitized.replace(BLOCK_PATTERN, '');
     return sanitizeHtml(withoutBlocks, {
         allowedTags: [],
         allowedAttributes: {},
@@ -53,8 +62,8 @@ function projectDescriptionText(value?: string | null) {
 
 export function cmsProjectToPortfolioProject(project: PrismaProject): Project {
     const content = (project.content ?? {}) as unknown as ProjectContent;
-    const contentLayout = sanitizeProjectDescription(project.longDescription);
-    const contentBlocks = extractProjectBlocks(project.longDescription);
+    const contentLayout = normalizeProjectBlockMarkers(sanitizeProjectDescription(project.longDescription));
+    const contentBlocks = extractProjectBlocks(contentLayout);
 
     return {
         id: project.id,
@@ -74,6 +83,7 @@ export function cmsProjectToPortfolioProject(project: PrismaProject): Project {
                   ? 'completed'
                   : 'planned',
         demoUrl: project.demoUrl ?? undefined,
+        downloadUrl: content.downloadUrl,
         repoUrl: project.repoUrl ?? undefined,
         startDate: (project.publishedAt ?? project.createdAt).toISOString().slice(0, 10),
         highlights: project.highlights,
@@ -132,5 +142,6 @@ export function safeProjectContent(value: FormDataEntryValue | null): ProjectCon
     }
 
     if (parsed.image) parsed.image = normalizeProjectMediaUrl(parsed.image);
+    if (parsed.downloadUrl) parsed.downloadUrl = normalizeProjectUrl(parsed.downloadUrl) ?? undefined;
     return parsed;
 }
