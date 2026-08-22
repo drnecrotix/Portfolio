@@ -38,6 +38,7 @@ export async function generateMetadata(): Promise<Metadata> {
     const ogImages = ogImage ? [{ url: ogImage }] : undefined;
     const twitterImages = twitterImage ? [twitterImage] : undefined;
     const favicon = general.faviconUrl || defaultGeneralSiteSettings.faviconUrl;
+    const normalizedSiteUrl = siteUrl.replace(/\/$/, '');
 
     return {
         title: { default: seo.titleDefault, template: seo.titleTemplate },
@@ -46,6 +47,9 @@ export async function generateMetadata(): Promise<Metadata> {
         authors: [{ name: seo.authorName }],
         creator: seo.creatorName,
         metadataBase: new URL(siteUrl),
+        alternates: seo.rssEnabled
+            ? { types: { 'application/rss+xml': `${normalizedSiteUrl}/rss.xml` } }
+            : undefined,
         openGraph: {
             type: 'website', locale: seo.locale, url: siteUrl, title: seo.ogTitle,
             description: seo.ogDescription, siteName: general.siteName, images: ogImages,
