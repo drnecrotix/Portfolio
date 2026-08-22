@@ -6,25 +6,19 @@ import type { PublicPost } from '@/lib/cms-posts';
 
 type Props = {
     posts: PublicPost[];
-    title: string;
-    subtitle: string;
 };
 
-export function HomeBlogSection({ posts, title, subtitle }: Props) {
+export function HomeBlogSection({ posts }: Props) {
     if (!posts.length) return null;
 
     return (
         <section id="home-blog" className="flex min-h-[100svh] scroll-mt-0 items-center border-t border-foreground/10 bg-background px-6 py-10 md:px-16 md:py-12 lg:px-24">
             <div className="mx-auto w-full max-w-[1400px]">
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-5 border-b border-foreground/10 pb-6">
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <span className="h-2.5 w-2.5 rounded-full bg-foreground/70" />
-                            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">Journal</p>
-                            <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[10px] text-muted-foreground">{posts.length}</span>
-                        </div>
-                        <p className="mt-2 text-sm font-semibold text-foreground/85 sm:text-base">{title}</p>
-                        {subtitle ? <p className="mt-1.5 text-xs text-muted-foreground sm:text-sm">{subtitle}</p> : null}
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="h-2.5 w-2.5 rounded-full bg-foreground/70" />
+                        <p className="font-mono text-sm font-semibold uppercase tracking-[0.28em] text-foreground/80">Journal</p>
+                        <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[10px] text-muted-foreground">{posts.length}</span>
                     </div>
                     <Link href="/blog" className="group inline-flex items-center gap-2 text-sm font-medium text-foreground/65 transition hover:text-foreground">
                         View all posts <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
