@@ -12,6 +12,11 @@ function getString(form: FormData, key: keyof HomepageContent, max: number) {
     return value;
 }
 
+function getLimit(form: FormData, key: 'homeBlogPostLimit' | 'homeProjectLimit', fallback: number) {
+    const value = Number(form.get(key));
+    return Number.isFinite(value) ? Math.max(1, Math.min(12, Math.round(value))) : fallback;
+}
+
 function safeLink(value: string, fallback: string) {
     const raw = value || fallback;
     if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) throw new Error('Invalid homepage link.');
@@ -43,6 +48,14 @@ export async function updateHomepage(form: FormData) {
         profileTitle: getString(form, 'profileTitle', 160) || defaultHomepageContent.profileTitle,
         profileDescription: getString(form, 'profileDescription', 600) || defaultHomepageContent.profileDescription,
         profileImage: safeCmsMediaUrl(getString(form, 'profileImage', 2048)),
+        showBlogPosts: form.get('showBlogPosts') === 'on',
+        homeBlogTitle: getString(form, 'homeBlogTitle', 120) || defaultHomepageContent.homeBlogTitle,
+        homeBlogSubtitle: getString(form, 'homeBlogSubtitle', 240) || defaultHomepageContent.homeBlogSubtitle,
+        homeBlogPostLimit: getLimit(form, 'homeBlogPostLimit', defaultHomepageContent.homeBlogPostLimit),
+        showProjects: form.get('showProjects') === 'on',
+        homeProjectsTitle: getString(form, 'homeProjectsTitle', 120) || defaultHomepageContent.homeProjectsTitle,
+        homeProjectsSubtitle: getString(form, 'homeProjectsSubtitle', 240) || defaultHomepageContent.homeProjectsSubtitle,
+        homeProjectLimit: getLimit(form, 'homeProjectLimit', defaultHomepageContent.homeProjectLimit),
         socialImage: existing.socialImage,
         openGraphImage: existing.openGraphImage,
         twitterImage: existing.twitterImage,
