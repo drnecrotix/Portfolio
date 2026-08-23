@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { defaultSeoDefaults, keywordsFromForm, type SeoDefaults } from '@/lib/seo-settings';
+import { defaultSeoDefaults, keywordsFromForm, type SeoDefaults, type SeoImagePreview, type SeoReferrerPolicy } from '@/lib/seo-settings';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { safeCmsMediaUrl } from '@/lib/sanitize-cms-html';
 
@@ -27,6 +27,23 @@ function safeKeywords(form: FormData) {
         if (keyword.length > 80) throw new Error('SEO keywords must be 80 characters or fewer.');
     }
     return keywords;
+}
+
+function safeCanonicalUrl(form: FormData) {
+    const raw = value(form, 'canonicalUrl', 2048);
+    if (!raw) return '';
+    try {
+        const parsed = new URL(raw);
+        if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+        return parsed.toString();
+    } catch {
+        throw new Error('Canonical URL must be a valid http(s) URL.');
+    }
+}
+
+function boundedNumber(form: FormData, key: keyof SeoDefaults, fallback: number) {
+    const raw = Number(form.get(key) ?? fallback);
+    return Number.isFinite(raw) ? Math.max(-1, Math.min(10000, Math.round(raw))) : fallback;
 }
 
 async function requireAdmin() {
@@ -60,9 +77,7 @@ export async function updateSeoSettings(form: FormData) {
         if (!/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z]{2,8})?$/.test(locale)) throw new Error('SEO locale is invalid.');
 
         const twitterCreator = value(form, 'twitterCreator', 32);
-        if (twitterCreator && !/^@[A-Za-z0-9_]{1,15}$/.test(twitterCreator)) {
-            throw new Error('Twitter/X creator must be a valid @handle.');
-        }
+        if (twitterCreator && !/^@[A-Za-z0-9_]{1,15}$/.test(twitterCreator)) throw new Error('Twitter/X creator must be a valid @handle.');
 
         const googleVerification = value(form, 'googleVerification', 256);
         if (/[<>\s]/.test(googleVerification)) throw new Error('Google verification token is invalid.');
@@ -72,6 +87,13 @@ export async function updateSeoSettings(form: FormData) {
             ? Math.min(100, Math.max(1, Math.round(rssItemLimitRaw)))
             : defaultSeoDefaults.rssItemLimit;
 
+        const referrerPolicies: SeoReferrerPolicy[] = ['no-referrer', 'origin', 'no-referrer-when-downgrade', 'origin-when-cross-origin', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin'];
+        const requestedReferrer = String(form.get('referrerPolicy') ?? defaultSeoDefaults.referrerPolicy) as SeoReferrerPolicy;
+        const referrerPolicy = referrerPolicies.includes(requestedReferrer) ? requestedReferrer : defaultSeoDefaults.referrerPolicy;
+        const imagePreviews: SeoImagePreview[] = ['none', 'standard', 'large'];
+        const requestedImagePreview = String(form.get('maxImagePreview') ?? defaultSeoDefaults.maxImagePreview) as SeoImagePreview;
+        const maxImagePreview = imagePreviews.includes(requestedImagePreview) ? requestedImagePreview : defaultSeoDefaults.maxImagePreview;
+
         const seoDefaults: SeoDefaults = {
             titleDefault: value(form, 'titleDefault', 120) || defaultSeoDefaults.titleDefault,
             titleTemplate: value(form, 'titleTemplate', 160) || defaultSeoDefaults.titleTemplate,
@@ -79,7 +101,11 @@ export async function updateSeoSettings(form: FormData) {
             keywords: safeKeywords(form),
             authorName: value(form, 'authorName', 120) || defaultSeoDefaults.authorName,
             creatorName: value(form, 'creatorName', 120) || defaultSeoDefaults.creatorName,
+            publisherName: value(form, 'publisherName', 120) || defaultSeoDefaults.publisherName,
+            applicationName: value(form, 'applicationName', 120) || defaultSeoDefaults.applicationName,
             locale,
+            canonicalUrl: safeCanonicalUrl(form),
+            referrerPolicy,
             ogTitle: value(form, 'ogTitle', 120) || defaultSeoDefaults.ogTitle,
             ogDescription: value(form, 'ogDescription', 320) || defaultSeoDefaults.ogDescription,
             ogImage: safeCmsMediaUrl(value(form, 'ogImage', 2048)),
@@ -89,9 +115,19 @@ export async function updateSeoSettings(form: FormData) {
             twitterCreator,
             indexSite: form.get('indexSite') === 'on',
             followLinks: form.get('followLinks') === 'on',
+            noArchive: form.get('noArchive') === 'on',
+            noSnippet: form.get('noSnippet') === 'on',
+            noImageIndex: form.get('noImageIndex') === 'on',
+            noTranslate: form.get('noTranslate') === 'on',
+            maxSnippet: boundedNumber(form, 'maxSnippet', defaultSeoDefaults.maxSnippet),
+            maxImagePreview,
+            maxVideoPreview: boundedNumber(form, 'maxVideoPreview', defaultSeoDefaults.maxVideoPreview),
             googleVerification,
             sitemapEnabled: form.get('sitemapEnabled') === 'on',
             sitemapAutoUpdate: form.get('sitemapAutoUpdate') === 'on',
+            sitemapIncludeBlog: form.get('sitemapIncludeBlog') === 'on',
+            sitemapIncludeProjects: form.get('sitemapIncludeProjects') === 'on',
+            sitemapIncludePages: form.get('sitemapIncludePages') === 'on',
             rssEnabled: form.get('rssEnabled') === 'on',
             rssAutoUpdate: form.get('rssAutoUpdate') === 'on',
             rssTitle: value(form, 'rssTitle', 160) || defaultSeoDefaults.rssTitle,
@@ -105,8 +141,6 @@ export async function updateSeoSettings(form: FormData) {
         const homepageContent = {
             ...homepage,
             socialImage: safeCmsMediaUrl(plainValue(form, 'socialImage', 2048)),
-            // v1.1.49 removes duplicate homepage-specific OG/Twitter image overrides.
-            // Homepage now follows the same site-wide social image hierarchy as the rest of the site.
             openGraphImage: '',
             twitterImage: '',
             customMetaTags: plainValue(form, 'customMetaTags', 12000),

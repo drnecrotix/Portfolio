@@ -27,7 +27,7 @@ export type HomepageContent = {
     customMetaTags: string;
 };
 
-export type CustomMetaTag = { attribute: 'name' | 'property'; key: string; content: string };
+export type CustomMetaTag = { attribute: 'name' | 'property' | 'http-equiv'; key: string; content: string };
 
 export const defaultHomepageContent: HomepageContent = {
     intro: "Hi, I'm Dr Necrotix. I build digital systems, creative projects and communities.",
@@ -74,9 +74,9 @@ export function normalizeHomepageContent(value: unknown): HomepageContent {
 
 export function parseCustomMetaTags(value: string): CustomMetaTag[] {
     return value.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 50).flatMap((line) => {
-        const match = line.match(/^(name|property)\s*:\s*([^=]+?)\s*=\s*(.+)$/i);
+        const match = line.match(/^(name|property|http-equiv)\s*:\s*([^=]+?)\s*=\s*(.+)$/i);
         if (!match) return [];
-        const attribute = match[1].toLowerCase() as 'name' | 'property';
+        const attribute = match[1].toLowerCase() as CustomMetaTag['attribute'];
         const key = match[2].trim().replace(/[^a-zA-Z0-9:_-]/g, '').slice(0, 120);
         const content = match[3].trim().replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 1000);
         if (!key || !content) return [];

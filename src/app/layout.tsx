@@ -39,22 +39,44 @@ export async function generateMetadata(): Promise<Metadata> {
     const twitterImages = twitterImage ? [twitterImage] : undefined;
     const favicon = general.faviconUrl || defaultGeneralSiteSettings.faviconUrl;
     const normalizedSiteUrl = siteUrl.replace(/\/$/, '');
+    const alternates: Metadata['alternates'] = {
+        ...(seo.canonicalUrl ? { canonical: seo.canonicalUrl } : {}),
+        ...(seo.rssEnabled ? { types: { 'application/rss+xml': `${normalizedSiteUrl}/rss.xml` } } : {}),
+    };
+    const robots = {
+        index: seo.indexSite,
+        follow: seo.followLinks,
+        noarchive: seo.noArchive,
+        nosnippet: seo.noSnippet,
+        noimageindex: seo.noImageIndex,
+        notranslate: seo.noTranslate,
+        googleBot: {
+            index: seo.indexSite,
+            follow: seo.followLinks,
+            noarchive: seo.noArchive,
+            nosnippet: seo.noSnippet,
+            noimageindex: seo.noImageIndex,
+            notranslate: seo.noTranslate,
+            'max-video-preview': seo.maxVideoPreview,
+            'max-image-preview': seo.maxImagePreview,
+            'max-snippet': seo.maxSnippet,
+        },
+    } as Metadata['robots'];
 
     return {
         title: { default: seo.titleDefault, template: seo.titleTemplate },
         description: seo.description,
         keywords: seo.keywords,
+        applicationName: seo.applicationName,
         authors: [{ name: seo.authorName }],
         creator: seo.creatorName,
+        publisher: seo.publisherName,
+        referrer: seo.referrerPolicy,
         metadataBase: new URL(siteUrl),
-        alternates: seo.rssEnabled ? { types: { 'application/rss+xml': `${normalizedSiteUrl}/rss.xml` } } : undefined,
-        openGraph: { type: 'website', locale: seo.locale, url: siteUrl, title: seo.ogTitle, description: seo.ogDescription, siteName: general.siteName, images: ogImages },
+        alternates,
+        openGraph: { type: 'website', locale: seo.locale, url: seo.canonicalUrl || siteUrl, title: seo.ogTitle, description: seo.ogDescription, siteName: general.siteName, images: ogImages },
         twitter: { card: 'summary_large_image', title: seo.twitterTitle, description: seo.twitterDescription, creator: seo.twitterCreator || undefined, images: twitterImages },
-        robots: {
-            index: seo.indexSite,
-            follow: seo.followLinks,
-            googleBot: { index: seo.indexSite, follow: seo.followLinks, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
-        },
+        robots,
         verification: seo.googleVerification ? { google: seo.googleVerification } : undefined,
         icons: { icon: [{ url: favicon }], shortcut: [{ url: favicon }], apple: [{ url: favicon }] },
     };
@@ -92,9 +114,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     return (
         <html lang={locale} data-scroll-behavior="smooth" suppressHydrationWarning>
             <head>
-                {customMetaTags.map((tag, index) => tag.attribute === 'property'
-                    ? <meta key={`${tag.attribute}-${tag.key}-${index}`} property={tag.key} content={tag.content} />
-                    : <meta key={`${tag.attribute}-${tag.key}-${index}`} name={tag.key} content={tag.content} />)}
+                {customMetaTags.map((tag, index) => {
+                    const key = `${tag.attribute}-${tag.key}-${index}`;
+                    if (tag.attribute === 'property') return <meta key={key} property={tag.key} content={tag.content} />;
+                    if (tag.attribute === 'http-equiv') return <meta key={key} httpEquiv={tag.key} content={tag.content} />;
+                    return <meta key={key} name={tag.key} content={tag.content} />;
+                })}
             </head>
             <body className={`${inter.variable} ${jetbrainsMono.variable} ${playfair.variable} ${signature.variable} font-sans relative`}>
                 <ThemeProvider defaultTheme={general.defaultTheme} allowDayMode={general.allowDayMode}>

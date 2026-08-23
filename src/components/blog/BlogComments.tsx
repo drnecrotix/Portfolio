@@ -117,19 +117,20 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
         <article
             key={comment.id}
             className={isReply
-                ? 'ml-4 border-l border-foreground/10 py-5 pl-5 sm:ml-8 sm:pl-6'
-                : 'border-b border-foreground/10 py-6 last:border-b-0'}
+                ? 'ml-4 border-l border-foreground/10 py-4 pl-5 sm:ml-7 sm:pl-6'
+                : 'rounded-xl border border-foreground/10 bg-foreground/[0.018] px-5 py-5 shadow-[0_1px_0_rgba(255,255,255,0.02)] sm:px-6 sm:py-6'}
         >
-            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                 <strong className="break-words text-sm font-semibold text-foreground">{comment.authorName}</strong>
+                <span className="text-muted-foreground/35">·</span>
                 <time className="text-xs text-muted-foreground/65" dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
             </div>
-            <p className="mt-2.5 whitespace-pre-wrap break-words text-[15px] leading-7 text-foreground/90">{comment.content}</p>
+            <p className="mt-3 whitespace-pre-wrap break-words text-[15px] leading-7 text-foreground/90">{comment.content}</p>
             {!isReply && (
                 <button
                     type="button"
                     onClick={() => startReply(comment)}
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground"
                     aria-label={`Reply to ${comment.authorName}`}
                 >
                     <CornerUpLeft className="h-3.5 w-3.5" />
@@ -225,10 +226,15 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
                     {!composerOpen && <button type="button" onClick={openComposer} className="mt-2 text-xs font-medium text-foreground/75 transition hover:text-foreground">Start the conversation</button>}
                 </div>
             ) : (
-                <div>
+                <div className="space-y-4 py-6">
                     {roots.map((comment) => {
                         const replies = comments.filter((item) => item.parentId === comment.id);
-                        return <div key={comment.id}>{renderComment(comment)}{replies.map((reply) => renderComment(reply, true))}</div>;
+                        return (
+                            <div key={comment.id}>
+                                {renderComment(comment)}
+                                {replies.length > 0 && <div className="mt-1">{replies.map((reply) => renderComment(reply, true))}</div>}
+                            </div>
+                        );
                     })}
                 </div>
             )}
