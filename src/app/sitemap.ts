@@ -19,8 +19,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const staticEntries: MetadataRoute.Sitemap = [
         { url: baseUrl, changeFrequency: 'weekly', priority: 1 },
-        { url: `${baseUrl}/blog`, changeFrequency: 'daily', priority: 0.9 },
-        { url: `${baseUrl}/projects`, changeFrequency: 'weekly', priority: 0.9 },
+        ...(seo.sitemapIncludeBlog ? [{ url: `${baseUrl}/blog`, changeFrequency: 'daily' as const, priority: 0.9 }] : []),
+        ...(seo.sitemapIncludeProjects ? [{ url: `${baseUrl}/projects`, changeFrequency: 'weekly' as const, priority: 0.9 }] : []),
         { url: `${baseUrl}/gallery`, changeFrequency: 'weekly', priority: 0.7 },
         { url: `${baseUrl}/experience`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
@@ -33,18 +33,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     try {
         const now = new Date();
         const [projects, posts, pages] = await Promise.all([
-            prisma.project.findMany({
-                where: { status: { in: ['ONGOING', 'COMPLETED'] } },
-                select: { slug: true, updatedAt: true },
-            }),
-            prisma.post.findMany({
-                where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] },
-                select: { slug: true, updatedAt: true },
-            }),
-            prisma.page.findMany({
-                where: { status: 'PUBLISHED' },
-                select: { slug: true, updatedAt: true },
-            }),
+            seo.sitemapIncludeProjects
+                ? prisma.project.findMany({ where: { status: { in: ['ONGOING', 'COMPLETED'] } }, select: { slug: true, updatedAt: true } })
+                : Promise.resolve([]),
+            seo.sitemapIncludeBlog
+                ? prisma.post.findMany({ where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] }, select: { slug: true, updatedAt: true } })
+                : Promise.resolve([]),
+            seo.sitemapIncludePages
+                ? prisma.page.findMany({ where: { status: 'PUBLISHED' }, select: { slug: true, updatedAt: true } })
+                : Promise.resolve([]),
         ]);
 
         return [
