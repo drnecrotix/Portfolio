@@ -87,7 +87,7 @@ export async function updateSeoSettings(form: FormData) {
             ? Math.min(100, Math.max(1, Math.round(rssItemLimitRaw)))
             : defaultSeoDefaults.rssItemLimit;
 
-        const referrerPolicies: SeoReferrerPolicy[] = ['no-referrer', 'origin', 'no-referrer-when-downgrade', 'origin-when-cross-origin', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin', 'unsafe-url'];
+        const referrerPolicies: SeoReferrerPolicy[] = ['no-referrer', 'origin', 'no-referrer-when-downgrade', 'origin-when-cross-origin', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin'];
         const requestedReferrer = String(form.get('referrerPolicy') ?? defaultSeoDefaults.referrerPolicy) as SeoReferrerPolicy;
         const referrerPolicy = referrerPolicies.includes(requestedReferrer) ? requestedReferrer : defaultSeoDefaults.referrerPolicy;
         const imagePreviews: SeoImagePreview[] = ['none', 'standard', 'large'];
