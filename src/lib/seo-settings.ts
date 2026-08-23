@@ -1,4 +1,4 @@
-export type SeoReferrerPolicy = 'no-referrer' | 'origin' | 'no-referrer-when-downgrade' | 'origin-when-cross-origin' | 'same-origin' | 'strict-origin' | 'strict-origin-when-cross-origin' | 'unsafe-url';
+export type SeoReferrerPolicy = 'no-referrer' | 'origin' | 'no-referrer-when-downgrade' | 'origin-when-cross-origin' | 'same-origin' | 'strict-origin' | 'strict-origin-when-cross-origin';
 export type SeoImagePreview = 'none' | 'standard' | 'large';
 
 export type SeoDefaults = {
@@ -90,7 +90,7 @@ export function normalizeSeoDefaults(value: unknown): SeoDefaults {
     const parsedRssItemLimit = Number(source.rssItemLimit);
     const parsedMaxSnippet = Number(source.maxSnippet);
     const parsedMaxVideoPreview = Number(source.maxVideoPreview);
-    const validReferrerPolicies: SeoReferrerPolicy[] = ['no-referrer', 'origin', 'no-referrer-when-downgrade', 'origin-when-cross-origin', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin', 'unsafe-url'];
+    const validReferrerPolicies: SeoReferrerPolicy[] = ['no-referrer', 'origin', 'no-referrer-when-downgrade', 'origin-when-cross-origin', 'same-origin', 'strict-origin', 'strict-origin-when-cross-origin'];
     const validImagePreviews: SeoImagePreview[] = ['none', 'standard', 'large'];
 
     return {
