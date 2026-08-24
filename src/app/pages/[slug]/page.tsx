@@ -2,17 +2,27 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { pageContentToHtml, pageFeaturedImage } from '@/lib/cms-pages';
+import { normalizeHomepageContent } from '@/lib/homepage-content';
+import { normalizeSeoDefaults } from '@/lib/seo-settings';
+import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
 
 export const dynamic = 'force-dynamic';
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const siteUrl = getPublicSiteUrl();
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
-    const page = await prisma.page.findUnique({ where: { slug } });
+    const [page, settings] = await Promise.all([
+        prisma.page.findUnique({ where: { slug } }),
+        prisma.siteSettings.findUnique({ where: { id: 'default' } }),
+    ]);
     if (!page || page.status !== 'PUBLISHED') return { robots: { index: false, follow: false } };
 
     const featuredImage = pageFeaturedImage(page.content);
+    const homepage = normalizeHomepageContent(settings?.homepageContent);
+    const seo = normalizeSeoDefaults(settings?.seoDefaults);
+    const ogImage = absoluteSocialMediaUrl(featuredImage || seo.ogImage || homepage.socialImage);
+    const twitterImage = absoluteSocialMediaUrl(featuredImage || seo.twitterImage || seo.ogImage || homepage.socialImage);
     const title = page.seoTitle || page.title;
     const description = page.seoDescription || undefined;
     const canonical = `${siteUrl}/pages/${slug}`;
@@ -27,13 +37,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
             url: canonical,
             title,
             description,
-            images: featuredImage ? [{ url: featuredImage, alt: page.title }] : undefined,
+            images: ogImage ? [socialImageDescriptor(ogImage, page.title)!] : undefined,
         },
         twitter: {
-            card: featuredImage ? 'summary_large_image' : 'summary',
+            card: twitterImage ? 'summary_large_image' : 'summary',
             title,
             description,
-            images: featuredImage ? [featuredImage] : undefined,
+            images: twitterImage ? [socialImageDescriptor(twitterImage, page.title)!] : undefined,
         },
     };
 }
