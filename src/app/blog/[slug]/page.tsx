@@ -7,25 +7,17 @@ import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComm
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
+import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
 
 export const dynamic = 'force-dynamic';
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const siteUrl = getPublicSiteUrl();
 const likeCookieName = 'necrotix_blog_like_id';
 
 type PostContent = { html?: string; text?: string; featuredImage?: string };
 
 function isPublicPost(post: { status: string; publishedAt: Date | null }) {
     return post.status === 'PUBLISHED' && (!post.publishedAt || post.publishedAt <= new Date());
-}
-
-function absoluteImageUrl(value?: string) {
-    if (!value) return undefined;
-    try {
-        return new URL(value, `${siteUrl}/`).toString();
-    } catch {
-        return undefined;
-    }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -41,8 +33,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const content = (cmsPost.content ?? {}) as PostContent;
     const homepage = normalizeHomepageContent(settings?.homepageContent);
     const seo = normalizeSeoDefaults(settings?.seoDefaults);
-    const defaultSocialImage = homepage.socialImage || seo.ogImage || undefined;
-    const image = absoluteImageUrl(content.featuredImage || defaultSocialImage);
+    const ogImage = absoluteSocialMediaUrl(content.featuredImage || seo.ogImage || homepage.socialImage);
+    const twitterImage = absoluteSocialMediaUrl(content.featuredImage || seo.twitterImage || seo.ogImage || homepage.socialImage);
     const title = cmsPost.seoTitle?.trim() || cmsPost.title;
     const description = cmsPost.seoDescription?.trim() || cmsPost.excerpt || undefined;
     const publishedTime = (cmsPost.publishedAt ?? cmsPost.createdAt).toISOString();
@@ -60,13 +52,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
             description,
             publishedTime,
             authors: [cmsPost.authorName],
-            images: image ? [{ url: image, alt: cmsPost.title }] : undefined,
+            images: ogImage ? [socialImageDescriptor(ogImage, cmsPost.title)!] : undefined,
         },
         twitter: {
-            card: image ? 'summary_large_image' : 'summary',
+            card: twitterImage ? 'summary_large_image' : 'summary',
             title,
             description,
-            images: image ? [image] : undefined,
+            images: twitterImage ? [socialImageDescriptor(twitterImage, cmsPost.title)!] : undefined,
         },
     };
 }
