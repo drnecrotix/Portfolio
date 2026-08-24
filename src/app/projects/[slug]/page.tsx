@@ -6,21 +6,13 @@ import { prisma } from '@/lib/prisma';
 import { cmsProjectToPortfolioProject } from '@/lib/cms-projects';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
+import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
 
 export const dynamic = 'force-dynamic';
 
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+const siteUrl = getPublicSiteUrl();
 
 type ProjectContent = { image?: string };
-
-function absoluteImageUrl(value?: string) {
-    if (!value) return undefined;
-    try {
-        return new URL(value, `${siteUrl}/`).toString();
-    } catch {
-        return undefined;
-    }
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
@@ -34,8 +26,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const content = (project.content ?? {}) as ProjectContent;
     const homepage = normalizeHomepageContent(settings?.homepageContent);
     const seo = normalizeSeoDefaults(settings?.seoDefaults);
-    const defaultSocialImage = homepage.socialImage || seo.ogImage || undefined;
-    const image = absoluteImageUrl(content.image || defaultSocialImage);
+    const ogImage = absoluteSocialMediaUrl(content.image || seo.ogImage || homepage.socialImage);
+    const twitterImage = absoluteSocialMediaUrl(content.image || seo.twitterImage || seo.ogImage || homepage.socialImage);
     const title = project.seoTitle?.trim() || project.title;
     const description = project.seoDescription?.trim() || project.description;
 
@@ -49,13 +41,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
             url: canonical,
             title,
             description,
-            images: image ? [{ url: image, alt: project.title }] : undefined,
+            images: ogImage ? [socialImageDescriptor(ogImage, project.title)!] : undefined,
         },
         twitter: {
-            card: image ? 'summary_large_image' : 'summary',
+            card: twitterImage ? 'summary_large_image' : 'summary',
             title,
             description,
-            images: image ? [image] : undefined,
+            images: twitterImage ? [socialImageDescriptor(twitterImage, project.title)!] : undefined,
         },
     };
 }
