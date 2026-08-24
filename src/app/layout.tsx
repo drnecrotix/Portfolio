@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 import { defaultGeneralSiteSettings, normalizeGeneralSiteSettings } from '@/lib/site-settings';
 import { defaultHomepageContent, normalizeHomepageContent, parseCustomMetaTags } from '@/lib/homepage-content';
+import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
 
 import '@/styles/globals.css';
 import '@/styles/mobile-polish.css';
@@ -16,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jet
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair', display: 'swap' });
 const signature = Alex_Brush({ weight: '400', subsets: ['latin'], variable: '--font-signature', display: 'swap' });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const siteUrl = getPublicSiteUrl();
 
 export async function generateMetadata(): Promise<Metadata> {
     let seo = defaultSeoDefaults;
@@ -33,14 +34,15 @@ export async function generateMetadata(): Promise<Metadata> {
     }
 
     const defaultSocialImage = homepage.socialImage;
-    const ogImage = seo.ogImage || defaultSocialImage;
-    const twitterImage = seo.twitterImage || defaultSocialImage;
-    const ogImages = ogImage ? [{ url: ogImage }] : undefined;
-    const twitterImages = twitterImage ? [twitterImage] : undefined;
+    const ogImage = absoluteSocialMediaUrl(seo.ogImage || defaultSocialImage);
+    const twitterImage = absoluteSocialMediaUrl(seo.twitterImage || seo.ogImage || defaultSocialImage);
+    const ogImages = ogImage ? [socialImageDescriptor(ogImage, `${general.siteName} - ${seo.ogTitle}`)!] : undefined;
+    const twitterImages = twitterImage ? [socialImageDescriptor(twitterImage, `${general.siteName} - ${seo.twitterTitle}`)!] : undefined;
     const favicon = general.faviconUrl || defaultGeneralSiteSettings.faviconUrl;
     const normalizedSiteUrl = siteUrl.replace(/\/$/, '');
+    const canonicalUrl = seo.canonicalUrl || normalizedSiteUrl;
     const alternates: Metadata['alternates'] = {
-        ...(seo.canonicalUrl ? { canonical: seo.canonicalUrl } : {}),
+        canonical: canonicalUrl,
         ...(seo.rssEnabled ? { types: { 'application/rss+xml': `${normalizedSiteUrl}/rss.xml` } } : {}),
     };
     const robots = {
@@ -72,10 +74,24 @@ export async function generateMetadata(): Promise<Metadata> {
         creator: seo.creatorName,
         publisher: seo.publisherName,
         referrer: seo.referrerPolicy,
-        metadataBase: new URL(siteUrl),
+        metadataBase: new URL(normalizedSiteUrl),
         alternates,
-        openGraph: { type: 'website', locale: seo.locale, url: seo.canonicalUrl || siteUrl, title: seo.ogTitle, description: seo.ogDescription, siteName: general.siteName, images: ogImages },
-        twitter: { card: 'summary_large_image', title: seo.twitterTitle, description: seo.twitterDescription, creator: seo.twitterCreator || undefined, images: twitterImages },
+        openGraph: {
+            type: 'website',
+            locale: seo.locale,
+            url: canonicalUrl,
+            title: seo.ogTitle,
+            description: seo.ogDescription,
+            siteName: general.siteName,
+            images: ogImages,
+        },
+        twitter: {
+            card: twitterImage ? 'summary_large_image' : 'summary',
+            title: seo.twitterTitle,
+            description: seo.twitterDescription,
+            creator: seo.twitterCreator || undefined,
+            images: twitterImages,
+        },
         robots,
         verification: seo.googleVerification ? { google: seo.googleVerification } : undefined,
         icons: { icon: [{ url: favicon }], shortcut: [{ url: favicon }], apple: [{ url: favicon }] },
