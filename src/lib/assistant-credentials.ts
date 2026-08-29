@@ -6,7 +6,6 @@ import type { Prisma } from '@prisma/client';
 const PRIVATE_FIELD = '__aiCredentials';
 const ENVELOPE_VERSION = 1;
 
-type JsonRecord = Record<string, Prisma.JsonValue>;
 type CredentialVault = {
     version: number;
     keys: Record<string, string>;
@@ -58,10 +57,6 @@ function readVault(value: unknown): CredentialVault {
     return { version: ENVELOPE_VERSION, keys };
 }
 
-export function assistantSettingsRecord(value: unknown): Record<string, unknown> {
-    return { ...record(value) };
-}
-
 export function getStoredAssistantApiKeys(value: unknown): Record<string, string> {
     const raw = record(value);
     const vault = readVault(raw[PRIVATE_FIELD]);
@@ -77,11 +72,6 @@ export function hasStoredAssistantApiKey(value: unknown, providerId: string) {
     const raw = record(value);
     const vault = readVault(raw[PRIVATE_FIELD]);
     return Boolean(vault.keys[providerId]);
-}
-
-export function resolveAssistantApiKey(value: unknown, providerId: string, envName: string) {
-    const stored = getStoredAssistantApiKeys(value)[providerId];
-    return stored || process.env[envName] || '';
 }
 
 export function mergeAssistantPrivateFields(existing: unknown, nextPublicSettings: Record<string, unknown>) {
@@ -105,10 +95,4 @@ export function withAssistantApiKey(existing: unknown, publicSettings: Record<st
 
 export function toAssistantSettingsJson(value: Record<string, unknown>): Prisma.InputJsonValue {
     return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-}
-
-export function maskApiKey(value: string) {
-    if (!value) return '';
-    if (value.length <= 8) return '••••••••';
-    return `${value.slice(0, 4)}••••${value.slice(-4)}`;
 }
