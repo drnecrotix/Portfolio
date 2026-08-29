@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { PostBody } from '@/components/blog/PostBody';
 import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComments';
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
-import { getLocalizedPostFields } from '@/lib/cms-posts';
+import { getAvailablePostLocales, getLocalizedPostFields } from '@/lib/cms-posts';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
 import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
@@ -114,6 +114,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         };
     });
     const comments: PublicBlogComment[] = cmsPost.comments.map((comment) => ({ ...comment, createdAt: comment.createdAt.toISOString() }));
+    const availableLocales = getAvailablePostLocales(cmsPost);
+    const currentLocale = locale === 'bg' ? 'bg' : 'en';
 
     return (
         <BlogArticleFrame
@@ -129,6 +131,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             publishedAt={publishedAt}
             tags={cmsPost.tags}
             relatedPosts={relatedPosts}
+            currentLocale={currentLocale}
+            availableLocales={availableLocales}
             comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
         >
             <PostBody type={cmsPost.type} content={content} />
