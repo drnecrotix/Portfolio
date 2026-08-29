@@ -10,6 +10,7 @@ import { TagInput } from '@/components/admin/TagInput';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { UnsavedContentPreview } from '@/components/admin/UnsavedContentPreview';
 import { FormDraftGuard, markDraftCommitted } from '@/components/admin/FormDraftGuard';
+import type { BlogLocale, CmsPostTranslation } from '@/lib/cms-posts';
 
 export type BlogTypeOption = { id: string; name: string; slug: string; editorMode: PostType };
 export type BlogCategoryOption = { id: string; name: string; slug: string };
@@ -31,7 +32,13 @@ export type BlogPostFormValue = {
     seoDescription?: string | null;
     publishedAt?: Date | null;
     scheduledAt?: Date | null;
-    content?: { html?: string; text?: string; featuredImage?: string };
+    content?: {
+        html?: string;
+        text?: string;
+        featuredImage?: string;
+        primaryLocale?: BlogLocale;
+        translations?: Partial<Record<BlogLocale, CmsPostTranslation>>;
+    };
 };
 
 const inputClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm outline-none transition focus:border-white/30 focus:bg-white/[0.05]';
@@ -58,12 +65,21 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
     const router = useRouter();
     const initialTypeId = value.postTypeId || postTypes[0]?.id || '';
     const draftKey = value.slug ? `blog:edit:${value.slug}` : 'blog:new';
+    const initialPrimaryLocale: BlogLocale = value.content?.primaryLocale === 'bg' ? 'bg' : 'en';
+    const initialSecondaryLocale: BlogLocale = initialPrimaryLocale === 'bg' ? 'en' : 'bg';
+    const initialTranslation = value.content?.translations?.[initialSecondaryLocale] ?? {};
     const [selectedTypeId, setSelectedTypeId] = useState(initialTypeId);
     const [title, setTitle] = useState(value.title ?? '');
     const [slug, setSlug] = useState(value.slug ?? '');
     const [slugTouched, setSlugTouched] = useState(Boolean(value.slug));
     const [excerpt, setExcerpt] = useState(value.excerpt ?? '');
     const [featuredImage, setFeaturedImage] = useState(value.content?.featuredImage ?? '');
+    const [primaryLocale, setPrimaryLocale] = useState<BlogLocale>(initialPrimaryLocale);
+    const [translationTitle, setTranslationTitle] = useState(initialTranslation.title ?? '');
+    const [translationExcerpt, setTranslationExcerpt] = useState(initialTranslation.excerpt ?? '');
+    const [translationSeoTitle, setTranslationSeoTitle] = useState(initialTranslation.seoTitle ?? '');
+    const [translationSeoDescription, setTranslationSeoDescription] = useState(initialTranslation.seoDescription ?? '');
+    const [translationOpen, setTranslationOpen] = useState(Boolean(initialTranslation.title || initialTranslation.html || initialTranslation.text));
     const [saveState, setSaveState] = useState<'idle' | 'saved' | 'error'>('idle');
     const [saveMessage, setSaveMessage] = useState('');
     const [isPending, startTransition] = useTransition();
@@ -72,6 +88,11 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
     const editorMode = selectedType?.editorMode ?? value.type ?? 'ARTICLE';
     const poetry = editorMode === 'POETRY';
     const initialContent = poetry ? value.content?.text ?? '' : value.content?.html ?? '';
+    const secondaryLocale: BlogLocale = primaryLocale === 'bg' ? 'en' : 'bg';
+    const secondaryLabel = secondaryLocale === 'bg' ? 'Bulgarian (BG)' : 'English (EN)';
+    const primaryLabel = primaryLocale === 'bg' ? 'Bulgarian (BG)' : 'English (EN)';
+    const savedTranslation = value.content?.translations?.[secondaryLocale] ?? initialTranslation;
+    const initialTranslationContent = poetry ? savedTranslation?.text ?? '' : savedTranslation?.html ?? '';
 
     const changeTitle = (next: string) => {
         setTitle(next);
@@ -81,6 +102,9 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        if (!translationOpen) {
+            for (const key of ['translationTitle', 'translationExcerpt', 'translationContent', 'translationSeoTitle', 'translationSeoDescription']) formData.set(key, '');
+        }
         setSaveState('idle');
         setSaveMessage('');
 
@@ -104,10 +128,10 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
             <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_330px]">
                 <div className="min-w-0 space-y-7">
                     <section className="overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.035] to-transparent p-6 md:p-8">
-                        <div className="mb-7 flex items-center justify-between gap-4">
+                        <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
                             <div>
                                 <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-fuchsia-200/55">Journal entry</p>
-                                <p className="mt-2 text-sm text-white/35">Start with the thought. The publishing controls can wait.</p>
+                                <p className="mt-2 text-sm text-white/35">Primary language: {primaryLabel}</p>
                             </div>
                             <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-white/35">{selectedType?.name || editorMode.replaceAll('_', ' ')}</span>
                         </div>
@@ -126,34 +150,53 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
 
                     <section>
                         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                            <div>
-                                <p className="text-sm font-semibold text-white/75">Writing canvas</p>
-                                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-white/35">{poetry ? 'Poetry keeps your line breaks and stanza rhythm untouched.' : 'Use Quote for a pull quote, Divider for a quiet pause, and keep paragraphs short when you want that Tumblr-like journal rhythm.'}</p>
-                            </div>
+                            <div><p className="text-sm font-semibold text-white/75">Writing canvas</p><p className="mt-1 max-w-2xl text-xs leading-relaxed text-white/35">Write the original article in {primaryLabel}.</p></div>
                             {!poetry && <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/25">Text · Quote · Pause · Image</span>}
                         </div>
-                        <PostEditor key={selectedTypeId || editorMode} name="content" initialValue={initialContent} poetry={poetry} variant="journal" />
+                        <PostEditor key={`primary-${selectedTypeId || editorMode}`} name="content" initialValue={initialContent} poetry={poetry} variant="journal" />
                     </section>
 
                     <SeoEditor sourceTitle={title} sourceDescription={excerpt} slug={slug} hasImage={Boolean(featuredImage)} initialTitle={value.seoTitle} initialDescription={value.seoDescription} />
+
+                    <section className="rounded-3xl border border-cyan-400/15 bg-cyan-400/[0.025] p-6 md:p-8">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-cyan-200/60">BG / EN translation</p>
+                                <h3 className="mt-2 text-xl font-semibold">{secondaryLabel} version</h3>
+                                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">When the visitor switches the site language, this version is shown automatically. If it is empty, the original post remains visible.</p>
+                            </div>
+                            <button type="button" onClick={() => setTranslationOpen((open) => !open)} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:bg-white/[0.05]">{translationOpen ? 'Disable translation' : 'Add translation'}</button>
+                        </div>
+
+                        {translationOpen && (
+                            <div className="mt-6 space-y-5">
+                                <label className="block text-xs text-white/45">Translated title<input name="translationTitle" value={translationTitle} onChange={(event) => setTranslationTitle(event.target.value)} className={inputClass} placeholder={secondaryLocale === 'bg' ? 'Заглавие на български' : 'English title'} /></label>
+                                <div>
+                                    <p className="text-xs text-white/45">Translated content</p>
+                                    <div className="mt-2"><PostEditor key={`translation-${secondaryLocale}-${selectedTypeId || editorMode}`} name="translationContent" initialValue={initialTranslationContent} poetry={poetry} variant="journal" /></div>
+                                </div>
+                                <label className="block text-xs text-white/45">Translated excerpt<textarea name="translationExcerpt" rows={4} value={translationExcerpt} onChange={(event) => setTranslationExcerpt(event.target.value)} className={inputClass} /></label>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <label className="block text-xs text-white/45">Translated SEO title<input name="translationSeoTitle" value={translationSeoTitle} onChange={(event) => setTranslationSeoTitle(event.target.value)} className={inputClass} /></label>
+                                    <label className="block text-xs text-white/45">Translated SEO description<textarea name="translationSeoDescription" rows={3} value={translationSeoDescription} onChange={(event) => setTranslationSeoDescription(event.target.value)} className={inputClass} /></label>
+                                </div>
+                            </div>
+                        )}
+                    </section>
                 </div>
 
                 <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
                     <section className={panelClass}>
                         <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Publish</h3><span className="text-[10px] uppercase tracking-[0.18em] text-white/30">Post</span></div>
                         <div className="mt-4 space-y-4">
+                            <label className="block text-xs text-white/45">Primary language<select name="primaryLocale" value={primaryLocale} onChange={(event) => setPrimaryLocale(event.target.value as BlogLocale)} className={selectClass}><option value="en">English (EN)</option><option value="bg">Bulgarian (BG)</option></select></label>
                             <label className="block text-xs text-white/45">Status<select name="status" defaultValue={value.status ?? 'DRAFT'} className={selectClass}>{['DRAFT','REVIEW','PUBLISHED','ARCHIVED'].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
                             <label className="block text-xs text-white/45">Author<input name="authorName" required defaultValue={value.authorName ?? 'Dr Necrotix'} className={inputClass} /></label>
                             <label className="block text-xs text-white/45">Publish date<input name="publishedAt" type="datetime-local" defaultValue={dateValue(value.publishedAt)} className={inputClass} /></label>
                             <label className="block text-xs text-white/45">Schedule<input name="scheduledAt" type="datetime-local" defaultValue={dateValue(value.scheduledAt)} className={inputClass} /></label>
                         </div>
-                        <div className="mt-5 grid grid-cols-2 gap-2">
-                            <UnsavedContentPreview kind="blog" />
-                            <button disabled={isPending} className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-wait disabled:opacity-60">{isPending ? 'Saving…' : submitLabel}</button>
-                        </div>
-                        <div aria-live="polite" className={`mt-3 min-h-5 text-center text-xs transition-opacity duration-200 ${saveState === 'idle' && !isPending ? 'opacity-0' : 'opacity-100'} ${saveState === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>
-                            {isPending ? 'Saving changes without reloading…' : saveMessage || 'Saved'}
-                        </div>
+                        <div className="mt-5 grid grid-cols-2 gap-2"><UnsavedContentPreview kind="blog" /><button disabled={isPending} className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-wait disabled:opacity-60">{isPending ? 'Saving…' : submitLabel}</button></div>
+                        <div aria-live="polite" className={`mt-3 min-h-5 text-center text-xs transition-opacity duration-200 ${saveState === 'idle' && !isPending ? 'opacity-0' : 'opacity-100'} ${saveState === 'error' ? 'text-red-300' : 'text-emerald-300'}`}>{isPending ? 'Saving changes without reloading…' : saveMessage || 'Saved'}</div>
                     </section>
 
                     <section className={panelClass}>
@@ -165,14 +208,11 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                         </div>
                     </section>
 
-                    <section className={panelClass}>
-                        <MediaPicker value={featuredImage} onChange={setFeaturedImage} inputName="featuredImage" label="Featured image" initialKind="image" lockKind />
-                        <p className="mt-3 text-[11px] text-white/30">Choose an existing image or upload a new one here; uploads are saved to the shared Media Library automatically.</p>
-                    </section>
+                    <section className={panelClass}><MediaPicker value={featuredImage} onChange={setFeaturedImage} inputName="featuredImage" label="Featured image" initialKind="image" lockKind /><p className="mt-3 text-[11px] text-white/30">The same featured image is used for both language versions.</p></section>
 
                     <section className={panelClass}>
                         <h3 className="text-sm font-semibold">Opening thought</h3>
-                        <p className="mt-1 text-[11px] leading-relaxed text-white/30">A short optional line used as the post intro and archive excerpt.</p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-white/30">Original excerpt in {primaryLabel}.</p>
                         <textarea name="excerpt" rows={5} value={excerpt} onChange={(event) => setExcerpt(event.target.value)} className={inputClass} placeholder="A sentence that sets the mood…" />
                     </section>
                 </aside>
