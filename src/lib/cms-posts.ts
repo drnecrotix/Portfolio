@@ -61,6 +61,19 @@ function cleanTranslation(type: PostType, value: unknown): CmsPostTranslation | 
     return Object.keys(translation).length ? translation : undefined;
 }
 
+export function getAvailablePostLocales(post: Pick<PrismaPost, 'content' | 'type'>): BlogLocale[] {
+    const source = contentRecord(post.content);
+    const primaryLocale: BlogLocale = source.primaryLocale === 'bg' ? 'bg' : 'en';
+    const secondaryLocale: BlogLocale = primaryLocale === 'bg' ? 'en' : 'bg';
+    const locales: BlogLocale[] = [primaryLocale];
+
+    if (cleanTranslation(post.type, source.translations?.[secondaryLocale])) {
+        locales.push(secondaryLocale);
+    }
+
+    return locales;
+}
+
 function safePublicContent(type: PostType, value: unknown, locale?: string): CmsPostContent {
     const source = contentRecord(value);
     const primaryLocale: BlogLocale = source.primaryLocale === 'bg' ? 'bg' : 'en';
