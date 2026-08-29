@@ -70,13 +70,17 @@ export function BlogArticleFrame({
         try {
             const response = await fetch('/api/locale', {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ locale }),
             });
-            if (!response.ok) throw new Error('Unable to change language.');
-            router.refresh();
-        } finally {
-            window.setTimeout(() => setSwitchingLocale(false), 500);
+            if (!response.ok) throw new Error('Unable to switch publication language.');
+
+            // A full reload guarantees that next-intl and the server component tree
+            // both read the newly written locale cookie. The URL stays unchanged.
+            window.location.reload();
+        } catch {
+            setSwitchingLocale(false);
         }
     };
 
