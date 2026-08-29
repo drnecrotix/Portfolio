@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, type FormEvent } from 'react';
+import { useRef, useState, useTransition, type FormEvent, type InvalidEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Project as PrismaProject } from '@prisma/client';
 import { MediaPicker } from '@/components/admin/MediaPicker';
@@ -11,7 +11,7 @@ import { UnsavedContentPreview } from '@/components/admin/UnsavedContentPreview'
 import { FormDraftGuard, markDraftCommitted } from '@/components/admin/FormDraftGuard';
 import type { ProjectSaveResult } from '@/app/admin/(protected)/projects/actions';
 
-const field = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/[0.05]';
+const field = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white outline-none transition focus:border-white/30 focus:bg-white/[0.05] invalid:border-red-400/50 invalid:bg-red-400/[0.035]';
 const selectField = `${field} [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white`;
 const panel = 'rounded-2xl border border-white/10 bg-white/[0.02] p-6';
 const projectShortcodes = [
@@ -22,6 +22,22 @@ const projectShortcodes = [
 ];
 
 type ProjectSaveAction = (formData: FormData) => Promise<ProjectSaveResult>;
+type ValidatableField = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+function validationMessageFor(target: ValidatableField) {
+    const labelText = target.closest('label')?.querySelector('span')?.textContent?.trim();
+    const fieldName = labelText || target.name || 'This field';
+
+    if (target.validity.valueMissing) return `${fieldName} is required.`;
+    if (target.name === 'slug' && target.validity.patternMismatch) {
+        return 'Slug must use lowercase letters, numbers and hyphens only - for example: volt-forge-stodio.';
+    }
+    if (target instanceof HTMLInputElement && target.type === 'url' && target.validity.typeMismatch) {
+        return `${fieldName} must be a complete URL starting with http:// or https://.`;
+    }
+    if (target.validity.badInput) return `${fieldName} contains an invalid value.`;
+    return target.validationMessage || `${fieldName} is invalid.`;
+}
 
 export function ProjectForm({ project, categories = [], action, submitLabel }: {
     project?: PrismaProject | null;
@@ -47,6 +63,25 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
     const [saveState, setSaveState] = useState<'idle' | 'saved' | 'error'>('idle');
     const [saveMessage, setSaveMessage] = useState('');
     const [isPending, startTransition] = useTransition();
+    const invalidHandledRef = useRef(false);
+
+    const handleInvalid = (event: InvalidEvent<HTMLFormElement>) => {
+        if (invalidHandledRef.current) return;
+        invalidHandledRef.current = true;
+
+        const target = event.target as ValidatableField;
+        setSaveState('error');
+        setSaveMessage(validationMessageFor(target));
+
+        window.requestAnimationFrame(() => {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.focus({ preventScroll: true });
+        });
+
+        window.setTimeout(() => {
+            invalidHandledRef.current = false;
+        }, 0);
+    };
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -69,7 +104,7 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
     };
 
     return (
-        <form onSubmit={handleSubmit} onInvalidCapture={() => { setSaveState('error'); setSaveMessage('Please complete the required fields before saving.'); }} className="space-y-8">
+        <form onSubmit={handleSubmit} onInvalidCapture={handleInvalid} className="space-y-8">
             <FormDraftGuard draftKey={draftKey} label="project" />
 
             <section className={`grid gap-5 md:grid-cols-2 ${panel}`}>
