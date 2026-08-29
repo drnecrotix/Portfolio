@@ -5,7 +5,8 @@ import { redirect } from 'next/navigation';
 import type { ContentStatus } from '@prisma/client';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { csvToList, parsePostContent } from '@/lib/cms-posts';
+import { csvToList, parsePostContent, type BlogLocale, type CmsPostContent, type CmsPostTranslation } from '@/lib/cms-posts';
+import { sanitizeCmsHtml } from '@/lib/sanitize-cms-html';
 
 const contentStatuses = new Set<ContentStatus>(['DRAFT', 'REVIEW', 'PUBLISHED', 'ARCHIVED']);
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -38,6 +39,25 @@ function revalidateBlogDiscovery() {
     revalidatePath('/rss.xml');
 }
 
+function translatedContent(form: FormData, type: 'POETRY' | string): CmsPostTranslation | undefined {
+    const title = boundedText(form.get('translationTitle'), 180, 'Translation title');
+    const excerpt = boundedText(form.get('translationExcerpt'), 500, 'Translation excerpt');
+    const seoTitle = boundedText(form.get('translationSeoTitle'), 180, 'Translation SEO title');
+    const seoDescription = boundedText(form.get('translationSeoDescription'), 500, 'Translation SEO description');
+    const rawContent = String(form.get('translationContent') ?? '');
+    const translation: CmsPostTranslation = {};
+    if (title) translation.title = title;
+    if (excerpt) translation.excerpt = excerpt;
+    if (seoTitle) translation.seoTitle = seoTitle;
+    if (seoDescription) translation.seoDescription = seoDescription;
+    if (type === 'POETRY') {
+        if (rawContent.trim()) translation.text = rawContent;
+    } else if (rawContent.trim()) {
+        translation.html = sanitizeCmsHtml(rawContent);
+    }
+    return Object.keys(translation).length ? translation : undefined;
+}
+
 async function fields(form: FormData) {
     const rawStatus = String(form.get('status') || 'DRAFT');
     if (!contentStatuses.has(rawStatus as ContentStatus)) throw new Error('Invalid publication status.');
@@ -58,6 +78,12 @@ async function fields(form: FormData) {
     const tags = csvToList(form.get('tags')).slice(0, 30).map((tag) => tag.slice(0, 50));
     const publishedAt = parseDate(form.get('publishedAt'), 'Published date');
     const scheduledAt = parseDate(form.get('scheduledAt'), 'Scheduled date');
+    const primaryLocale: BlogLocale = String(form.get('primaryLocale')) === 'bg' ? 'bg' : 'en';
+    const secondaryLocale: BlogLocale = primaryLocale === 'bg' ? 'en' : 'bg';
+    const content = parsePostContent(postType.editorMode, form.get('content'), form.get('featuredImage')) as CmsPostContent;
+    content.primaryLocale = primaryLocale;
+    const translation = translatedContent(form, postType.editorMode);
+    if (translation) content.translations = { [secondaryLocale]: translation };
 
     return {
         slug,
@@ -74,7 +100,7 @@ async function fields(form: FormData) {
         seoDescription: boundedText(form.get('seoDescription'), 500, 'SEO description') || null,
         publishedAt,
         scheduledAt,
-        content: parsePostContent(postType.editorMode, form.get('content'), form.get('featuredImage')),
+        content,
     };
 }
 
