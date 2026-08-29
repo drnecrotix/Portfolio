@@ -119,13 +119,29 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        const formData = new FormData(event.currentTarget);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
         setSaveState('idle');
         setSaveMessage('');
 
         startTransition(async () => {
             try {
                 const result = await action(formData);
+
+                if (!result.ok) {
+                    showNotice(result.error, 'error');
+                    if (result.field) {
+                        const target = form.elements.namedItem(result.field);
+                        if (target instanceof HTMLElement) {
+                            window.requestAnimationFrame(() => {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                target.focus({ preventScroll: true });
+                            });
+                        }
+                    }
+                    return;
+                }
+
                 markDraftCommitted(draftKey);
                 const savedTime = new Date(result.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 const message = result.created
@@ -139,7 +155,12 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
                     router.replace(`/admin/projects/${result.id}`, { scroll: false });
                 }
             } catch (error) {
-                showNotice(error instanceof Error ? error.message : 'Unable to save project.', 'error');
+                showNotice(
+                    error instanceof Error && error.message && !error.message.includes('Server Components render')
+                        ? error.message
+                        : 'The project request failed before a save result was returned. Please retry. If it continues, check the server logs.',
+                    'error',
+                );
             }
         });
     };
