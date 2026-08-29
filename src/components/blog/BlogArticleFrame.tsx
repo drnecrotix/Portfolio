@@ -64,12 +64,20 @@ export function BlogArticleFrame({
         window.setTimeout(() => setCopied(false), 1800);
     };
 
-    const switchLanguage = (locale: 'en' | 'bg') => {
+    const switchLanguage = async (locale: 'en' | 'bg') => {
         if (locale === currentLocale || switchingLocale || !availableLocales.includes(locale)) return;
         setSwitchingLocale(true);
-        document.cookie = `locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
-        router.refresh();
-        window.setTimeout(() => setSwitchingLocale(false), 700);
+        try {
+            const response = await fetch('/api/locale', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ locale }),
+            });
+            if (!response.ok) throw new Error('Unable to change language.');
+            router.refresh();
+        } finally {
+            window.setTimeout(() => setSwitchingLocale(false), 500);
+        }
     };
 
     const toggleLike = async () => {
@@ -175,7 +183,7 @@ export function BlogArticleFrame({
                                     <button
                                         key={locale}
                                         type="button"
-                                        onClick={() => switchLanguage(locale)}
+                                        onClick={() => void switchLanguage(locale)}
                                         disabled={switchingLocale || locale === currentLocale}
                                         aria-pressed={locale === currentLocale}
                                         className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${locale === currentLocale ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
