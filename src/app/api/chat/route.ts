@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildPortfolioChatContext } from '@/lib/chat-context';
+import { getStoredAssistantApiKeys } from '@/lib/assistant-credentials';
 import { prisma } from '@/lib/prisma';
 import {
     interpolateAssistantMessage,
@@ -24,6 +25,11 @@ type ProviderCandidate =
     | { kind: 'groq'; id: 'groq'; name: 'Groq'; priority: number }
     | { kind: 'gemini'; id: 'gemini'; name: 'Gemini'; priority: number }
     | { kind: 'custom'; id: string; name: string; priority: number; custom: CustomAssistantProvider };
+
+type AssistantRuntime = {
+    settings: AssistantSettings;
+    apiKeys: Record<string, string>;
+};
 
 function clientKey(req: NextRequest) {
     return req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
@@ -62,12 +68,15 @@ function validateMessages(value: unknown): Message[] | null {
     return messages;
 }
 
-async function getAssistantSettings() {
+async function getAssistantRuntime(): Promise<AssistantRuntime> {
     try {
         const site = await prisma.siteSettings.findUnique({ where: { id: 'default' }, select: { assistantSettings: true } });
-        return normalizeAssistantSettings(site?.assistantSettings);
+        return {
+            settings: normalizeAssistantSettings(site?.assistantSettings),
+            apiKeys: getStoredAssistantApiKeys(site?.assistantSettings),
+        };
     } catch {
-        return normalizeAssistantSettings(null);
+        return { settings: normalizeAssistantSettings(null), apiKeys: {} };
     }
 }
 
@@ -138,8 +147,7 @@ async function callOpenAICompatible(baseUrl: string, apiKey: string, model: stri
     return content.trim();
 }
 
-async function callOpenAI(messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
-    const apiKey = process.env.OPENAI_API_KEY;
+async function callOpenAI(apiKey: string, messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
     if (!apiKey) throw new Error('provider-unavailable');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -158,14 +166,12 @@ async function callOpenAI(messages: Message[], systemPrompt: string, settings: A
     return content.trim();
 }
 
-async function callGroq(messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
-    const apiKey = process.env.GROQ_API_KEY;
+async function callGroq(apiKey: string, messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
     if (!apiKey) throw new Error('provider-unavailable');
     return callOpenAICompatible('https://api.groq.com/openai/v1', apiKey, settings.groqModel, messages, systemPrompt, settings, 20_000);
 }
 
-async function callGemini(messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
-    const apiKey = process.env.GEMINI_API_KEY;
+async function callGemini(apiKey: string, messages: Message[], systemPrompt: string, settings: AssistantSettings): Promise<string> {
     if (!apiKey) throw new Error('provider-unavailable');
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.geminiModel)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
         method: 'POST',
@@ -184,8 +190,7 @@ async function callGemini(messages: Message[], systemPrompt: string, settings: A
     return content;
 }
 
-async function callCustom(provider: CustomAssistantProvider, messages: Message[], systemPrompt: string, settings: AssistantSettings) {
-    const apiKey = process.env[provider.apiKeyEnv];
+async function callCustom(provider: CustomAssistantProvider, apiKey: string, messages: Message[], systemPrompt: string, settings: AssistantSettings) {
     if (!apiKey) throw new Error('provider-unavailable');
     return callOpenAICompatible(provider.baseUrl, apiKey, provider.model, messages, systemPrompt, settings, provider.timeoutMs);
 }
@@ -200,9 +205,20 @@ function providerCandidates(settings: AssistantSettings): ProviderCandidate[] {
     return providers.sort((a, b) => a.priority - b.priority);
 }
 
+function providerEnvName(provider: ProviderCandidate) {
+    if (provider.kind === 'openai') return 'OPENAI_API_KEY';
+    if (provider.kind === 'groq') return 'GROQ_API_KEY';
+    if (provider.kind === 'gemini') return 'GEMINI_API_KEY';
+    return provider.custom.apiKeyEnv;
+}
+
+function providerApiKey(provider: ProviderCandidate, apiKeys: Record<string, string>) {
+    return apiKeys[provider.id] || process.env[providerEnvName(provider)] || '';
+}
+
 export async function POST(req: NextRequest) {
     if (isRateLimited(req)) return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429, headers: { 'Cache-Control': 'no-store' } });
-    let settings: AssistantSettings | null = null;
+    let runtime: AssistantRuntime | null = null;
     try {
         const contentLength = Number(req.headers.get('content-length') ?? 0);
         if (contentLength > 32_000) return NextResponse.json({ error: 'Request too large.' }, { status: 413, headers: { 'Cache-Control': 'no-store' } });
@@ -210,7 +226,8 @@ export async function POST(req: NextRequest) {
         const messages = validateMessages(body?.messages);
         if (!messages) return NextResponse.json({ error: 'Invalid chat request.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
 
-        settings = await getAssistantSettings();
+        runtime = await getAssistantRuntime();
+        const settings = runtime.settings;
         if (!settings.enabled) return NextResponse.json({ error: interpolateAssistantMessage(settings.disabledMessage, settings), assistantName: settings.assistantName }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
 
         const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content || '';
@@ -220,13 +237,14 @@ export async function POST(req: NextRequest) {
         const systemPrompt = await buildSystemPrompt(normalizeLocale(body.locale), settings);
         for (const provider of providerCandidates(settings)) {
             try {
+                const apiKey = providerApiKey(provider, runtime.apiKeys);
                 const reply = provider.kind === 'openai'
-                    ? await callOpenAI(messages, systemPrompt, settings)
+                    ? await callOpenAI(apiKey, messages, systemPrompt, settings)
                     : provider.kind === 'groq'
-                        ? await callGroq(messages, systemPrompt, settings)
+                        ? await callGroq(apiKey, messages, systemPrompt, settings)
                         : provider.kind === 'gemini'
-                            ? await callGemini(messages, systemPrompt, settings)
-                            : await callCustom(provider.custom, messages, systemPrompt, settings);
+                            ? await callGemini(apiKey, messages, systemPrompt, settings)
+                            : await callCustom(provider.custom, apiKey, messages, systemPrompt, settings);
                 return NextResponse.json({ reply, provider: provider.id, providerName: provider.name, assistantName: settings.assistantName }, { headers: { 'Cache-Control': 'no-store' } });
             } catch (error) {
                 console.warn(`[Chat] ${provider.name} failed:`, error instanceof Error ? error.message : 'unknown');
@@ -235,24 +253,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: interpolateAssistantMessage(settings.unavailableMessage, settings), assistantName: settings.assistantName }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
         console.error('[Chat] Request failed:', error instanceof Error ? error.message : 'unknown error');
-        const resolved = settings ?? await getAssistantSettings();
-        return NextResponse.json({ error: interpolateAssistantMessage(resolved.requestErrorMessage, resolved), assistantName: resolved.assistantName }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
+        const resolved = runtime ?? await getAssistantRuntime();
+        return NextResponse.json({ error: interpolateAssistantMessage(resolved.settings.requestErrorMessage, resolved.settings), assistantName: resolved.settings.assistantName }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
     }
 }
 
 export async function GET() {
-    const settings = await getAssistantSettings();
+    const runtime = await getAssistantRuntime();
+    const settings = runtime.settings;
     const providers = providerCandidates(settings).map((provider) => ({
         id: provider.id,
         name: provider.name,
         priority: provider.priority,
-        configured: provider.kind === 'openai'
-            ? Boolean(process.env.OPENAI_API_KEY)
-            : provider.kind === 'groq'
-                ? Boolean(process.env.GROQ_API_KEY)
-                : provider.kind === 'gemini'
-                    ? Boolean(process.env.GEMINI_API_KEY)
-                    : Boolean(process.env[provider.custom.apiKeyEnv]),
+        configured: Boolean(providerApiKey(provider, runtime.apiKeys)),
     }));
     const assistantConfigured = providers.some((provider) => provider.configured) || settings.responseTemplates.some((template) => template.enabled);
 
