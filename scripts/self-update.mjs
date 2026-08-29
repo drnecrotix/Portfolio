@@ -69,10 +69,12 @@ let modulesBackup;
 let buildBackup;
 let dependenciesReplaced = false;
 let targetVersion = null;
+const buildDir = join(appRoot, '.next');
+const stagedBuildDir = join(appRoot, '.next-update');
 
 function restorePreviousBuild() {
+  rmSync(stagedBuildDir, { recursive: true, force: true });
   if (!buildBackup || !existsSync(buildBackup)) return false;
-  const buildDir = join(appRoot, '.next');
   rmSync(buildDir, { recursive: true, force: true });
   renameSync(buildBackup, buildDir);
   buildBackup = undefined;
@@ -104,14 +106,13 @@ try {
     '--exclude=.env',
     '--exclude=node_modules',
     '--exclude=.next',
+    '--exclude=.next-update',
     '--exclude=tmp',
     '--exclude=public/.htaccess',
     `${checkout}/`,
     `${appRoot}/`,
   ]);
 
-  // rsync intentionally does not use --delete because user-managed files may live beside the app.
-  // Remove only obsolete framework files that are known to conflict with the current release.
   const obsoleteNextConfig = join(appRoot, 'next.config.ts');
   if (existsSync(join(appRoot, 'next.config.mjs')) && !existsSync(join(checkout, 'next.config.ts')) && existsSync(obsoleteNextConfig)) {
     rmSync(obsoleteNextConfig, { force: true });
@@ -161,17 +162,18 @@ try {
   status('running', 'Applying database migrations…', { targetVersion });
   run(process.execPath, [prismaCli, 'migrate', 'deploy'], { env: prismaEnv });
 
-  status('running', 'Preparing a clean production build…', { targetVersion });
-  const buildDir = join(appRoot, '.next');
-  if (existsSync(buildDir)) {
-    buildBackup = join(dirname(appRoot), `.necrotixlab-next-backup-${Date.now()}`);
-    renameSync(buildDir, buildBackup);
-  }
+  status('running', 'Preparing a staged production build…', { targetVersion });
+  rmSync(stagedBuildDir, { recursive: true, force: true });
 
   const existingNodeOptions = (process.env.NODE_OPTIONS || '').trim().split(/\s+/).filter(Boolean);
   const buildNodeOptions = [...existingNodeOptions];
   if (!buildNodeOptions.some((option) => option.startsWith('--max-old-space-size='))) buildNodeOptions.push('--max-old-space-size=6144');
-  const buildEnv = { ...prismaEnv, NODE_OPTIONS: buildNodeOptions.join(' '), NEXT_N0C_WASM_SWC: '1' };
+  const buildEnv = {
+    ...prismaEnv,
+    NODE_OPTIONS: buildNodeOptions.join(' '),
+    NEXT_N0C_WASM_SWC: '1',
+    NEXT_DIST_DIR: '.next-update',
+  };
   delete buildEnv.TURBOPACK;
   delete buildEnv.NEXT_TURBOPACK;
 
@@ -185,8 +187,36 @@ try {
     throw new Error('WASM SWC is not installed. Retry the update so N0C installs @next/swc-wasm-nodejs before building.');
   }
 
-  status('running', 'Building the production application with WASM SWC compatibility mode…', { targetVersion });
+  status('running', 'Building the production application without touching the live .next directory…', { targetVersion });
   run(process.execPath, [nextCli, 'build', '--webpack'], { env: buildEnv });
+
+  if (!existsSync(stagedBuildDir)) {
+    throw new Error('The staged Next.js build completed without producing .next-update.');
+  }
+
+  if (existsSync(join(buildDir, 'static'))) {
+    status('running', 'Preserving previous hashed browser chunks for open tabs and cached pages…', { targetVersion });
+    mkdirSync(join(stagedBuildDir, 'static'), { recursive: true });
+    run('rsync', [
+      '-a',
+      '--ignore-existing',
+      `${join(buildDir, 'static')}/`,
+      `${join(stagedBuildDir, 'static')}/`,
+    ]);
+  }
+
+  status('running', 'Activating the new production build…', { targetVersion });
+  if (existsSync(buildDir)) {
+    buildBackup = join(dirname(appRoot), `.necrotixlab-next-backup-${Date.now()}`);
+    renameSync(buildDir, buildBackup);
+  }
+
+  try {
+    renameSync(stagedBuildDir, buildDir);
+  } catch (error) {
+    restorePreviousBuild();
+    throw error;
+  }
 
   if (buildBackup && existsSync(buildBackup)) {
     rmSync(buildBackup, { recursive: true, force: true });
@@ -206,5 +236,6 @@ try {
   status('error', `${error instanceof Error ? error.message : 'Unknown update error'}${restoredBuild ? ' Previous production build restored.' : ''}`, { targetVersion });
   process.exitCode = 1;
 } finally {
+  rmSync(stagedBuildDir, { recursive: true, force: true });
   if (workDir) rmSync(workDir, { recursive: true, force: true });
 }
