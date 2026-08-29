@@ -33,66 +33,48 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
         openrouter: openRouter?.model || 'openrouter/free',
     };
 
-    const rankedProviders: Array<{ id: IntegrationProvider; priority: number }> = [
+    const ranked: Array<{ id: IntegrationProvider; priority: number }> = [
         { id: 'openai', priority: settings.openaiPriority },
         { id: 'groq', priority: settings.groqPriority },
         { id: 'gemini', priority: settings.geminiPriority },
-        { id: 'openrouter', priority: openRouter?.priority ?? 10_000 },
+        { id: 'openrouter', priority: openRouter?.priority ?? 100 },
     ];
-    const initialProvider = rankedProviders.sort((a, b) => a.priority - b.priority)[0]?.id ?? 'openrouter';
-
-    const providers = [
-        { id: 'openai', name: 'OpenAI / GPT', configured: configured.openai, model: settings.openaiModel, priority: settings.openaiPriority },
-        { id: 'groq', name: 'Groq', configured: configured.groq, model: settings.groqModel, priority: settings.groqPriority },
-        { id: 'gemini', name: 'Gemini', configured: configured.gemini, model: settings.geminiModel, priority: settings.geminiPriority },
-        ...(openRouter ? [{ id: 'openrouter', name: 'OpenRouter', configured: configured.openrouter, model: openRouter.model, priority: openRouter.priority }] : []),
-        ...settings.customProviders.filter((provider) => provider.id !== 'openrouter').map((provider) => ({
-            id: provider.id,
-            name: provider.name,
-            configured: hasStoredAssistantApiKey(rawSettings, provider.id) || Boolean(process.env[provider.apiKeyEnv]),
-            model: provider.model,
-            priority: provider.priority,
-        })),
-    ].sort((a, b) => a.priority - b.priority);
+    const initialProvider = ranked.sort((a, b) => a.priority - b.priority)[0]?.id ?? 'openrouter';
+    const quickReplyCount = settings.responseTemplates.filter((template) => template.enabled).length;
 
     return (
-        <div className="mx-auto max-w-7xl">
+        <div className="mx-auto max-w-6xl">
             <StatusToast type={params.error ? 'error' : params.saved ? 'success' : undefined} message={params.error || (params.saved ? 'AI Assistant settings saved and applied.' : undefined)} />
-            <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
+
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/35">AI Assistant</p>
-                    <h2 className="mt-2 text-4xl font-semibold">Assistant studio</h2>
-                    <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Personalize the chat experience, choose lightweight text models and manage provider API keys directly from the CMS. CMS keys are encrypted server-side, while hosting environment variables remain supported as a fallback.</p>
+                    <h2 className="mt-2 text-4xl font-semibold">Chat setup</h2>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">The assistant now follows one simple flow: prepared chat buttons return prepared answers instantly, while every other free-form question is sent to the single AI provider selected below.</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3 text-sm text-white/55">
-                    {settings.enabled ? <span className="text-emerald-300">● Public assistant enabled</span> : <span className="text-amber-300">● Public assistant disabled</span>}
+                <div className="flex flex-wrap gap-2 text-xs">
+                    <span className={`rounded-full border px-3 py-1.5 ${settings.enabled ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/20 bg-amber-400/10 text-amber-300'}`}>{settings.enabled ? 'Chat enabled' : 'Chat disabled'}</span>
+                    <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/55">{quickReplyCount} quick replies</span>
                 </div>
             </div>
 
-            <div className="mb-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {providers.map((provider) => (
-                    <div key={`${provider.id}-${provider.priority}`} className="rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-                        <div className="flex items-center justify-between gap-3"><p className="text-sm font-medium">{provider.name}</p><span className="text-[10px] uppercase tracking-wider text-white/30">#{provider.priority}</span></div>
-                        <p className={`mt-2 text-xs ${provider.configured ? 'text-emerald-300' : 'text-amber-300'}`}>{provider.configured ? 'API key configured' : 'API key missing'}</p>
-                        <p className="mt-2 truncate text-xs text-white/30" title={provider.model}>{provider.model}</p>
-                    </div>
-                ))}
-            </div>
+            <section className="mb-6 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                <div className="grid gap-4 md:grid-cols-3">
+                    <div><p className="text-[10px] uppercase tracking-[0.2em] text-white/35">1. Visitor chooses a button</p><p className="mt-2 text-sm leading-6 text-white/65">A prepared question is answered locally from the saved quick reply. No AI request is needed.</p></div>
+                    <div><p className="text-[10px] uppercase tracking-[0.2em] text-white/35">2. Visitor types something else</p><p className="mt-2 text-sm leading-6 text-white/65">The message is sent to the selected provider using its configured API key and model.</p></div>
+                    <div><p className="text-[10px] uppercase tracking-[0.2em] text-white/35">3. Portfolio context only</p><p className="mt-2 text-sm leading-6 text-white/65">AI answers remain grounded in the public CMS portfolio context instead of inventing personal information.</p></div>
+                </div>
+            </section>
 
-            <AssistantApiIntegrations
-                action={saveAssistantIntegration}
-                initialProvider={initialProvider}
-                initialModels={initialModels}
-                configured={configured}
-            />
+            <AssistantApiIntegrations action={saveAssistantIntegration} initialProvider={initialProvider} initialModels={initialModels} configured={configured} />
 
             <form action={updateAssistantSettings} className="space-y-6">
                 <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
                     <label className="flex items-center gap-3 text-sm text-white/70"><input type="checkbox" name="enabled" defaultChecked={settings.enabled} className="size-4" /> Enable public AI Assistant</label>
                 </section>
                 <AssistantConfigurator settings={settings} />
-                <div className="sticky bottom-5 z-20 flex justify-end">
-                    <button className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black shadow-2xl shadow-black/40">Save AI Assistant</button>
+                <div className="sticky bottom-5 z-20 flex justify-end rounded-2xl border border-white/10 bg-[#101010]/90 p-3 backdrop-blur-xl">
+                    <button className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black shadow-2xl shadow-black/40">Save chat settings</button>
                 </div>
             </form>
         </div>
