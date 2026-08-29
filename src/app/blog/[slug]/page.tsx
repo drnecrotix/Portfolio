@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { PostBody } from '@/components/blog/PostBody';
 import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComments';
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
 import { getAvailablePostLocales, getLocalizedPostFields } from '@/lib/cms-posts';
@@ -120,10 +119,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     return (
         <BlogArticleFrame
             postId={cmsPost.id}
+            slug={cmsPost.slug}
+            postType={cmsPost.type}
             initialLikeCount={cmsPost._count.likes}
             initiallyLiked={cmsPost.likes.length > 0}
             title={localized.title}
             excerpt={localized.excerpt}
+            initialContent={content}
             featuredImage={content.featuredImage || null}
             typeLabel={typeLabel}
             categoryLabel={categoryLabel}
@@ -134,8 +136,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             currentLocale={currentLocale}
             availableLocales={availableLocales}
             comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
-        >
-            <PostBody type={cmsPost.type} content={content} />
-        </BlogArticleFrame>
+        />
     );
 }
