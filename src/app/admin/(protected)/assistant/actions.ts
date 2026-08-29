@@ -28,44 +28,32 @@ export async function updateAssistantSettings(form: FormData) {
     let destination = '/admin/assistant?saved=1';
     try {
         await requireAssistantAdmin();
-
         const existing = await prisma.siteSettings.findUnique({
             where: { id: 'default' },
             select: { assistantSettings: true },
         });
+        const current = normalizeAssistantSettings(existing?.assistantSettings);
+        const responseTemplates = parseJson(form.get('responseTemplates'), current.responseTemplates);
 
         const settings = normalizeAssistantSettings({
+            ...current,
             enabled: form.has('enabled'),
-            assistantName: String(form.get('assistantName') || ''),
-            roleLabel: String(form.get('roleLabel') || ''),
-            headerSubtitle: String(form.get('headerSubtitle') || ''),
-            welcomeMessage: String(form.get('welcomeMessage') || ''),
-            inputPlaceholder: String(form.get('inputPlaceholder') || ''),
-            inputHint: String(form.get('inputHint') || ''),
-            suggestedQuestions: String(form.get('suggestedQuestions') || '').split('\n'),
-            proactiveEnabled: form.has('proactiveEnabled'),
-            proactiveMessage: String(form.get('proactiveMessage') || ''),
-            proactiveDelaySeconds: Number(form.get('proactiveDelaySeconds')),
-            personality: String(form.get('personality') || ''),
-            tone: String(form.get('tone') || ''),
-            responseStyle: String(form.get('responseStyle') || ''),
-            languagePolicy: String(form.get('languagePolicy') || ''),
-            providerOrder: ['openai', 'groq', 'gemini'],
-            openaiModel: String(form.get('openaiModel') || ''),
-            groqModel: String(form.get('groqModel') || ''),
-            geminiModel: String(form.get('geminiModel') || ''),
-            openaiPriority: Number(form.get('openaiPriority')),
-            groqPriority: Number(form.get('groqPriority')),
-            geminiPriority: Number(form.get('geminiPriority')),
-            customProviders: parseJson(form.get('customProviders'), []),
-            responseTemplates: parseJson(form.get('responseTemplates'), []),
-            temperature: Number(form.get('temperature')),
-            maxTokens: Number(form.get('maxTokens')),
+            assistantName: String(form.get('assistantName') || current.assistantName),
+            headerSubtitle: String(form.get('headerSubtitle') || current.headerSubtitle),
+            welcomeMessage: String(form.get('welcomeMessage') || current.welcomeMessage),
+            inputPlaceholder: String(form.get('inputPlaceholder') || current.inputPlaceholder),
             extraInstructions: String(form.get('extraInstructions') || ''),
-            unknownAnswer: String(form.get('unknownAnswer') || ''),
-            disabledMessage: String(form.get('disabledMessage') || ''),
-            unavailableMessage: String(form.get('unavailableMessage') || ''),
-            requestErrorMessage: String(form.get('requestErrorMessage') || ''),
+            responseTemplates,
+            // Quick replies are now the single source of truth for chat suggestions.
+            suggestedQuestions: Array.isArray(responseTemplates)
+                ? responseTemplates
+                    .filter((item): item is { enabled?: boolean; triggers?: unknown[] } => Boolean(item && typeof item === 'object'))
+                    .filter((item) => item.enabled !== false)
+                    .map((item) => String(item.triggers?.[0] || '').trim())
+                    .filter(Boolean)
+                : current.suggestedQuestions,
+            // Legacy proactive messages are intentionally disabled in the simplified flow.
+            proactiveEnabled: false,
         });
 
         const merged = mergeAssistantPrivateFields(existing?.assistantSettings, publicSettingsRecord(settings));
@@ -84,46 +72,25 @@ export async function updateAssistantSettings(form: FormData) {
 }
 
 type IntegrationProvider = 'openai' | 'groq' | 'gemini' | 'openrouter';
-
-type IntegrationInput = {
-    provider: IntegrationProvider;
-    model: string;
-    apiKey: string;
-    clearApiKey: boolean;
-};
+type IntegrationInput = { provider: IntegrationProvider; model: string; apiKey: string; clearApiKey: boolean };
 
 export async function saveAssistantIntegration(input: IntegrationInput): Promise<{ ok: boolean; message: string }> {
     try {
         await requireAssistantAdmin();
-
-        const provider: IntegrationProvider = ['openai', 'groq', 'gemini', 'openrouter'].includes(input.provider)
-            ? input.provider
-            : 'openrouter';
+        const provider: IntegrationProvider = ['openai', 'groq', 'gemini', 'openrouter'].includes(input.provider) ? input.provider : 'openrouter';
         const model = String(input.model || '').trim().slice(0, 160);
         const apiKey = String(input.apiKey || '').trim().slice(0, 1000);
         if (!model) return { ok: false, message: 'Choose or enter a model before saving the integration.' };
 
-        const existing = await prisma.siteSettings.findUnique({
-            where: { id: 'default' },
-            select: { assistantSettings: true },
-        });
-        const settings = normalizeAssistantSettings(existing?.assistantSettings);
-        let openaiPriority = settings.openaiPriority;
-        let groqPriority = settings.groqPriority;
-        let geminiPriority = settings.geminiPriority;
-        let openaiModel = settings.openaiModel;
-        let groqModel = settings.groqModel;
-        let geminiModel = settings.geminiModel;
-        let customProviders = settings.customProviders.map((item) => ({ ...item }));
-
-        const ensureFallbackPriorities = () => {
-            if (openaiPriority <= 0) openaiPriority = 10;
-            if (groqPriority <= 0) groqPriority = 20;
-            if (geminiPriority <= 0) geminiPriority = 30;
-            customProviders = customProviders.map((item) => item.id === 'openrouter' && item.priority <= 0 ? { ...item, priority: 40 } : item);
-        };
-
-        ensureFallbackPriorities();
+        const existing = await prisma.siteSettings.findUnique({ where: { id: 'default' }, select: { assistantSettings: true } });
+        const current = normalizeAssistantSettings(existing?.assistantSettings);
+        let openaiModel = current.openaiModel;
+        let groqModel = current.groqModel;
+        let geminiModel = current.geminiModel;
+        let openaiPriority = 100;
+        let groqPriority = 100;
+        let geminiPriority = 100;
+        let customProviders = current.customProviders.filter((item) => item.id === 'openrouter').map((item) => ({ ...item, priority: 100, enabled: true }));
 
         if (provider === 'openai') {
             openaiModel = model;
@@ -135,8 +102,8 @@ export async function saveAssistantIntegration(input: IntegrationInput): Promise
             geminiModel = model;
             geminiPriority = 0;
         } else {
-            const existingOpenRouter = customProviders.find((item) => item.id === 'openrouter');
-            const openRouter = {
+            const previous = customProviders.find((item) => item.id === 'openrouter');
+            customProviders = [{
                 id: 'openrouter',
                 name: 'OpenRouter',
                 enabled: true,
@@ -144,15 +111,12 @@ export async function saveAssistantIntegration(input: IntegrationInput): Promise
                 model,
                 apiKeyEnv: 'OPENROUTER_API_KEY',
                 priority: 0,
-                timeoutMs: existingOpenRouter?.timeoutMs ?? 20_000,
-            };
-            customProviders = existingOpenRouter
-                ? customProviders.map((item) => item.id === 'openrouter' ? openRouter : item)
-                : [...customProviders, openRouter];
+                timeoutMs: previous?.timeoutMs ?? 20_000,
+            }];
         }
 
         const nextSettings = normalizeAssistantSettings({
-            ...settings,
+            ...current,
             openaiModel,
             groqModel,
             geminiModel,
@@ -161,20 +125,13 @@ export async function saveAssistantIntegration(input: IntegrationInput): Promise
             geminiPriority,
             customProviders,
         });
-        const merged = withAssistantApiKey(
-            existing?.assistantSettings,
-            publicSettingsRecord(nextSettings),
-            provider,
-            apiKey,
-            Boolean(input.clearApiKey),
-        );
+        const merged = withAssistantApiKey(existing?.assistantSettings, publicSettingsRecord(nextSettings), provider, apiKey, Boolean(input.clearApiKey));
 
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
             create: { id: 'default', assistantSettings: toAssistantSettingsJson(merged) },
             update: { assistantSettings: toAssistantSettingsJson(merged) },
         });
-
         revalidatePath('/admin/assistant');
         revalidatePath('/', 'layout');
         revalidatePath('/api/chat');
@@ -184,7 +141,7 @@ export async function saveAssistantIntegration(input: IntegrationInput): Promise
             : apiKey
                 ? ' API key encrypted and stored.'
                 : ' Existing API key kept unchanged.';
-        return { ok: true, message: `${provider === 'openrouter' ? 'OpenRouter' : provider} is now the first AI provider using ${model}.${keyMessage}` };
+        return { ok: true, message: `${provider === 'openrouter' ? 'OpenRouter' : provider} selected for free-form questions using ${model}.${keyMessage}` };
     } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : 'Unable to save AI integration.' };
     }
