@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Check, Copy, Heart, Languages, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Heart, Languages } from 'lucide-react';
 import type { CmsPostContent } from '@/lib/cms-posts';
 
 export type RelatedBlogPost = {
@@ -198,7 +198,7 @@ export function BlogArticleFrame({
                         </button>
                         {showLanguageSwitch && (
                             <motion.div layout className="inline-flex h-9 items-center gap-1 rounded-full border border-foreground/10 bg-foreground/[0.03] p-1" aria-label="Publication language">
-                                {switchingLocale ? <LoaderCircle className="ml-2 h-4 w-4 animate-spin text-fuchsia-500" /> : <Languages className="ml-2 h-4 w-4 text-muted-foreground" />}
+                                <Languages className={`ml-2 h-4 w-4 ${switchingLocale ? 'animate-spin text-fuchsia-500' : 'text-muted-foreground'}`} />
                                 {(['en', 'bg'] as const).filter((locale) => availableLocales.includes(locale)).map((locale) => (
                                     <motion.button
                                         layout
