@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { GitHubCalendar } from 'react-github-calendar';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
@@ -8,6 +8,13 @@ import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
 import { GitCommit, Star, Zap, TrendingUp, Github, ChevronDown } from 'lucide-react';
 import { Counter } from '@/components/ui/Counter';
+
+type GitHubActivity = {
+    type: 'push' | 'pull_request' | string;
+    repo: string;
+    status?: string;
+    date: string;
+};
 
 export interface GitHubSummary {
     totalStars: number;
@@ -18,7 +25,7 @@ export interface GitHubSummary {
     bestDay: number;
     average: number;
     followers: number;
-    recentActivity?: any[];
+    recentActivity?: GitHubActivity[];
 }
 
 export function useGitHubData(username: string) {
@@ -47,15 +54,15 @@ export function useGitHubData(username: string) {
     return { summary, loading };
 }
 
+const subscribeToClient = () => () => undefined;
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export function GitHubHeatmap({ username }: { username: string }) {
     const { theme } = useTheme();
     const t = useTranslations('technical.github');
-    const [mounted, setMounted] = useState(false);
+    const mounted = useSyncExternalStore(subscribeToClient, getClientSnapshot, getServerSnapshot);
     const [showActivity, setShowActivity] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     const goldTheme = {
         light: ['#ebedf0', '#fef9c3', '#fde047', '#eab308', '#a16207'],
@@ -68,7 +75,6 @@ export function GitHubHeatmap({ username }: { username: string }) {
 
     return (
         <div className="w-full overflow-visible font-sans transition-colors duration-300">
-            {/* Keep a little optical breathing room so large G glyphs are not clipped by the section edge. */}
             <div className="-ml-1 mb-4 flex items-center gap-3 overflow-visible pl-1">
                 <Github className="h-8 w-8 shrink-0 text-gray-900 dark:text-white" />
                 <h2 className="overflow-visible py-0.5 text-2xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white md:text-3xl">
@@ -146,7 +152,7 @@ export function GitHubHeatmap({ username }: { username: string }) {
                     >
                         <div className="flex flex-col pt-2">
                             {summary.recentActivity.map((activity, idx) => (
-                                <div key={idx} className="group flex items-center rounded-lg px-2 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
+                                <div key={`${activity.repo}-${activity.date}-${idx}`} className="group flex items-center rounded-lg px-2 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
                                     <span className="w-8 font-mono text-xs text-gray-400 dark:text-gray-600">{String(idx + 1).padStart(2, '0')}</span>
                                     <div className="flex flex-1 flex-row items-center justify-between gap-4">
                                         <span className="truncate text-sm font-medium text-gray-900 transition-colors group-hover:text-blue-500 dark:text-gray-200 md:text-base">
@@ -170,7 +176,7 @@ export function GitHubHeatmap({ username }: { username: string }) {
     );
 }
 
-function StatCard({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) {
+function StatCard({ label, value, icon }: { label: string; value: string | number; icon?: ReactNode }) {
     return (
         <div className="group relative flex min-h-[125px] flex-col justify-between rounded-2xl border border-gray-300 bg-transparent p-4 transition-all duration-300 hover:border-yellow-500/30 hover:bg-gray-100/50 dark:border-[#30363d] dark:hover:border-yellow-500/30 dark:hover:bg-[#161b22]/50">
             <div className="flex items-center gap-2">
@@ -185,7 +191,16 @@ function StatCard({ label, value, icon }: { label: string; value: string | numbe
     );
 }
 
-export function StatPod({ label, value, icon, color, delay, suffix = '' }: any) {
+type StatPodProps = {
+    label: string;
+    value: ReactNode;
+    icon: ReactNode;
+    color: string;
+    delay: number;
+    suffix?: string;
+};
+
+export function StatPod({ label, value, icon, color, delay, suffix = '' }: StatPodProps) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
