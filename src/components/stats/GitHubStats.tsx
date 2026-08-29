@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { GitHubCalendar } from 'react-github-calendar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
-import { GitCommit, Star, Trophy, Zap, TrendingUp, Calendar as CalendarIcon, Github, GitPullRequest, ChevronDown } from 'lucide-react';
-import { portfolioData } from '@/data/portfolio';
-import { animate, useMotionValue, useTransform } from 'framer-motion';
+import { GitCommit, Star, Zap, TrendingUp, Github, ChevronDown } from 'lucide-react';
 import { Counter } from '@/components/ui/Counter';
 
 export interface GitHubSummary {
@@ -30,19 +28,12 @@ export function useGitHubData(username: string) {
     useEffect(() => {
         const fetchGitHubData = async () => {
             try {
-                // Fetch from our new internal API
                 const res = await fetch('/api/github-stats');
                 if (res.ok) {
                     const json = await res.json();
                     const data = json.data;
-
-                    // Calculate average (approximate)
                     const average = parseFloat((data.totalContributions / 365).toFixed(1));
-
-                    setSummary({
-                        ...data,
-                        average
-                    });
+                    setSummary({ ...data, average });
                 }
             } catch (error) {
                 console.error('Failed to fetch GitHub stats:', error);
@@ -66,7 +57,6 @@ export function GitHubHeatmap({ username }: { username: string }) {
         setMounted(true);
     }, []);
 
-    // Gold/Yellow Theme for "Kontribusi GitHub"
     const goldTheme = {
         light: ['#ebedf0', '#fef9c3', '#fde047', '#eab308', '#a16207'],
         dark: ['#161b22', '#422006', '#854d0e', '#eab308', '#facc15'],
@@ -77,60 +67,34 @@ export function GitHubHeatmap({ username }: { username: string }) {
     if (!mounted) return null;
 
     return (
-        <div className="w-full font-sans transition-colors duration-300">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-4">
-                <Github className="w-8 h-8 text-gray-900 dark:text-white" />
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+        <div className="w-full overflow-visible font-sans transition-colors duration-300">
+            {/* Keep a little optical breathing room so large G glyphs are not clipped by the section edge. */}
+            <div className="-ml-1 mb-4 flex items-center gap-3 overflow-visible pl-1">
+                <Github className="h-8 w-8 shrink-0 text-gray-900 dark:text-white" />
+                <h2 className="overflow-visible py-0.5 text-2xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white md:text-3xl">
                     {t('title')}
                 </h2>
             </div>
-            <p className="text-gray-600 dark:text-[#8b949e] mb-8 -mt-2 text-sm md:text-base">
+            <p className="mb-8 -mt-2 text-sm text-gray-600 dark:text-[#8b949e] md:text-base">
                 {t('description')}
             </p>
 
-            {/* NEW STATS (Real-time from API) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                {/* Total Contributions */}
-                <StatCard
-                    label="Total"
-                    value={summary?.totalContributions || 0}
-                    icon={<Zap className="w-4 h-4 text-orange-500" />}
-                />
-                {/* ... (rest of cards) ... */}
-
-                {/* Total Commits */}
-                <StatCard
-                    label="Total Commits"
-                    value={summary?.totalCommits || 0}
-                    icon={<GitCommit className="w-4 h-4 text-blue-500" />}
-                />
-
-                {/* PRs / Merges */}
-                <StatCard
-                    label="PRs & Merges"
-                    value={summary?.totalPRs || 0}
-                    icon={<TrendingUp className="w-4 h-4 text-green-500" />}
-                />
-
-                {/* Total Stars */}
-                <StatCard
-                    label="Total Stars"
-                    value={summary?.totalStars || 0}
-                    icon={<Star className="w-4 h-4 text-yellow-500" />}
-                />
+            <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+                <StatCard label="Total" value={summary?.totalContributions || 0} icon={<Zap className="h-4 w-4 text-orange-500" />} />
+                <StatCard label="Total Commits" value={summary?.totalCommits || 0} icon={<GitCommit className="h-4 w-4 text-blue-500" />} />
+                <StatCard label="PRs & Merges" value={summary?.totalPRs || 0} icon={<TrendingUp className="h-4 w-4 text-green-500" />} />
+                <StatCard label="Total Stars" value={summary?.totalStars || 0} icon={<Star className="h-4 w-4 text-yellow-500" />} />
             </div>
 
-            {/* Heatmap Container - Seamless Background */}
-            <div className="w-full overflow-hidden mb-10">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-gray-900 dark:text-white text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            <div className="mb-10 w-full overflow-hidden">
+                <div className="mb-6 flex items-center justify-between">
+                    <h3 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900 dark:text-white md:text-xs">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
                         Activity Calendar
                     </h3>
                 </div>
 
-                <div className="w-full overflow-x-auto pb-2 custom-scrollbar">
+                <div className="custom-scrollbar w-full overflow-x-auto pb-2">
                     <div className="min-w-full">
                         <GitHubCalendar
                             username={username}
@@ -145,40 +109,32 @@ export function GitHubHeatmap({ username }: { username: string }) {
                                 months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                                 weekdays: ['Dom', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'],
                                 totalCount: '{{count}} contributions in {{year}}',
-                                legend: {
-                                    less: t('less'),
-                                    more: t('more'),
-                                },
+                                legend: { less: t('less'), more: t('more') },
                             }}
                         />
                     </div>
                 </div>
 
-                {/* Custom Legend */}
-                <div className="flex items-center gap-2 mt-4 text-xs text-gray-600 dark:text-[#8b949e]">
+                <div className="mt-4 flex items-center gap-2 text-xs text-gray-600 dark:text-[#8b949e]">
                     <span>{t('less')}</span>
                     <div className="flex gap-1">
                         {(theme === 'dark' ? goldTheme.dark : goldTheme.light).map((color, i) => (
-                            <div key={i} className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+                            <div key={i} className="h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />
                         ))}
                     </div>
                     <span>{t('more')}</span>
                 </div>
             </div>
 
-            {/* Recent Activity Feed - Collapsible */}
             {summary?.recentActivity && summary.recentActivity.length > 0 && (
-                <div className="w-full mb-8">
-                    <button
-                        onClick={() => setShowActivity(!showActivity)}
-                        className="w-full flex items-center justify-between group py-2"
-                    >
-                        <h3 className="text-gray-900 dark:text-white text-sm font-semibold uppercase tracking-wider flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <div className="mb-8 w-full">
+                    <button onClick={() => setShowActivity(!showActivity)} className="group flex w-full items-center justify-between py-2">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-gray-900 dark:text-white">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                             Recent Activity
                         </h3>
-                        <div className={`p-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors`}>
-                            <ChevronDown className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-300 ${showActivity ? 'rotate-180' : ''}`} />
+                        <div className="rounded-full p-1 transition-colors hover:bg-gray-100 dark:hover:bg-white/10">
+                            <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-300 dark:text-gray-400 ${showActivity ? 'rotate-180' : ''}`} />
                         </div>
                     </button>
 
@@ -190,19 +146,17 @@ export function GitHubHeatmap({ username }: { username: string }) {
                     >
                         <div className="flex flex-col pt-2">
                             {summary.recentActivity.map((activity, idx) => (
-                                <div key={idx} className="group flex items-center py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors px-2 rounded-lg">
-                                    <span className="text-xs font-mono text-gray-400 dark:text-gray-600 w-8">
-                                        {String(idx + 1).padStart(2, '0')}
-                                    </span>
-                                    <div className="flex-1 flex flex-row items-center justify-between gap-4">
-                                        <span className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-200 group-hover:text-blue-500 transition-colors truncate">
+                                <div key={idx} className="group flex items-center rounded-lg px-2 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
+                                    <span className="w-8 font-mono text-xs text-gray-400 dark:text-gray-600">{String(idx + 1).padStart(2, '0')}</span>
+                                    <div className="flex flex-1 flex-row items-center justify-between gap-4">
+                                        <span className="truncate text-sm font-medium text-gray-900 transition-colors group-hover:text-blue-500 dark:text-gray-200 md:text-base">
                                             {activity.type === 'push' ? (
-                                                <>Pushed to <span className="text-gray-500 dark:text-gray-500 group-hover:text-blue-400 transition-colors">{activity.repo}</span></>
+                                                <>Pushed to <span className="text-gray-500 transition-colors group-hover:text-blue-400 dark:text-gray-500">{activity.repo}</span></>
                                             ) : (
-                                                <>{activity.status === 'merged' ? 'Merged PR in' : 'Opened PR in'} <span className="text-gray-500 dark:text-gray-500 group-hover:text-blue-400 transition-colors">{activity.repo}</span></>
+                                                <>{activity.status === 'merged' ? 'Merged PR in' : 'Opened PR in'} <span className="text-gray-500 transition-colors group-hover:text-blue-400 dark:text-gray-500">{activity.repo}</span></>
                                             )}
                                         </span>
-                                        <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-600 whitespace-nowrap">
+                                        <span className="whitespace-nowrap text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-600">
                                             {formatDistanceToNow(new Date(activity.date), { addSuffix: true })}
                                         </span>
                                     </div>
@@ -216,16 +170,14 @@ export function GitHubHeatmap({ username }: { username: string }) {
     );
 }
 
-function StatCard({ label, value, icon }: { label: string, value: string | number, icon?: React.ReactNode }) {
+function StatCard({ label, value, icon }: { label: string; value: string | number; icon?: React.ReactNode }) {
     return (
-        <div className="relative group p-4 border border-gray-300 dark:border-[#30363d] rounded-2xl hover:border-yellow-500/30 dark:hover:border-yellow-500/30 transition-all duration-300 bg-transparent hover:bg-gray-100/50 dark:hover:bg-[#161b22]/50 flex flex-col justify-between min-h-[125px]">
+        <div className="group relative flex min-h-[125px] flex-col justify-between rounded-2xl border border-gray-300 bg-transparent p-4 transition-all duration-300 hover:border-yellow-500/30 hover:bg-gray-100/50 dark:border-[#30363d] dark:hover:border-yellow-500/30 dark:hover:bg-[#161b22]/50">
             <div className="flex items-center gap-2">
-                <div className="text-gray-600 dark:text-gray-400 group-hover:text-yellow-600 dark:group-hover:text-yellow-500 transition-colors duration-300">
-                    {icon}
-                </div>
-                <span className="text-gray-600 dark:text-[#8b949e] text-[10px] font-bold uppercase tracking-[0.15em] opacity-80">{label}</span>
+                <div className="text-gray-600 transition-colors duration-300 group-hover:text-yellow-600 dark:text-gray-400 dark:group-hover:text-yellow-500">{icon}</div>
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-600 opacity-80 dark:text-[#8b949e]">{label}</span>
             </div>
-            <span className="text-2xl md:text-3xl font-extrabold tracking-tighter text-gray-900 dark:text-white">
+            <span className="text-2xl font-extrabold tracking-tighter text-gray-900 dark:text-white md:text-3xl">
                 <Counter value={typeof value === 'string' ? parseFloat(value) : value} decimal={typeof value === 'string' && value.includes('.') ? 1 : 0} />
                 {typeof value === 'string' && value.includes('+') ? '+' : ''}
             </span>
@@ -233,31 +185,25 @@ function StatCard({ label, value, icon }: { label: string, value: string | numbe
     );
 }
 
-export function StatPod({ label, value, icon, color, delay, suffix = "" }: any) {
+export function StatPod({ label, value, icon, color, delay, suffix = '' }: any) {
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ delay }}
-            className="relative flex flex-col justify-between p-6 bg-card/85 border border-border rounded-[2rem] backdrop-blur-xl group hover:border-emerald-500/40 h-full overflow-hidden shadow-lg transition-all duration-500"
+            className="group relative flex h-full flex-col justify-between overflow-hidden rounded-[2rem] border border-border bg-card/85 p-6 shadow-lg backdrop-blur-xl transition-all duration-500 hover:border-emerald-500/40"
         >
-            <div className={`absolute top-0 right-0 w-24 h-24 blur-3xl opacity-10 transition-opacity group-hover:opacity-20 ${color.replace('text-', 'bg-')}`} />
-
-            <div className="flex items-center gap-3 relative z-10">
-                <div className={`p-2 rounded-lg bg-white/5 border border-white/5 group-hover:border-white/20 transition-colors ${color}`}>
-                    {icon}
-                </div>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 dark:text-zinc-400 font-bold group-hover:text-foreground transition-colors">{label}</span>
+            <div className={`absolute right-0 top-0 h-24 w-24 opacity-10 blur-3xl transition-opacity group-hover:opacity-20 ${color.replace('text-', 'bg-')}`} />
+            <div className="relative z-10 flex items-center gap-3">
+                <div className={`rounded-lg border border-white/5 bg-white/5 p-2 transition-colors group-hover:border-white/20 ${color}`}>{icon}</div>
+                <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-zinc-500 transition-colors group-hover:text-foreground dark:text-zinc-400">{label}</span>
             </div>
-
-            <div className="mt-4 relative z-10">
-                <div className="text-3xl font-black tracking-tighter text-foreground group-hover:scale-105 transition-transform origin-left">
-                    {value}<span className="text-xs font-normal text-muted-foreground/50 ml-1">{suffix}</span>
+            <div className="relative z-10 mt-4">
+                <div className="origin-left text-3xl font-black tracking-tighter text-foreground transition-transform group-hover:scale-105">
+                    {value}<span className="ml-1 text-xs font-normal text-muted-foreground/50">{suffix}</span>
                 </div>
             </div>
-
-            {/* Inset Decorative Element */}
-            <div className="absolute -bottom-2 -right-2 w-12 h-12 border-t border-l border-white/5 rounded-tl-2xl opacity-50" />
+            <div className="absolute -bottom-2 -right-2 h-12 w-12 rounded-tl-2xl border-l border-t border-white/5 opacity-50" />
         </motion.div>
     );
 }
