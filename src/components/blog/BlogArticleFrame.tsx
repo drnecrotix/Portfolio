@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Check, Copy, Heart } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Heart, Languages } from 'lucide-react';
 
 export type RelatedBlogPost = {
     slug: string;
@@ -29,6 +29,8 @@ export function BlogArticleFrame({
     publishedAt,
     tags,
     relatedPosts,
+    currentLocale,
+    availableLocales,
     comments,
     children,
 }: {
@@ -44,6 +46,8 @@ export function BlogArticleFrame({
     publishedAt: string;
     tags: string[];
     relatedPosts: RelatedBlogPost[];
+    currentLocale: 'en' | 'bg';
+    availableLocales: Array<'en' | 'bg'>;
     comments?: ReactNode;
     children: ReactNode;
 }) {
@@ -52,11 +56,20 @@ export function BlogArticleFrame({
     const [liked, setLiked] = useState(initiallyLiked);
     const [likeCount, setLikeCount] = useState(initialLikeCount);
     const [liking, setLiking] = useState(false);
+    const [switchingLocale, setSwitchingLocale] = useState(false);
 
     const copyLink = async () => {
         await navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1800);
+    };
+
+    const switchLanguage = (locale: 'en' | 'bg') => {
+        if (locale === currentLocale || switchingLocale || !availableLocales.includes(locale)) return;
+        setSwitchingLocale(true);
+        document.cookie = `locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        router.refresh();
+        window.setTimeout(() => setSwitchingLocale(false), 700);
     };
 
     const toggleLike = async () => {
@@ -83,6 +96,7 @@ export function BlogArticleFrame({
     };
 
     const dateLabel = new Date(publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const showLanguageSwitch = availableLocales.length > 1;
 
     return (
         <main className="min-h-screen bg-background pb-24 pt-28 text-foreground sm:pt-32">
@@ -137,7 +151,7 @@ export function BlogArticleFrame({
                     className="mx-auto flex max-w-3xl items-center justify-between gap-5 border-y border-foreground/10 py-4"
                 >
                     <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A note from the journal</span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                         <motion.button
                             type="button"
                             onClick={() => void toggleLike()}
@@ -154,6 +168,23 @@ export function BlogArticleFrame({
                             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             <span>{copied ? 'Copied' : 'Share'}</span>
                         </button>
+                        {showLanguageSwitch && (
+                            <div className="inline-flex h-9 items-center gap-1 rounded-full border border-foreground/10 bg-foreground/[0.03] p-1" aria-label="Publication language">
+                                <Languages className="ml-2 h-4 w-4 text-muted-foreground" />
+                                {(['en', 'bg'] as const).filter((locale) => availableLocales.includes(locale)).map((locale) => (
+                                    <button
+                                        key={locale}
+                                        type="button"
+                                        onClick={() => switchLanguage(locale)}
+                                        disabled={switchingLocale || locale === currentLocale}
+                                        aria-pressed={locale === currentLocale}
+                                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${locale === currentLocale ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                                    >
+                                        {locale}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             </div>
