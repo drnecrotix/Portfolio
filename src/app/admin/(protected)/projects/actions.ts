@@ -1,5 +1,6 @@
 'use server';
 
+import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
@@ -14,12 +15,18 @@ import {
 const PROJECT_STATUSES = ['PLANNED', 'ONGOING', 'COMPLETED', 'ARCHIVED'] as const;
 type ProjectStatusValue = (typeof PROJECT_STATUSES)[number];
 
-export type ProjectSaveResult = {
-    ok: true;
-    id: string;
-    created: boolean;
-    savedAt: string;
-};
+export type ProjectSaveResult =
+    | {
+        ok: true;
+        id: string;
+        created: boolean;
+        savedAt: string;
+    }
+    | {
+        ok: false;
+        error: string;
+        field?: string;
+    };
 
 async function requireEditor() {
     const session = await auth();
@@ -95,41 +102,92 @@ function readProjectForm(formData: FormData) {
     };
 }
 
+function safeSaveError(error: unknown): ProjectSaveResult {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+            const target = Array.isArray(error.meta?.target) ? error.meta?.target.map(String) : [];
+            if (target.includes('slug')) {
+                return { ok: false, field: 'slug', error: 'A project with this slug already exists. Choose a different slug.' };
+            }
+            return { ok: false, error: 'A project with the same unique value already exists.' };
+        }
+    }
+
+    if (error instanceof SyntaxError) {
+        return { ok: false, field: 'content', error: 'Advanced content JSON is invalid. Check the JSON syntax and try again.' };
+    }
+
+    if (error instanceof TypeError && error.message.includes('Invalid URL')) {
+        return { ok: false, error: 'One of the project URLs is invalid. Use a complete http:// or https:// URL.' };
+    }
+
+    if (error instanceof Error) {
+        const safeMessages = [
+            / is required\.$/,
+            / is too long\.$/,
+            /^Slug must use /,
+            /^Invalid project status\.$/,
+            /^Project URL is too long\.$/,
+            /^Project URLs must use /,
+            /^Project content JSON is too large\.$/,
+            /^Project content must be a JSON object\.$/,
+            /^Gallery images must be an array\.$/,
+            /^Project not found\.$/,
+            /^Unauthorized$/,
+            /^Forbidden$/,
+        ];
+        if (safeMessages.some((pattern) => pattern.test(error.message))) {
+            return { ok: false, error: error.message };
+        }
+    }
+
+    console.error('[Projects] Save failed:', error);
+    return { ok: false, error: 'Project could not be saved. Please try again. If the problem continues, check the server logs for the detailed error.' };
+}
+
 export async function createProject(formData: FormData): Promise<ProjectSaveResult> {
-    await requireEditor();
-    const data = readProjectForm(formData);
-    const project = await prisma.project.create({ data });
-    revalidatePath('/admin/projects');
-    revalidateProjectDiscovery();
-    return { ok: true, id: project.id, created: true, savedAt: new Date().toISOString() };
+    try {
+        await requireEditor();
+        const data = readProjectForm(formData);
+        const project = await prisma.project.create({ data });
+        revalidatePath('/admin/projects');
+        revalidateProjectDiscovery();
+        return { ok: true, id: project.id, created: true, savedAt: new Date().toISOString() };
+    } catch (error) {
+        return safeSaveError(error);
+    }
 }
 
 export async function updateProject(projectId: string, formData: FormData): Promise<ProjectSaveResult> {
-    const user = await requireEditor();
-    const current = await prisma.project.findUnique({ where: { id: projectId } });
-    if (!current) throw new Error('Project not found.');
-    const nextData = readProjectForm(formData);
+    try {
+        const user = await requireEditor();
+        const current = await prisma.project.findUnique({ where: { id: projectId } });
+        if (!current) throw new Error('Project not found.');
+        const nextData = readProjectForm(formData);
 
-    await prisma.$transaction(async (tx) => {
-        await tx.revision.create({
-            data: {
-                entityType: 'project',
-                entityId: current.id,
-                projectId: current.id,
-                createdBy: user.id,
-                snapshot: JSON.parse(JSON.stringify(current)),
-                note: 'Snapshot before project update',
-            },
+        await prisma.$transaction(async (tx) => {
+            await tx.revision.create({
+                data: {
+                    entityType: 'project',
+                    entityId: current.id,
+                    projectId: current.id,
+                    createdBy: user.id,
+                    snapshot: JSON.parse(JSON.stringify(current)),
+                    note: 'Snapshot before project update',
+                },
+            });
+            await tx.project.update({ where: { id: projectId }, data: nextData });
         });
-        await tx.project.update({ where: { id: projectId }, data: nextData });
-    });
 
-    revalidatePath('/admin/projects');
-    revalidatePath(`/admin/projects/${projectId}`);
-    revalidateProjectDiscovery();
-    revalidatePath(`/projects/${current.slug}`);
-    if (current.slug !== nextData.slug) revalidatePath(`/projects/${nextData.slug}`);
-    return { ok: true, id: projectId, created: false, savedAt: new Date().toISOString() };
+        revalidatePath('/admin/projects');
+        revalidatePath(`/admin/projects/${projectId}`);
+        revalidateProjectDiscovery();
+        revalidatePath(`/projects/${current.slug}`);
+        if (current.slug !== nextData.slug) revalidatePath(`/projects/${nextData.slug}`);
+        return { ok: true, id: projectId, created: false, savedAt: new Date().toISOString() };
+    } catch (error) {
+        return safeSaveError(error);
+    }
 }
 
 export async function deleteProject(projectId: string) {
