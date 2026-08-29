@@ -33,7 +33,7 @@ export default async function HomePage() {
                 orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
                 take: homepage.homeBlogPostLimit,
             });
-            posts = cmsPosts.map(cmsPostToPublicPost);
+            posts = cmsPosts.map((post) => cmsPostToPublicPost(post));
         }
 
         if (homepage.showProjects) {
