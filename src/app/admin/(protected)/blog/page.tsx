@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { getAvailablePostLocales } from '@/lib/cms-posts';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,20 +28,41 @@ export default async function AdminBlogPage() {
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.015]">
-                {posts.map((post) => (
-                    <Link key={post.id} href={`/admin/blog/${post.id}`} className="block border-b border-foreground/10 p-4 transition-colors last:border-b-0 hover:bg-foreground/[0.035] sm:p-5 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-5">
-                        <div className="min-w-0">
-                            <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                <h3 className="mr-1 min-w-0 break-words text-lg font-semibold sm:text-xl">{post.title}</h3>
-                                <span className="rounded-full border border-foreground/10 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">{post.postType?.name ?? post.type.replaceAll('_', ' ')}</span>
-                                {post.categoryRef?.name && <span className="rounded-full border border-sky-500/20 bg-sky-500/[0.06] px-2 py-1 text-[10px] uppercase tracking-wider text-sky-600 dark:text-sky-300">{post.categoryRef.name}</span>}
-                                <span className="rounded-full border border-foreground/10 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">{post.status}</span>
+                {posts.map((post) => {
+                    const availableLocales = getAvailablePostLocales(post);
+                    return (
+                        <Link key={post.id} href={`/admin/blog/${post.id}`} className="block border-b border-foreground/10 p-4 transition-colors last:border-b-0 hover:bg-foreground/[0.035] sm:p-5 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-5">
+                            <div className="min-w-0">
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <h3 className="mr-1 min-w-0 break-words text-lg font-semibold sm:text-xl">{post.title}</h3>
+                                    <span className="rounded-full border border-foreground/10 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">{post.postType?.name ?? post.type.replaceAll('_', ' ')}</span>
+                                    {post.categoryRef?.name && <span className="rounded-full border border-sky-500/20 bg-sky-500/[0.06] px-2 py-1 text-[10px] uppercase tracking-wider text-sky-600 dark:text-sky-300">{post.categoryRef.name}</span>}
+                                    <span className="rounded-full border border-foreground/10 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">{post.status}</span>
+                                    <span className="ml-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Languages</span>
+                                    {(['en', 'bg'] as const).map((locale) => {
+                                        const available = availableLocales.includes(locale);
+                                        return (
+                                            <span
+                                                key={locale}
+                                                title={available ? `${locale.toUpperCase()} version available` : `${locale.toUpperCase()} translation missing`}
+                                                className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${available
+                                                    ? locale === 'bg'
+                                                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                                                        : 'border-indigo-500/25 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300'
+                                                    : 'border-foreground/10 bg-foreground/[0.02] text-muted-foreground/45'
+                                                    }`}
+                                            >
+                                                {locale}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                                <p className="mt-2 truncate text-xs text-muted-foreground sm:text-sm">/blog/{post.slug}</p>
                             </div>
-                            <p className="mt-2 truncate text-xs text-muted-foreground sm:text-sm">/blog/{post.slug}</p>
-                        </div>
-                        <div className="mt-3 text-xs text-muted-foreground md:mt-0 md:text-right">Updated {post.updatedAt.toLocaleDateString()}</div>
-                    </Link>
-                ))}
+                            <div className="mt-3 text-xs text-muted-foreground md:mt-0 md:text-right">Updated {post.updatedAt.toLocaleDateString()}</div>
+                        </Link>
+                    );
+                })}
                 {posts.length === 0 && <div className="px-5 py-14 text-center text-sm text-muted-foreground">No CMS publications yet.</div>}
             </div>
         </div>
