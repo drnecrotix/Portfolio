@@ -77,18 +77,25 @@ export function ProjectForm({ project, categories = [], action, submitLabel }: {
     };
 
     useEffect(() => {
+        let restoredMessage: string | undefined;
+
         try {
             const stored = sessionStorage.getItem(projectNoticeKey);
             if (stored) {
                 const parsed = JSON.parse(stored) as { message?: string };
                 sessionStorage.removeItem(projectNoticeKey);
-                if (parsed.message) showNotice(parsed.message, 'saved');
+                restoredMessage = parsed.message;
             }
         } catch {
             sessionStorage.removeItem(projectNoticeKey);
         }
 
+        const restoreTimer = restoredMessage
+            ? window.setTimeout(() => showNotice(restoredMessage, 'saved'), 0)
+            : null;
+
         return () => {
+            if (restoreTimer !== null) window.clearTimeout(restoreTimer);
             if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
         };
     }, []);
