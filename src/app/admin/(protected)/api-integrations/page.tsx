@@ -3,10 +3,26 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getStoredAssistantApiKeys } from '@/lib/assistant-credentials';
 import { getIntegrationTests, getStoredIntegrationValues } from '@/lib/integration-credentials';
-import { ApiIntegrationsManager, type ApiIntegrationCard } from '@/components/admin/ApiIntegrationsManager';
+import { ApiIntegrationsManager, type ApiIntegrationCard, type ApiIntegrationField } from '@/components/admin/ApiIntegrationsManager';
 
 function envConfigured(name: string) {
     return Boolean(String(process.env[name] ?? '').trim());
+}
+
+function record(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function githubUsernameFromUrl(value: unknown) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    try {
+        const url = new URL(raw);
+        if (!/(^|\.)github\.com$/i.test(url.hostname)) return '';
+        return url.pathname.split('/').filter(Boolean)[0] ?? '';
+    } catch {
+        return '';
+    }
 }
 
 export default async function ApiIntegrationsPage() {
@@ -15,20 +31,34 @@ export default async function ApiIntegrationsPage() {
 
     const settings = await prisma.siteSettings.findUnique({
         where: { id: 'default' },
-        select: { integrationSettings: true, assistantSettings: true },
+        select: { integrationSettings: true, assistantSettings: true, socialLinks: true },
     });
 
     const stored = getStoredIntegrationValues(settings?.integrationSettings);
     const assistantKeys = getStoredAssistantApiKeys(settings?.assistantSettings);
     const tests = getIntegrationTests(settings?.integrationSettings);
+    const siteGithubUsername = githubUsernameFromUrl(record(settings?.socialLinks).github);
 
-    const field = (key: string, label: string, envName: string, secret = true, help?: string) => {
+    const field = (key: string, label: string, envName: string, secret = true, help?: string): ApiIntegrationField => {
         const provider = key.split('.')[0];
         const cms = Boolean(stored[key]);
         const legacyAssistant = key.endsWith('.apiKey') && Boolean(assistantKeys[provider]);
         const environment = envConfigured(envName);
-        const source = cms ? 'cms' : legacyAssistant ? 'assistant' : environment ? 'environment' : 'missing';
-        return { key, label, envName, secret, configured: source !== 'missing', source, help } as const;
+        const source: ApiIntegrationField['source'] = cms ? 'cms' : legacyAssistant ? 'assistant' : environment ? 'environment' : 'missing';
+        return { key, label, envName, secret, configured: source !== 'missing', source, help };
+    };
+
+    const githubUsernameField: ApiIntegrationField = stored['github.username']
+        ? { key: 'github.username', label: 'GitHub username', envName: 'GITHUB_USERNAME', secret: false, configured: true, source: 'cms', help: 'Used by The Lab public repository fallback.' }
+        : envConfigured('GITHUB_USERNAME')
+            ? { key: 'github.username', label: 'GitHub username', envName: 'GITHUB_USERNAME', secret: false, configured: true, source: 'environment', help: 'Used by The Lab public repository fallback.' }
+            : siteGithubUsername
+                ? { key: 'github.username', label: 'GitHub username', envName: 'GITHUB_USERNAME', secret: false, configured: true, source: 'site', help: `Inferred from Site Settings → Social links (${siteGithubUsername}).` }
+                : { key: 'github.username', label: 'GitHub username', envName: 'GITHUB_USERNAME', secret: false, configured: false, source: 'missing', help: 'Set the username here or add a GitHub profile URL in Site Settings → Social links.' };
+
+    const githubTokenField: ApiIntegrationField = {
+        ...field('github.apiKey', 'Personal access token', 'GITHUB_TOKEN', true, 'Optional for The Lab REST fallback. CMS value overrides GITHUB_TOKEN from the environment.'),
+        required: false,
     };
 
     const cards: ApiIntegrationCard[] = [
@@ -38,8 +68,8 @@ export default async function ApiIntegrationsPage() {
             category: 'Development data',
             description: 'Reads your public GitHub repositories, languages, activity and repository metadata.',
             usedBy: ['The Lab - Used in real work', 'GitHub statistics', 'Language statistics', 'Recent GitHub activity'],
-            docsHint: 'Use a GitHub personal access token that can read your public profile and repositories. Public-only access is enough for the Lab proof feature.',
-            fields: [field('github.apiKey', 'Personal access token', 'GITHUB_TOKEN', true, 'CMS value overrides GITHUB_TOKEN from the environment.')],
+            docsHint: 'The Lab first tries authenticated GraphQL for richer framework detection. If GraphQL is unavailable or the token has restrictive scopes, it automatically uses the public REST repository API. A token is optional for the Lab fallback but recommended for richer data and higher rate limits.',
+            fields: [githubUsernameField, githubTokenField],
             lastTest: tests.github ?? null,
         },
         {

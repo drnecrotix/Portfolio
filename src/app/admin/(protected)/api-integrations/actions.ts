@@ -23,7 +23,7 @@ export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemi
 export type ApiActionResult = { ok: boolean; message: string; testedAt?: string; latencyMs?: number };
 
 const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
-    github: ['github.apiKey'],
+    github: ['github.username', 'github.apiKey'],
     wakatime: ['wakatime.apiKey'],
     openai: ['openai.apiKey'],
     groq: ['groq.apiKey'],
@@ -33,6 +33,7 @@ const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
 };
 
 const envNames: Record<string, string> = {
+    'github.username': 'GITHUB_USERNAME',
     'github.apiKey': 'GITHUB_TOKEN',
     'wakatime.apiKey': 'WAKATIME_API_KEY',
     'openai.apiKey': 'OPENAI_API_KEY',
@@ -48,6 +49,22 @@ const envNames: Record<string, string> = {
 
 const aiProviders = new Set<ApiIntegrationId>(['openai', 'groq', 'gemini', 'openrouter']);
 
+function record(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function githubUsernameFromUrl(value: unknown) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    try {
+        const url = new URL(raw);
+        if (!/(^|\.)github\.com$/i.test(url.hostname)) return '';
+        return url.pathname.split('/').filter(Boolean)[0] ?? '';
+    } catch {
+        return '';
+    }
+}
+
 async function requireApiAdmin() {
     const session = await auth();
     if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) throw new Error('Forbidden');
@@ -60,11 +77,11 @@ function validIntegrationId(value: string): value is ApiIntegrationId {
 async function loadRuntimeSettings() {
     return prisma.siteSettings.findUnique({
         where: { id: 'default' },
-        select: { integrationSettings: true, assistantSettings: true },
+        select: { integrationSettings: true, assistantSettings: true, socialLinks: true },
     });
 }
 
-function effectiveValues(integrationSettings: unknown, assistantSettings: unknown) {
+function effectiveValues(integrationSettings: unknown, assistantSettings: unknown, socialLinks?: unknown) {
     const stored = getStoredIntegrationValues(integrationSettings);
     const assistantKeys = getStoredAssistantApiKeys(assistantSettings);
     const values: Record<string, string> = {};
@@ -75,6 +92,7 @@ function effectiveValues(integrationSettings: unknown, assistantSettings: unknow
             || (field.endsWith('.apiKey') ? assistantKeys[provider] : '')
             || String(process.env[envName] ?? '').trim();
     }
+    if (!values['github.username']) values['github.username'] = githubUsernameFromUrl(record(socialLinks).github);
     return values;
 }
 
@@ -181,17 +199,51 @@ async function fetchChecked(url: string, init?: RequestInit) {
     return response;
 }
 
-async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, string>): Promise<string> {
-    if (id === 'github') {
-        const token = values['github.apiKey'];
-        if (!token) throw new Error('No GitHub token is configured.');
-        const response = await fetchChecked('https://api.github.com/user', {
+async function testGitHub(values: Record<string, string>) {
+    const token = values['github.apiKey'];
+    let username = values['github.username'];
+
+    if (token) {
+        const userResponse = await fetchChecked('https://api.github.com/user', {
             headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'NecrotixLab-Portfolio' },
         });
-        const data = await response.json();
-        const login = String(data?.login ?? '').trim();
-        return login ? `Connected to GitHub as @${login}.` : 'GitHub connection is valid.';
+        const userData = await userResponse.json();
+        username = username || String(userData?.login ?? '').trim();
     }
+
+    if (!username) throw new Error('No GitHub username is configured. Set it here or in Site Settings → Social links.');
+
+    if (token) {
+        const query = `query LabConnection($login: String!) { user(login: $login) { login repositories(first: 1, isFork: false, privacy: PUBLIC) { totalCount nodes { name } } } }`;
+        try {
+            const response = await fetchChecked('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'User-Agent': 'NecrotixLab-Portfolio' },
+                body: JSON.stringify({ query, variables: { login: username } }),
+            });
+            const data = await response.json();
+            const user = data?.data?.user;
+            if (!Array.isArray(data?.errors) && user) {
+                const count = Number(user?.repositories?.totalCount ?? 0);
+                if (count > 0) return `GitHub Lab connection is healthy for @${String(user.login ?? username)}. GraphQL can see ${count} public repositories.`;
+            }
+        } catch {
+            // REST fallback is tested below.
+        }
+    }
+
+    const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'NecrotixLab-Portfolio' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetchChecked(`https://api.github.com/users/${encodeURIComponent(username)}/repos?per_page=1&type=owner&sort=updated`, { headers });
+    const repos = await response.json();
+    if (!Array.isArray(repos)) throw new Error('GitHub public repositories response is invalid.');
+    return token
+        ? `GitHub is connected as @${username}. Lab GraphQL is unavailable for this token, but the public REST fallback is healthy.`
+        : `GitHub public REST data is healthy for @${username}. No token is required for the Lab fallback; adding one enables richer GraphQL detection and a higher rate limit.`;
+}
+
+async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, string>): Promise<string> {
+    if (id === 'github') return testGitHub(values);
 
     if (id === 'wakatime') {
         const apiKey = values['wakatime.apiKey'];
@@ -265,7 +317,7 @@ export async function testApiIntegration(id: ApiIntegrationId): Promise<ApiActio
     let result: ApiActionResult;
     try {
         const settings = await loadRuntimeSettings();
-        const values = effectiveValues(settings?.integrationSettings, settings?.assistantSettings);
+        const values = effectiveValues(settings?.integrationSettings, settings?.assistantSettings, settings?.socialLinks);
         const message = await runIntegrationTest(id, values);
         result = { ok: true, message, latencyMs: Date.now() - startedAt, testedAt: new Date().toISOString() };
     } catch (error) {

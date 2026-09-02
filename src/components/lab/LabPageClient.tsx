@@ -130,6 +130,7 @@ export function LabPageClient() {
     const robotY = useTransform(scrollY, [0, 900], [0, 150]);
     const heroY = useTransform(scrollY, [0, 700], [0, 220]);
     const heroOpacity = useTransform(scrollY, [0, 560], [1, 0]);
+    const [desktopHero, setDesktopHero] = useState(false);
 
     const fallbackProof = useMemo<ProofItem[]>(() => {
         const counts = new Map<string, { repositories: number; examples: ProofExample[] }>();
@@ -150,6 +151,14 @@ export function LabPageClient() {
     const [proof, setProof] = useState<ProofItem[]>(fallbackProof);
     const [proofMeta, setProofMeta] = useState<ProofMeta>({ source: 'portfolio' });
     const [proofLoading, setProofLoading] = useState(true);
+
+    useEffect(() => {
+        const media = window.matchMedia('(min-width: 1024px)');
+        const sync = () => setDesktopHero(media.matches);
+        sync();
+        media.addEventListener('change', sync);
+        return () => media.removeEventListener('change', sync);
+    }, []);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -199,23 +208,32 @@ export function LabPageClient() {
     }, []);
 
     return (
-        <main className="min-h-screen overflow-hidden bg-background text-foreground" onMouseMove={(event) => { mouseX.set(event.clientX); mouseY.set(event.clientY); }}>
-            <section className="relative flex min-h-screen items-end justify-center overflow-hidden pb-16 pt-24">
-                <motion.div className="absolute inset-0" style={{ y: robotY }}>
-                    <DeferredMount fallback={<div className="h-full w-full bg-zinc-950" />}>
-                        <SplineScene scene="https://prod.spline.design/qVnpleqGGhqRlQYK/scene.splinecode" className="h-full w-full opacity-70 md:opacity-100" />
-                    </DeferredMount>
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/5 via-background/30 to-background" />
-                </motion.div>
+        <main className="min-h-screen overflow-hidden bg-background text-foreground" onMouseMove={(event) => { if (desktopHero) { mouseX.set(event.clientX); mouseY.set(event.clientY); } }}>
+            <section className="relative flex min-h-[calc(100svh-4rem)] items-center justify-center overflow-hidden px-5 pb-12 pt-28 lg:min-h-screen lg:items-end lg:px-0 lg:pb-16 lg:pt-24">
+                {desktopHero ? (
+                    <>
+                        <motion.div className="absolute inset-0" style={{ y: robotY }}>
+                            <DeferredMount fallback={<div className="h-full w-full bg-zinc-950" />}>
+                                <SplineScene scene="https://prod.spline.design/qVnpleqGGhqRlQYK/scene.splinecode" className="h-full w-full opacity-100" />
+                            </DeferredMount>
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/5 via-background/30 to-background" />
+                        </motion.div>
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.07),transparent_35%)]" />
+                        {bubbles.map((item) => <FloatingTechnology key={item.name} item={item} mouseX={mouseX} mouseY={mouseY} />)}
+                    </>
+                ) : (
+                    <div className="pointer-events-none absolute inset-0">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(127,127,127,0.11),transparent_38%)]" />
+                        <div className="absolute left-1/2 top-[38%] h-52 w-52 -translate-x-1/2 rounded-full bg-foreground/[0.035] blur-3xl" />
+                        <div className="absolute inset-x-5 bottom-12 top-24 rounded-[2rem] border border-foreground/[0.04]" />
+                    </div>
+                )}
 
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.07),transparent_35%)]" />
-                {bubbles.map((item) => <FloatingTechnology key={item.name} item={item} mouseX={mouseX} mouseY={mouseY} />)}
-
-                <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center px-6 text-center">
-                    <p className="mb-4 font-mono text-[10px] font-semibold uppercase tracking-[0.45em] text-muted-foreground">Code · Design · Systems · AI</p>
-                    <h1 className="text-[16vw] font-black uppercase leading-[0.78] tracking-[-0.075em] text-zinc-300 sm:text-[13vw] lg:text-[10vw] dark:text-zinc-300">The Lab</h1>
-                    <p className="mt-7 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">Technologies, systems and tools behind what I build - organized by capability, not arbitrary proficiency percentages.</p>
-                    <button type="button" onClick={() => document.getElementById('capabilities')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' })} className="mt-8 inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/50 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] backdrop-blur transition hover:bg-foreground hover:text-background">
+                <motion.div style={desktopHero ? { y: heroY, opacity: heroOpacity } : undefined} className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center text-center lg:px-6">
+                    <p className="mb-5 font-mono text-[9px] font-semibold uppercase tracking-[0.28em] text-muted-foreground sm:text-[10px] sm:tracking-[0.4em] lg:mb-4 lg:tracking-[0.45em]">Code · Design · Systems · AI</p>
+                    <h1 className="text-[18vw] font-black uppercase leading-[0.86] tracking-[-0.06em] text-zinc-300 sm:text-[14vw] lg:text-[10vw] lg:leading-[0.78] lg:tracking-[-0.075em] dark:text-zinc-300">The Lab</h1>
+                    <p className="mt-7 max-w-md text-sm leading-7 text-muted-foreground sm:max-w-xl sm:text-base lg:max-w-2xl">Technologies, systems and tools behind what I build - organized by capability, not arbitrary proficiency percentages.</p>
+                    <button type="button" onClick={() => document.getElementById('capabilities')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' })} className="mt-8 inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] backdrop-blur transition hover:bg-foreground hover:text-background">
                         Explore the lab <ArrowDown className="size-4" />
                     </button>
                 </motion.div>
