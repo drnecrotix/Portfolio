@@ -224,8 +224,8 @@ export async function seedDefaultNavigationAjax() {
             const about = await tx.navigationItem.create({ data: { label: 'About', href: '#', sortOrder: 20, isDropdown: true, dropdownStyle: 'auto' } });
             for (const [label, href, sortOrder] of [
                 ['Achievements', '/achievements', 10],
-                ['Skills', '/skills', 20],
-                ['Experience', '/experience', 30],
+                ['Lab', '/lab', 20],
+                ['Journey', '/journey', 30],
                 ['Projects', '/projects', 40],
                 ['Blog', '/blog', 50],
             ] as const) {
