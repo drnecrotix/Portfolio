@@ -2,9 +2,9 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
-import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, Palette } from 'lucide-react';
+import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, ExternalLink, Github, Palette } from 'lucide-react';
 import { SplineScene } from '@/components/ui/SplineScene';
 import { DeferredMount } from '@/components/ui/DeferredMount';
 import { portfolioData } from '@/data/portfolio';
@@ -34,6 +34,39 @@ type Bubble = {
     left?: string;
     right?: string;
     duration: number;
+};
+
+type ProofExample = {
+    name: string;
+    url?: string;
+    updatedAt?: string;
+};
+
+type ProofItem = {
+    name: string;
+    repositories: number;
+    examples: ProofExample[];
+};
+
+type ProofMeta = {
+    source: 'github' | 'portfolio';
+    username?: string;
+    publicRepositories?: number;
+    analyzedRepositories?: number;
+};
+
+type GitHubProofResponse = {
+    data?: {
+        source?: string;
+        username?: string;
+        publicRepositories?: number;
+        analyzedRepositories?: number;
+        technologies?: Array<{
+            name?: string;
+            repositories?: number;
+            examples?: Array<{ name?: string; url?: string; updatedAt?: string }>;
+        }>;
+    };
 };
 
 const bubbles: Bubble[] = [
@@ -98,17 +131,71 @@ export function LabPageClient() {
     const heroY = useTransform(scrollY, [0, 700], [0, 220]);
     const heroOpacity = useTransform(scrollY, [0, 560], [1, 0]);
 
-    const proof = useMemo(() => {
-        const counts = new Map<string, { projects: number; examples: string[] }>();
+    const fallbackProof = useMemo<ProofItem[]>(() => {
+        const counts = new Map<string, { repositories: number; examples: ProofExample[] }>();
         for (const project of portfolioData.projects) {
-            for (const technology of [...project.techStack, ...project.tools]) {
-                const current = counts.get(technology) ?? { projects: 0, examples: [] };
-                current.projects += 1;
-                if (current.examples.length < 2) current.examples.push(project.title);
+            for (const technology of new Set([...project.techStack, ...project.tools])) {
+                const current = counts.get(technology) ?? { repositories: 0, examples: [] };
+                current.repositories += 1;
+                if (current.examples.length < 3) current.examples.push({ name: project.title });
                 counts.set(technology, current);
             }
         }
-        return [...counts.entries()].sort((a, b) => b[1].projects - a[1].projects).slice(0, 6);
+        return [...counts.entries()]
+            .map(([name, usage]) => ({ name, repositories: usage.repositories, examples: usage.examples }))
+            .sort((a, b) => b.repositories - a.repositories)
+            .slice(0, 8);
+    }, []);
+
+    const [proof, setProof] = useState<ProofItem[]>(fallbackProof);
+    const [proofMeta, setProofMeta] = useState<ProofMeta>({ source: 'portfolio' });
+    const [proofLoading, setProofLoading] = useState(true);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        fetch('/api/github-proof', { signal: controller.signal })
+            .then((response) => response.ok ? response.json() as Promise<GitHubProofResponse> : null)
+            .then((result) => {
+                const data = result?.data;
+                if (!data || !Array.isArray(data.technologies) || data.technologies.length === 0) return;
+
+                const technologies = data.technologies
+                    .map((item): ProofItem | null => {
+                        const name = String(item?.name ?? '').trim();
+                        const repositories = Number(item?.repositories ?? 0);
+                        if (!name || !Number.isFinite(repositories) || repositories < 1) return null;
+                        const examples = Array.isArray(item?.examples)
+                            ? item.examples
+                                .map((example) => ({
+                                    name: String(example?.name ?? '').trim(),
+                                    url: String(example?.url ?? '').trim() || undefined,
+                                    updatedAt: String(example?.updatedAt ?? '').trim() || undefined,
+                                }))
+                                .filter((example) => Boolean(example.name))
+                                .slice(0, 3)
+                            : [];
+                        return { name, repositories, examples };
+                    })
+                    .filter((item): item is ProofItem => item !== null);
+
+                if (technologies.length === 0) return;
+
+                setProof(technologies);
+                setProofMeta({
+                    source: 'github',
+                    username: String(data.username ?? '').trim() || undefined,
+                    publicRepositories: Number(data.publicRepositories ?? 0) || undefined,
+                    analyzedRepositories: Number(data.analyzedRepositories ?? 0) || undefined,
+                });
+            })
+            .catch((error) => {
+                if (error instanceof DOMException && error.name === 'AbortError') return;
+                console.warn('[Lab] GitHub proof unavailable; using portfolio fallback.');
+            })
+            .finally(() => setProofLoading(false));
+
+        return () => controller.abort();
     }, []);
 
     return (
@@ -166,12 +253,41 @@ export function LabPageClient() {
             </section>
 
             <section id="proof" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:py-32">
-                <SectionHeading eyebrow="Proof, not percentages" title="Used in real work" copy="Instead of claiming a percentage, this view connects frequently used technologies with actual projects in the portfolio." />
-                <div className="mt-12 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    {proof.map(([name, usage]) => (
-                        <article key={name} className="rounded-2xl border border-border/60 p-5">
-                            <div className="flex items-start justify-between gap-4"><h3 className="text-xl font-bold">{name}</h3><span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{usage.projects} project{usage.projects === 1 ? '' : 's'}</span></div>
-                            <p className="mt-5 text-xs uppercase tracking-[0.16em] text-muted-foreground">{usage.examples.join(' · ')}</p>
+                <SectionHeading eyebrow="Proof, not percentages" title="Used in real work" copy="Public GitHub repositories are analyzed from languages, repository topics and project manifests. Portfolio data is used only as a fallback if GitHub is temporarily unavailable." />
+
+                <div className="mt-8 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground" aria-live="polite">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-foreground/[0.025] px-3 py-1.5">
+                        <Github className="size-3.5" />
+                        {proofMeta.source === 'github' ? 'Live GitHub data' : proofLoading ? 'Syncing GitHub' : 'Portfolio fallback'}
+                    </span>
+                    {proofMeta.source === 'github' && proofMeta.username ? (
+                        <a href={`https://github.com/${proofMeta.username}`} target="_blank" rel="noreferrer" className="rounded-full border border-border/60 px-3 py-1.5 transition hover:text-foreground">
+                            @{proofMeta.username}
+                        </a>
+                    ) : null}
+                    {proofMeta.source === 'github' && proofMeta.analyzedRepositories ? (
+                        <span className="rounded-full border border-border/60 px-3 py-1.5">
+                            {proofMeta.analyzedRepositories}{proofMeta.publicRepositories && proofMeta.publicRepositories !== proofMeta.analyzedRepositories ? ` / ${proofMeta.publicRepositories}` : ''} public repos · cached hourly
+                        </span>
+                    ) : null}
+                </div>
+
+                <div className="mt-8 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                    {proof.map((usage) => (
+                        <article key={usage.name} className="group rounded-2xl border border-border/60 p-5 transition hover:border-border hover:bg-foreground/[0.02]">
+                            <div className="flex items-start justify-between gap-4">
+                                <h3 className="text-xl font-bold">{usage.name}</h3>
+                                <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{usage.repositories} repo{usage.repositories === 1 ? '' : 's'}</span>
+                            </div>
+                            <div className="mt-5 flex flex-col gap-2">
+                                {usage.examples.map((example) => example.url ? (
+                                    <a key={`${usage.name}-${example.name}`} href={example.url} target="_blank" rel="noreferrer" className="inline-flex items-center justify-between gap-3 rounded-lg border border-border/50 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:border-border hover:text-foreground">
+                                        <span className="truncate">{example.name}</span><ExternalLink className="size-3 shrink-0" />
+                                    </a>
+                                ) : (
+                                    <span key={`${usage.name}-${example.name}`} className="rounded-lg border border-border/50 px-3 py-2 text-xs font-semibold text-muted-foreground">{example.name}</span>
+                                ))}
+                            </div>
                         </article>
                     ))}
                 </div>
