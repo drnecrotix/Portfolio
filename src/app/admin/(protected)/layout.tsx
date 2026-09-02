@@ -58,11 +58,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ]);
     const siteName = settings?.siteName ?? 'Portfolio';
     const journeyPageName = journeyPage?.title && journeyPage.title !== LEGACY_JOURNEY_TITLE ? journeyPage.title : 'Journey';
-    const canModerateComments = session.user.role === 'OWNER' || session.user.role === 'ADMIN';
+    const canManageSensitiveTools = session.user.role === 'OWNER' || session.user.role === 'ADMIN';
     const visibleNavGroups: AdminNavGroup[] = navGroups.map(([groupLabel, items]) => [
         groupLabel,
         items
-            .filter(([label]) => label !== 'Comments' || canModerateComments)
+            .filter(([label]) => label !== 'Comments' || canManageSensitiveTools)
+            .filter(([label]) => label !== 'API Integrations' || canManageSensitiveTools)
             .map(([label, href]) => [href === '/admin/experience' ? journeyPageName : label, href] as const),
     ] as const).filter(([, items]) => items.length > 0);
 
