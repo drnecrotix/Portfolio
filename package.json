@@ -1,6 +1,6 @@
 {
     "name": "personal-portfolio",
-    "version": "1.1.86",
+    "version": "1.1.87",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -16,7 +16,7 @@
         "db:validate": "prisma validate",
         "db:migrate": "prisma migrate dev",
         "db:deploy": "prisma migrate deploy",
-        "db:status": "prisma migrate status",
+        "db:status": "prisma migration status",
         "db:studio": "prisma studio",
         "db:seed": "node prisma/seed.cjs"
     },
