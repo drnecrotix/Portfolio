@@ -35,11 +35,9 @@ export default function GalleryPage() {
             )}
             <div className="relative z-10">
                 <ManifestoHero isLowPowerMode={isLowPowerMode} content={content} />
-                <DeferredMount>
-                    <ErrorBoundary fallback={<div className="container mx-auto py-20 text-center">Gallery Grid Unavailable</div>}>
-                        <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} />
-                    </ErrorBoundary>
-                </DeferredMount>
+                <ErrorBoundary fallback={<div className="container mx-auto py-20 text-center">Gallery Grid Unavailable</div>}>
+                    <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} />
+                </ErrorBoundary>
             </div>
         </main>
     );

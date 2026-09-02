@@ -30,25 +30,20 @@ function logoClasses(logo?: string) {
 
 export function JourneyTimeline({ content, entries }: { content: ExperienceContent; entries: Experience[] }) {
     const grouped = useMemo(() => {
-        const groups: Record<string, Experience[]> = {};
-        const sorted = [...entries].sort(
-            (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-        );
+        const groups = new Map<string, Experience[]>();
 
-        for (const experience of sorted) {
+        // Keep the CMS array order instead of sorting again by date. The first
+        // occurrence of a year controls the year-group order and entries keep
+        // their drag-and-drop order inside that group.
+        for (const experience of entries) {
             const parsedYear = new Date(experience.startDate).getFullYear();
             const year = Number.isFinite(parsedYear) ? parsedYear.toString() : 'Other';
-            if (!groups[year]) groups[year] = [];
-            groups[year].push(experience);
+            const items = groups.get(year) ?? [];
+            items.push(experience);
+            groups.set(year, items);
         }
 
-        return Object.keys(groups)
-            .sort((a, b) => {
-                if (a === 'Other') return 1;
-                if (b === 'Other') return -1;
-                return Number(b) - Number(a);
-            })
-            .map((year) => ({ title: year, experiences: groups[year] }));
+        return Array.from(groups, ([title, experiences]) => ({ title, experiences }));
     }, [entries]);
 
     const data = grouped.map((group) => ({
