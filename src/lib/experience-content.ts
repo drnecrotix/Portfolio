@@ -77,7 +77,7 @@ export const defaultExperienceContent: ExperienceContent = {
     heroPrimaryUrl: '#experience-content',
     heroSecondaryLabel: 'View projects',
     heroSecondaryUrl: '/projects',
-    marqueeTitle: 'Selected experience',
+    marqueeTitle: 'Partners & Sponsors',
     tabIntro: 'Choose how you want to explore the timeline.',
     educationLabel: 'Education',
     educationDescription: 'Academic foundations, training and learning milestones.',
@@ -152,6 +152,10 @@ export function normalizeExperienceContent(value: unknown): ExperienceContent {
     const defaultTab = source.defaultTab === 'education' || source.defaultTab === 'experience' || source.defaultTab === 'journey'
         ? source.defaultTab
         : defaultExperienceContent.defaultTab;
+    const savedMarqueeTitle = text(source.marqueeTitle, defaultExperienceContent.marqueeTitle, 120);
+    const marqueeTitle = /^selected experience$/i.test(savedMarqueeTitle)
+        ? defaultExperienceContent.marqueeTitle
+        : savedMarqueeTitle;
 
     return {
         pageEnabled: bool(source.pageEnabled, defaultExperienceContent.pageEnabled),
@@ -176,7 +180,7 @@ export function normalizeExperienceContent(value: unknown): ExperienceContent {
         heroPrimaryUrl: text(source.heroPrimaryUrl, defaultExperienceContent.heroPrimaryUrl, 2048),
         heroSecondaryLabel: text(source.heroSecondaryLabel, defaultExperienceContent.heroSecondaryLabel, 80),
         heroSecondaryUrl: text(source.heroSecondaryUrl, defaultExperienceContent.heroSecondaryUrl, 2048),
-        marqueeTitle: text(source.marqueeTitle, defaultExperienceContent.marqueeTitle, 120),
+        marqueeTitle,
         tabIntro: text(source.tabIntro, defaultExperienceContent.tabIntro, 240),
         educationLabel: text(source.educationLabel, defaultExperienceContent.educationLabel, 80),
         educationDescription: text(source.educationDescription, defaultExperienceContent.educationDescription, 240),
