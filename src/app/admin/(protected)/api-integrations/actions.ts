@@ -15,6 +15,7 @@ import {
     toIntegrationSettingsJson,
     updateIntegrationValues,
     withIntegrationTest,
+    withoutIntegrationTest,
     type IntegrationTestRecord,
 } from '@/lib/integration-credentials';
 
@@ -120,7 +121,10 @@ export async function saveApiIntegration(input: {
             where: { id: 'default' },
             select: { integrationSettings: true, assistantSettings: true },
         });
-        const nextIntegrationSettings = updateIntegrationValues(existing?.integrationSettings, changes);
+        const updatedIntegrationSettings = updateIntegrationValues(existing?.integrationSettings, changes);
+        const nextIntegrationSettings = Object.keys(changes).length > 0
+            ? withoutIntegrationTest(updatedIntegrationSettings, input.id)
+            : updatedIntegrationSettings;
 
         let nextAssistantSettings = existing?.assistantSettings;
         if (aiProviders.has(input.id)) {
@@ -161,7 +165,7 @@ export async function saveApiIntegration(input: {
         revalidatePath('/api/chat');
         revalidatePath('/admin/media');
 
-        return { ok: true, message: 'Integration credentials saved securely. Run Test connection to verify them.' };
+        return { ok: true, message: Object.keys(changes).length > 0 ? 'Integration credentials saved securely. Run Test connection to verify them.' : 'No credential changes were submitted.' };
     } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : 'Unable to save API integration.' };
     }
