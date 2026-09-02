@@ -4,7 +4,12 @@ import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { getStoredAssistantApiKeys } from '@/lib/assistant-credentials';
+import { normalizeAssistantSettings } from '@/lib/assistant-settings';
+import {
+    getStoredAssistantApiKeys,
+    toAssistantSettingsJson,
+    withAssistantApiKey,
+} from '@/lib/assistant-credentials';
 import {
     getStoredIntegrationValues,
     toIntegrationSettingsJson,
@@ -39,6 +44,8 @@ const envNames: Record<string, string> = {
     'r2.bucket': 'R2_BUCKET',
     'r2.publicBaseUrl': 'R2_PUBLIC_BASE_URL',
 };
+
+const aiProviders = new Set<ApiIntegrationId>(['openai', 'groq', 'gemini', 'openrouter']);
 
 async function requireApiAdmin() {
     const session = await auth();
@@ -111,17 +118,40 @@ export async function saveApiIntegration(input: {
 
         const existing = await prisma.siteSettings.findUnique({
             where: { id: 'default' },
-            select: { integrationSettings: true },
+            select: { integrationSettings: true, assistantSettings: true },
         });
-        const next = updateIntegrationValues(existing?.integrationSettings, changes);
+        const nextIntegrationSettings = updateIntegrationValues(existing?.integrationSettings, changes);
+
+        let nextAssistantSettings = existing?.assistantSettings;
+        if (aiProviders.has(input.id)) {
+            const apiField = `${input.id}.apiKey`;
+            if (apiField in changes) {
+                const current = normalizeAssistantSettings(existing?.assistantSettings);
+                nextAssistantSettings = withAssistantApiKey(
+                    existing?.assistantSettings,
+                    { ...current } as Record<string, unknown>,
+                    input.id,
+                    typeof changes[apiField] === 'string' ? String(changes[apiField]) : '',
+                    changes[apiField] === null,
+                );
+            }
+        }
 
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
-            create: { id: 'default', integrationSettings: toIntegrationSettingsJson(next) },
-            update: { integrationSettings: toIntegrationSettingsJson(next) },
+            create: {
+                id: 'default',
+                integrationSettings: toIntegrationSettingsJson(nextIntegrationSettings),
+                ...(nextAssistantSettings ? { assistantSettings: toAssistantSettingsJson(nextAssistantSettings as Record<string, unknown>) } : {}),
+            },
+            update: {
+                integrationSettings: toIntegrationSettingsJson(nextIntegrationSettings),
+                ...(nextAssistantSettings ? { assistantSettings: toAssistantSettingsJson(nextAssistantSettings as Record<string, unknown>) } : {}),
+            },
         });
 
         revalidatePath('/admin/api-integrations');
+        revalidatePath('/admin/assistant');
         revalidatePath('/lab');
         revalidatePath('/api/github-proof');
         revalidatePath('/api/github-stats');
