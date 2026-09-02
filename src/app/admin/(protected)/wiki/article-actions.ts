@@ -38,12 +38,15 @@ export async function saveWikiArticle(form: FormData) {
         const articleId = value(form, 'articleId', 100);
         const title = value(form, 'title', 180);
         const requestedSlug = wikiSlug(value(form, 'slug', 120));
+        const requestedCategory = value(form, 'category', 40);
         if (!title) throw new Error('Article title is required.');
         if (!requestedSlug) throw new Error('A valid Wiki slug is required.');
+        if (requestedSlug === 'faq') throw new Error('/wiki/faq is reserved for the dedicated Wiki FAQ manager.');
+        if (!articleId && requestedCategory === 'FAQ') throw new Error('Create new FAQ content from Admin → Wiki → FAQ instead of a generic Wiki article.');
 
         const content = normalizeWikiArticleContent({
             slug: requestedSlug,
-            category: value(form, 'category', 40),
+            category: requestedCategory,
             summary: value(form, 'summary', 1200),
             bodyHtml: value(form, 'bodyHtml', 80_000),
             image: value(form, 'image', 2048),
