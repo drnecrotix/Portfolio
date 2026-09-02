@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CircleHelp, ExternalLink } from 'lucide-react';
+import { ExternalLink, HelpCircle } from 'lucide-react';
 import { WikiFaqEditor } from '@/components/admin/WikiFaqEditor';
 import { prisma } from '@/lib/prisma';
 import { normalizeWikiFaqContent, WIKI_FAQ_CONFIG_SLUG } from '@/lib/wiki-faq';
@@ -17,7 +17,7 @@ export default async function WikiFaqAdminPage() {
         <div className="mx-auto max-w-7xl">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.26em] text-muted-foreground"><CircleHelp className="size-4" /> Wiki module</div>
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.26em] text-muted-foreground"><HelpCircle className="size-4" /> Wiki module</div>
                     <h2 className="mt-1 text-3xl font-semibold">FAQ</h2>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">List-first FAQ management with rich-text answers, categories, search, structured data and save-without-reload behavior.</p>
                 </div>
