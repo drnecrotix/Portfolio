@@ -102,6 +102,7 @@ model Post {
   seoDescription String?
   publishedAt    DateTime?
   scheduledAt    DateTime?
+  viewCount      Int               @default(0)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   revisions      Revision[]
@@ -169,8 +170,8 @@ model BlogCategory {
 model Page {
   id             String        @id @default(cuid())
   slug           String        @unique
-  title           String
-  status          ContentStatus @default(DRAFT)
+  title          String
+  status         ContentStatus @default(DRAFT)
   content         Json
   seoTitle        String?
   seoDescription String?

@@ -122,6 +122,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             slug={cmsPost.slug}
             postType={cmsPost.type}
             initialLikeCount={cmsPost._count.likes}
+            initialViewCount={cmsPost.viewCount}
             initiallyLiked={cmsPost.likes.length > 0}
             title={localized.title}
             excerpt={localized.excerpt}
