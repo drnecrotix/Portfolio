@@ -56,6 +56,11 @@ export default async function ApiIntegrationsPage() {
                 ? { key: 'github.username', label: 'GitHub username', envName: 'GITHUB_USERNAME', secret: false, configured: true, source: 'site', help: `Inferred from Site Settings → Social links (${siteGithubUsername}).` }
                 : { key: 'github.username', label: 'GitHub username', envName: 'GITHUB_USERNAME', secret: false, configured: false, source: 'missing', help: 'Set the username here or add a GitHub profile URL in Site Settings → Social links.' };
 
+    const githubTokenField: ApiIntegrationField = {
+        ...field('github.apiKey', 'Personal access token', 'GITHUB_TOKEN', true, 'Optional for The Lab REST fallback. CMS value overrides GITHUB_TOKEN from the environment.'),
+        required: false,
+    };
+
     const cards: ApiIntegrationCard[] = [
         {
             id: 'github',
@@ -64,10 +69,7 @@ export default async function ApiIntegrationsPage() {
             description: 'Reads your public GitHub repositories, languages, activity and repository metadata.',
             usedBy: ['The Lab - Used in real work', 'GitHub statistics', 'Language statistics', 'Recent GitHub activity'],
             docsHint: 'The Lab first tries authenticated GraphQL for richer framework detection. If GraphQL is unavailable or the token has restrictive scopes, it automatically uses the public REST repository API. A token is optional for the Lab fallback but recommended for richer data and higher rate limits.',
-            fields: [
-                githubUsernameField,
-                field('github.apiKey', 'Personal access token', 'GITHUB_TOKEN', true, 'Optional for The Lab REST fallback. CMS value overrides GITHUB_TOKEN from the environment.'),
-            ],
+            fields: [githubUsernameField, githubTokenField],
             lastTest: tests.github ?? null,
         },
         {
