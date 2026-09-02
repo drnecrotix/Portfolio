@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import Image from 'next/image';
-import { portfolioData } from '@/data/portfolio';
 import type { Experience } from '@/types';
 import type { ExperienceContent } from '@/lib/experience-content';
 import { formatDate } from '@/lib/utils';
@@ -29,23 +28,28 @@ function logoClasses(logo?: string) {
     return '';
 }
 
-export function JourneyTimeline({ content }: { content: ExperienceContent }) {
+export function JourneyTimeline({ content, entries }: { content: ExperienceContent; entries: Experience[] }) {
     const grouped = useMemo(() => {
         const groups: Record<string, Experience[]> = {};
-        const sorted = [...portfolioData.experiences].sort(
+        const sorted = [...entries].sort(
             (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
         );
 
         for (const experience of sorted) {
-            const year = new Date(experience.startDate).getFullYear().toString();
+            const parsedYear = new Date(experience.startDate).getFullYear();
+            const year = Number.isFinite(parsedYear) ? parsedYear.toString() : 'Other';
             if (!groups[year]) groups[year] = [];
             groups[year].push(experience);
         }
 
         return Object.keys(groups)
-            .sort((a, b) => Number(b) - Number(a))
+            .sort((a, b) => {
+                if (a === 'Other') return 1;
+                if (b === 'Other') return -1;
+                return Number(b) - Number(a);
+            })
             .map((year) => ({ title: year, experiences: groups[year] }));
-    }, []);
+    }, [entries]);
 
     const data = grouped.map((group) => ({
         title: group.title,
@@ -57,6 +61,10 @@ export function JourneyTimeline({ content }: { content: ExperienceContent }) {
             </div>
         ),
     }));
+
+    if (data.length === 0) {
+        return <div className="rounded-3xl border border-dashed border-border p-12 text-center text-muted-foreground">{content.emptyState}</div>;
+    }
 
     return <Timeline data={data} />;
 }
@@ -91,7 +99,7 @@ function JourneyTimelineEntry({ experience, content }: { experience: Experience;
                 </div>
                 <div className="flex flex-col gap-2 sm:items-end">
                     <span className="w-fit rounded bg-neutral-100 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-widest text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
-                        {formatDate(experience.startDate)} - {experience.endDate ? formatDate(experience.endDate) : 'Present'}
+                        {experience.startDate ? formatDate(experience.startDate) : 'Undated'} - {experience.endDate ? formatDate(experience.endDate) : experience.isOngoing ? 'Present' : 'Open'}
                     </span>
                 </div>
             </div>

@@ -17,7 +17,6 @@ import {
     Rocket,
     Sparkles,
 } from 'lucide-react';
-import { portfolioData } from '@/data/portfolio';
 import type { Education, Experience } from '@/types';
 import type { ExperienceContent, ExperienceTabId } from '@/lib/experience-content';
 import { cn, formatDate } from '@/lib/utils';
@@ -80,7 +79,7 @@ export function ExperiencePageClient({ content }: { content: ExperienceContent }
                             Collaborations & network
                         </span>
                     </div>
-                    <ExperienceMarquee />
+                    <ExperienceMarquee logos={content.partnerLogos.filter((item) => item.enabled)} />
                 </section>
             )}
 
@@ -121,6 +120,9 @@ function BackgroundDecorations() {
 }
 
 function Hero({ content }: { content: ExperienceContent }) {
+    const uniqueSkills = new Set([...content.journeyEntries, ...content.experienceEntries].flatMap((item) => item.skills)).size;
+    const currentRoles = content.journeyEntries.filter((item) => item.isOngoing).length;
+
     return (
         <section className="relative z-10 flex min-h-[76vh] items-center border-b border-border/40 px-4 py-28 sm:px-6 lg:px-8">
             <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
@@ -146,10 +148,10 @@ function Hero({ content }: { content: ExperienceContent }) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                    <Stat value={portfolioData.experiences.length} label="Experience records" />
-                    <Stat value={portfolioData.education.length} label="Education records" />
-                    <Stat value={new Set(portfolioData.experiences.flatMap((item) => item.skills)).size} label="Skills represented" />
-                    <Stat value={portfolioData.experiences.filter((item) => item.isOngoing).length} label="Current roles" />
+                    <Stat value={content.experienceEntries.length} label="Experience records" />
+                    <Stat value={content.educationEntries.length} label="Education records" />
+                    <Stat value={uniqueSkills} label="Skills represented" />
+                    <Stat value={currentRoles} label="Current roles" />
                 </div>
             </div>
         </section>
@@ -225,8 +227,9 @@ function EducationView({ content }: { content: ExperienceContent }) {
     return (
         <div>
             <div className="grid gap-5 lg:grid-cols-2">
-                {portfolioData.education.map((item) => <EducationCard key={item.id} item={item} />)}
+                {content.educationEntries.map((item) => <EducationCard key={item.id} item={item} />)}
             </div>
+            {content.educationEntries.length === 0 && <div className="rounded-3xl border border-dashed border-border p-12 text-center text-muted-foreground">{content.emptyState}</div>}
             <Highlight content={content} id="education" />
         </div>
     );
@@ -259,7 +262,7 @@ function EducationCard({ item }: { item: Education }) {
 function JourneyView({ content }: { content: ExperienceContent }) {
     return (
         <div>
-            <JourneyTimeline content={content} />
+            <JourneyTimeline content={content} entries={content.journeyEntries} />
             <Highlight content={content} id="journey" />
         </div>
     );
@@ -269,7 +272,7 @@ function ArchiveView({ content }: { content: ExperienceContent }) {
     const categories = content.categories.filter((category) => category.enabled);
     const [selected, setSelected] = useState(categories[0]?.id ?? '');
     const active = categories.find((category) => category.id === selected) ?? categories[0];
-    const items = active ? portfolioData.experiences.filter((item) => item.id.startsWith(active.prefix)) : [];
+    const items = active ? content.experienceEntries.filter((item) => item.id.startsWith(active.prefix)) : [];
 
     if (categories.length === 0) return <div className="rounded-3xl border border-border/60 p-10 text-center text-muted-foreground">{content.emptyState}</div>;
 

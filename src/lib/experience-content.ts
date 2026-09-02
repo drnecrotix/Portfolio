@@ -1,3 +1,6 @@
+import { portfolioData } from '@/data/portfolio';
+import type { Education, Experience } from '@/types';
+
 export type ExperienceTabId = 'education' | 'journey' | 'experience';
 
 export type ExperienceCategory = {
@@ -12,6 +15,14 @@ export type ExperienceHighlight = {
     title: string;
     highlight: string;
     description: string;
+    enabled: boolean;
+};
+
+export type PartnerLogo = {
+    id: string;
+    name: string;
+    src: string;
+    href?: string;
     enabled: boolean;
 };
 
@@ -52,7 +63,57 @@ export type ExperienceContent = {
     emptyState: string;
     categories: ExperienceCategory[];
     highlights: Record<ExperienceTabId, ExperienceHighlight>;
+    educationEntries: Education[];
+    journeyEntries: Experience[];
+    experienceEntries: Experience[];
+    partnerLogos: PartnerLogo[];
 };
+
+const legacyPartnerLogos: PartnerLogo[] = [
+    ['dbs', 'DBS', '/assets/DBSLogo.webp'],
+    ['hmit', 'HMIT', '/assets/HMITlogo.webp'],
+    ['humic', 'HUMIC', '/assets/HumicLogo.webp'],
+    ['mckinsey', 'McKinsey & Company', '/assets/McKinseylogo.webp'],
+    ['telkom-university', 'Telkom University', '/assets/TelkomUniversityLogo.webp'],
+    ['aiesec', 'AIESEC', '/assets/aieseclogo.webp'],
+    ['aselab', 'ASE Lab', '/assets/aselablogo.webp'],
+    ['birulangit', 'BiruLangit', '/assets/birulangitlogo.webp'],
+    ['cisometric', 'Cisometric', '/assets/cisometriclogo.webp'],
+    ['dicoding', 'Dicoding', '/assets/dicodinglogo.webp'],
+    ['dinas-pangan', 'Dinas Pangan dan Pertanian Kota Bandung', '/assets/dinas-pangan-dan-pertanian-kota-bandung.webp'],
+    ['flyrank-ai', 'FlyRank AI', '/assets/flyrankailogo.webp'],
+    ['iflab', 'Informatics Lab', '/assets/iflablogo.webp'],
+    ['idcamp', 'IDCamp', '/assets/indosat-ooredoo-hutchison-digital-camp.webp'],
+    ['bei', 'BEI', '/assets/logobei.webp'],
+    ['cps', 'Cyber Physical System Laboratory', '/assets/logocps.webp'],
+    ['digistar', 'Digistar', '/assets/logodigistar.webp'],
+    ['gdsc', 'GDSC', '/assets/logogdsc.webp'],
+    ['microsoft', 'Microsoft', '/assets/microsotlogo.webp'],
+    ['sman88', 'SMAN 88', '/assets/sman88logo.webp'],
+    ['softage', 'SoftAge', '/assets/softagelogo.webp'],
+    ['yot', 'Young On Top', '/assets/yotlogo.webp'],
+    ['youth-ranger', 'Youth Ranger Indonesia', '/assets/youth-ranger-indonesia.webp'],
+].map(([id, name, src]) => ({ id, name, src, enabled: true }));
+
+function cloneEducation(entries: Education[]) {
+    return entries.map((item) => ({
+        ...item,
+        activities: item.activities ? [...item.activities] : undefined,
+        achievements: item.achievements ? [...item.achievements] : undefined,
+    }));
+}
+
+function cloneExperiences(entries: Experience[]) {
+    return entries.map((item) => ({
+        ...item,
+        skills: [...item.skills],
+        responsibilities: item.responsibilities ? [...item.responsibilities] : undefined,
+        galleryImages: item.galleryImages ? [...item.galleryImages] : undefined,
+        externalLink: Array.isArray(item.externalLink) ? [...item.externalLink] : item.externalLink,
+        keyLearnings: item.keyLearnings ? [...item.keyLearnings] : undefined,
+        impact: item.impact ? [...item.impact] : undefined,
+    }));
+}
 
 export const defaultExperienceContent: ExperienceContent = {
     pageEnabled: true,
@@ -115,6 +176,10 @@ export const defaultExperienceContent: ExperienceContent = {
             enabled: true,
         },
     },
+    educationEntries: cloneEducation(portfolioData.education),
+    journeyEntries: cloneExperiences(portfolioData.experiences),
+    experienceEntries: cloneExperiences(portfolioData.experiences),
+    partnerLogos: legacyPartnerLogos.map((item) => ({ ...item })),
 };
 
 function bool(value: unknown, fallback: boolean) {
@@ -123,6 +188,24 @@ function bool(value: unknown, fallback: boolean) {
 
 function text(value: unknown, fallback: string, max = 600) {
     return typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : fallback;
+}
+
+function optionalText(value: unknown, max = 1200) {
+    return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function list(value: unknown, maxItems = 80, maxLength = 500) {
+    if (!Array.isArray(value)) return [] as string[];
+    return value
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => item.trim().slice(0, maxLength))
+        .filter(Boolean)
+        .slice(0, maxItems);
+}
+
+function cleanId(value: unknown, fallback: string) {
+    const raw = optionalText(value, 100).replace(/[^a-zA-Z0-9_-]/g, '');
+    return raw || fallback;
 }
 
 function normalizeCategory(value: unknown, fallback: ExperienceCategory): ExperienceCategory {
@@ -144,6 +227,102 @@ function normalizeHighlight(value: unknown, fallback: ExperienceHighlight): Expe
         description: text(source.description, fallback.description, 500),
         enabled: bool(source.enabled, fallback.enabled),
     };
+}
+
+function normalizeEducationEntry(value: unknown, index: number): Education | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const source = value as Partial<Education>;
+    const institution = optionalText(source.institution, 200);
+    const degree = optionalText(source.degree, 200);
+    if (!institution || !degree) return null;
+    const endDate = optionalText(source.endDate, 40);
+    const gpa = optionalText(source.gpa, 40);
+    const activities = list(source.activities, 60, 300);
+    const achievements = list(source.achievements, 60, 300);
+    return {
+        id: cleanId(source.id, `education-${index + 1}`),
+        institution,
+        degree,
+        major: optionalText(source.major, 200),
+        startDate: optionalText(source.startDate, 40),
+        ...(endDate ? { endDate } : {}),
+        isOngoing: Boolean(source.isOngoing),
+        ...(gpa ? { gpa } : {}),
+        ...(activities.length ? { activities } : {}),
+        ...(achievements.length ? { achievements } : {}),
+    };
+}
+
+const experienceTypes: Experience['type'][] = ['full-time', 'part-time', 'contract', 'internship', 'freelance', 'volunteer', 'apprenticeship', 'self-employed'];
+
+function normalizeExperienceEntry(value: unknown, index: number): Experience | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const source = value as Partial<Experience>;
+    const company = optionalText(source.company, 200);
+    const position = optionalText(source.position, 200);
+    if (!company || !position) return null;
+    const responsibilities = list(source.responsibilities, 80, 500);
+    const skills = list(source.skills, 100, 120);
+    const impact = list(source.impact, 80, 500);
+    const keyLearnings = list(source.keyLearnings, 80, 500);
+    const galleryImages = list(source.galleryImages, 80, 2048);
+    const rawExternal = Array.isArray(source.externalLink) ? list(source.externalLink, 20, 2048) : optionalText(source.externalLink, 2048);
+    const type = experienceTypes.includes(source.type as Experience['type']) ? source.type as Experience['type'] : 'full-time';
+    const endDate = optionalText(source.endDate, 40);
+    const location = optionalText(source.location, 240);
+    const logo = optionalText(source.logo, 2048);
+    const logoBg = optionalText(source.logoBg, 120);
+    const link = optionalText(source.link, 2048);
+    const description = optionalText(source.description, 4000);
+
+    return {
+        id: cleanId(source.id, `experience-${index + 1}`),
+        company,
+        position,
+        description,
+        ...(responsibilities.length ? { responsibilities } : {}),
+        skills,
+        startDate: optionalText(source.startDate, 40),
+        ...(endDate ? { endDate } : {}),
+        isOngoing: Boolean(source.isOngoing),
+        ...(location ? { location } : {}),
+        type,
+        ...(logo ? { logo } : {}),
+        ...(logoBg ? { logoBg } : {}),
+        ...(link ? { link } : {}),
+        ...(galleryImages.length ? { galleryImages } : {}),
+        ...(Array.isArray(rawExternal) ? (rawExternal.length ? { externalLink: rawExternal } : {}) : (rawExternal ? { externalLink: rawExternal } : {})),
+        ...(keyLearnings.length ? { keyLearnings } : {}),
+        ...(impact.length ? { impact } : {}),
+    };
+}
+
+function normalizeEducationEntries(value: unknown, fallback: Education[]) {
+    if (!Array.isArray(value)) return cloneEducation(fallback);
+    return value.map(normalizeEducationEntry).filter((item): item is Education => Boolean(item));
+}
+
+function normalizeExperienceEntries(value: unknown, fallback: Experience[]) {
+    if (!Array.isArray(value)) return cloneExperiences(fallback);
+    return value.map(normalizeExperienceEntry).filter((item): item is Experience => Boolean(item));
+}
+
+function normalizePartnerLogos(value: unknown, fallback: PartnerLogo[]) {
+    if (!Array.isArray(value)) return fallback.map((item) => ({ ...item }));
+    return value.flatMap((entry, index) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+        const source = entry as Partial<PartnerLogo>;
+        const src = optionalText(source.src, 2048);
+        if (!src) return [];
+        const href = optionalText(source.href, 2048);
+        return [{
+            id: cleanId(source.id, `partner-${index + 1}`),
+            name: optionalText(source.name, 180) || `Partner ${index + 1}`,
+            src,
+            ...(href ? { href } : {}),
+            enabled: typeof source.enabled === 'boolean' ? source.enabled : true,
+        }];
+    });
 }
 
 export function normalizeExperienceContent(value: unknown): ExperienceContent {
@@ -198,5 +377,9 @@ export function normalizeExperienceContent(value: unknown): ExperienceContent {
             journey: normalizeHighlight(source.highlights?.journey, defaultExperienceContent.highlights.journey),
             experience: normalizeHighlight(source.highlights?.experience, defaultExperienceContent.highlights.experience),
         },
+        educationEntries: normalizeEducationEntries(source.educationEntries, defaultExperienceContent.educationEntries),
+        journeyEntries: normalizeExperienceEntries(source.journeyEntries, defaultExperienceContent.journeyEntries),
+        experienceEntries: normalizeExperienceEntries(source.experienceEntries, defaultExperienceContent.experienceEntries),
+        partnerLogos: normalizePartnerLogos(source.partnerLogos, defaultExperienceContent.partnerLogos),
     };
 }
