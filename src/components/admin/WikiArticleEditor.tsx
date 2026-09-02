@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CircleHelp, Plus, Trash2 } from 'lucide-react';
+import { HelpCircle, Plus, Trash2 } from 'lucide-react';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { WikiRichEditor } from '@/components/admin/WikiRichEditor';
 import { WIKI_CATEGORIES, wikiCategoryLabel, type WikiArticleContent, type WikiFact, type WikiFaqItem } from '@/lib/wiki-articles';
@@ -52,7 +52,7 @@ export function WikiArticleEditor({
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div className="space-y-4">
-                {!articleId ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/20 bg-sky-500/[0.045] px-4 py-3 text-xs text-muted-foreground"><div className="flex items-center gap-2"><CircleHelp className="size-4 text-sky-500" /><span>Creating questions? FAQ now has a dedicated editor, search, categories and structured data.</span></div><Link href="/admin/wiki/faq" className="font-semibold text-sky-500">Open FAQ manager →</Link></div> : null}
+                {!articleId ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/20 bg-sky-500/[0.045] px-4 py-3 text-xs text-muted-foreground"><div className="flex items-center gap-2"><HelpCircle className="size-4 text-sky-500" /><span>Creating questions? FAQ now has a dedicated editor, search, categories and structured data.</span></div><Link href="/admin/wiki/faq" className="font-semibold text-sky-500">Open FAQ manager →</Link></div> : null}
 
                 <section className={block}>
                     <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
