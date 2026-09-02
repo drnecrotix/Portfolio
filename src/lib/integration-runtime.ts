@@ -4,11 +4,27 @@ import { prisma } from '@/lib/prisma';
 import { getStoredAssistantApiKeys } from '@/lib/assistant-credentials';
 import { getStoredIntegrationValues } from '@/lib/integration-credentials';
 
+function record(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function githubUsernameFromUrl(value: unknown) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    try {
+        const url = new URL(raw);
+        if (!/(^|\.)github\.com$/i.test(url.hostname)) return '';
+        return url.pathname.split('/').filter(Boolean)[0] ?? '';
+    } catch {
+        return '';
+    }
+}
+
 async function loadSettings() {
     try {
         return await prisma.siteSettings.findUnique({
             where: { id: 'default' },
-            select: { integrationSettings: true, assistantSettings: true },
+            select: { integrationSettings: true, assistantSettings: true, socialLinks: true },
         });
     } catch {
         return null;
@@ -26,6 +42,18 @@ export async function getRuntimeIntegrationValue(field: string, envName: string,
     }
 
     return String(process.env[envName] ?? '').trim();
+}
+
+export async function getRuntimeGithubConfig() {
+    const settings = await loadSettings();
+    const stored = getStoredIntegrationValues(settings?.integrationSettings);
+    const socialLinks = record(settings?.socialLinks);
+    const token = stored['github.apiKey'] || String(process.env.GITHUB_TOKEN ?? '').trim();
+    const username = stored['github.username']
+        || String(process.env.GITHUB_USERNAME ?? '').trim()
+        || githubUsernameFromUrl(socialLinks.github);
+
+    return { token, username };
 }
 
 export async function getRuntimeAiApiKeys() {
