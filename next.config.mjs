@@ -15,7 +15,7 @@ const contentSecurityPolicy = [
     "style-src 'self' 'unsafe-inline' https:",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https:",
-    "media-src 'self' blob: https:",
+    "media-src 'self' data: blob: https:",
     "connect-src 'self' https: wss:",
     "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://assets.pinterest.com https://www.dailymotion.com",
     'upgrade-insecure-requests',
