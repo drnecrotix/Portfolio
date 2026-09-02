@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
+import { getRuntimeIntegrationValue } from '@/lib/integration-runtime';
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const cacheHeaders = { 'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=300' };
 
 export async function GET() {
-  if (!GITHUB_TOKEN) {
+  const githubToken = await getRuntimeIntegrationValue('github.apiKey', 'GITHUB_TOKEN');
+  if (!githubToken) {
     return NextResponse.json({ error: 'GitHub metrics are unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 
@@ -32,7 +33,7 @@ export async function GET() {
     const res = await fetch('https://api.github.com/graphql', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${githubToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ query }),
@@ -72,7 +73,7 @@ export async function GET() {
     if (username) {
       try {
         const eventsRes = await fetch(`https://api.github.com/users/${encodeURIComponent(username)}/events?per_page=20`, {
-          headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' },
+          headers: { Authorization: `Bearer ${githubToken}`, Accept: 'application/vnd.github+json' },
           signal: AbortSignal.timeout(8000),
         });
         if (eventsRes.ok) {
