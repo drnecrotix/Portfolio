@@ -25,13 +25,19 @@ type Props = {
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif';
 const VIDEO_ACCEPT = 'video/mp4,video/webm,video/ogg,video/quicktime,video/x-m4v,.mp4,.webm,.ogg,.ogv,.mov,.m4v';
 const ZIP_ACCEPT = 'application/zip,application/x-zip-compressed,.zip';
+const PDF_ACCEPT = 'application/pdf,.pdf';
+const FILE_ACCEPT = `${PDF_ACCEPT},${ZIP_ACCEPT}`;
 const MEDIA_LIBRARY_EVENT = 'portfolio:media-library-updated';
 
 function acceptsForKind(kind: MediaKind) {
     if (kind === 'image') return IMAGE_ACCEPT;
     if (kind === 'video') return VIDEO_ACCEPT;
-    if (kind === 'file') return ZIP_ACCEPT;
-    return `${IMAGE_ACCEPT},${VIDEO_ACCEPT},${ZIP_ACCEPT}`;
+    if (kind === 'file') return FILE_ACCEPT;
+    return `${IMAGE_ACCEPT},${VIDEO_ACCEPT},${FILE_ACCEPT}`;
+}
+
+function fileBadge(fileName: string, mimeType = '') {
+    return mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'FILE';
 }
 
 export function MediaPicker({ value = '', onChange, inputName, label = 'Media', initialKind = 'all', lockKind = false }: Props) {
@@ -142,11 +148,11 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
             {inputName && <input type="hidden" name={inputName} value={selected} />}
             {selected && (
                 <div className="flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                    {activeKind === 'video' ? (
-                        <div className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-[10px] font-medium uppercase tracking-wider text-white/40">Video</div>
-                    ) : (
+                    {activeKind === 'image' ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={selected} alt="Selected media preview" className="h-14 w-20 shrink-0 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                    ) : (
+                        <div className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-[10px] font-medium uppercase tracking-wider text-white/40">{activeKind === 'video' ? 'VIDEO' : fileBadge(selected)}</div>
                     )}
                     <span className="min-w-0 flex-1 truncate text-xs text-white/60" title={selected}>{selected}</span>
                 </div>
@@ -161,7 +167,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                     {tab === 'upload' ? (
                         <div className="min-w-0 py-4">
                             <input ref={fileInputRef} type="file" accept={acceptsForKind(activeKind)} disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file); }} className="block w-full min-w-0 cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30" />
-                            <p className="mt-3 text-[11px] leading-relaxed text-white/30">Allowed: images, videos and ZIP archives. Maximum file size: 10 MB.</p>
+                            <p className="mt-3 text-[11px] leading-relaxed text-white/30">Allowed: images, videos, PDF documents and ZIP archives. Maximum file size: 10 MB.</p>
                             {uploading && <p className="mt-3 break-words text-xs text-sky-300">Uploading and adding to library…</p>}
                             {uploadError && <p className="mt-3 max-w-full break-words text-xs text-red-300">{uploadError}</p>}
                         </div>
@@ -173,7 +179,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                     <div className="flex flex-wrap gap-2">
                                         {(['all', 'image', 'video', 'file'] as const).map((mediaKind) => (
                                             <button key={mediaKind} type="button" onClick={() => setKind(mediaKind)} className={`rounded-lg border px-3 py-2 text-xs capitalize ${activeKind === mediaKind ? 'border-white/40 bg-white text-black' : 'border-white/10 text-white/55 hover:bg-white/[0.05]'}`}>
-                                                {mediaKind === 'file' ? 'zip' : mediaKind}
+                                                {mediaKind === 'file' ? 'files' : mediaKind}
                                             </button>
                                         ))}
                                     </div>
@@ -187,7 +193,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={asset.url} alt={asset.altText || asset.fileName} className="aspect-video w-full object-cover" />
                                         ) : (
-                                            <div className="flex aspect-video items-center justify-center text-xs text-white/35">{asset.mimeType.startsWith('video/') ? 'VIDEO' : 'ZIP'}</div>
+                                            <div className="flex aspect-video items-center justify-center text-xs text-white/35">{asset.mimeType.startsWith('video/') ? 'VIDEO' : fileBadge(asset.fileName, asset.mimeType)}</div>
                                         )}
                                         <div className="truncate px-3 pt-2 text-xs text-white/70" title={asset.fileName}>{asset.fileName}</div>
                                         <div className="truncate px-3 pb-2 pt-1 font-mono text-[10px] text-white/30">{asset.mimeType}</div>
