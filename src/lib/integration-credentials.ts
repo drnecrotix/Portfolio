@@ -121,6 +121,13 @@ export function withIntegrationTest(existing: unknown, id: string, test: Integra
     };
 }
 
+export function withoutIntegrationTest(existing: unknown, id: string) {
+    const raw = record(existing);
+    const tests = { ...record(raw.tests) };
+    delete tests[id];
+    return { ...raw, version: ENVELOPE_VERSION, tests };
+}
+
 export function toIntegrationSettingsJson(value: unknown): Prisma.InputJsonValue {
     return JSON.parse(JSON.stringify(value ?? { version: ENVELOPE_VERSION, values: {}, tests: {} })) as Prisma.InputJsonValue;
 }
