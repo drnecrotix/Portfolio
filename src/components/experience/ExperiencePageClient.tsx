@@ -22,6 +22,7 @@ import type { Education, Experience } from '@/types';
 import type { ExperienceContent, ExperienceTabId } from '@/lib/experience-content';
 import { cn, formatDate } from '@/lib/utils';
 import ExperienceMarquee from '@/components/sections/ExperienceMarquee';
+import { JourneyTimeline } from '@/components/experience/JourneyTimeline';
 
 const icons: Record<ExperienceTabId, typeof GraduationCap> = {
     education: GraduationCap,
@@ -228,19 +229,9 @@ function EducationCard({ item }: { item: Education }) {
 }
 
 function JourneyView({ content }: { content: ExperienceContent }) {
-    const sorted = useMemo(() => [...portfolioData.experiences].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()), []);
     return (
         <div>
-            <div className="relative space-y-5 before:absolute before:bottom-6 before:left-[23px] before:top-6 before:w-px before:bg-border md:before:left-[31px]">
-                {sorted.map((item, index) => (
-                    <div key={item.id} className="relative grid grid-cols-[48px_1fr] gap-4 md:grid-cols-[64px_1fr] md:gap-6">
-                        <div className="relative z-10 flex size-12 items-center justify-center rounded-2xl border border-border bg-background md:size-16">
-                            <span className="text-xs font-black text-muted-foreground">{String(index + 1).padStart(2, '0')}</span>
-                        </div>
-                        <ExperienceCard item={item} content={content} />
-                    </div>
-                ))}
-            </div>
+            <JourneyTimeline content={content} />
             <Highlight content={content} id="journey" />
         </div>
     );
