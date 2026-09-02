@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BookOpen, CircleHelp, LibraryBig, Search, Star } from 'lucide-react';
+import { BookOpen, HelpCircle, LibraryBig, Search, Star } from 'lucide-react';
 import type { WikiFaqContent } from '@/lib/wiki-faq';
 
 function plain(value: string) {
@@ -31,11 +31,11 @@ export function WikiFaqPage({ content }: { content: WikiFaqContent }) {
             <header className="mx-auto max-w-6xl px-5 sm:px-8">
                 <div className="border-b border-foreground/10 pb-10 sm:pb-12">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground"><CircleHelp className="size-4 text-sky-400" /> {content.eyebrow}</div>
+                        <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground"><HelpCircle className="size-4 text-sky-400" /> {content.eyebrow}</div>
                         <div className="grid grid-cols-3 gap-2 sm:flex">
                             <Link href="/wiki" className={`${navBase} border-foreground/10 bg-foreground/[0.025] text-muted-foreground hover:border-sky-400/25 hover:bg-sky-500/[0.06] hover:text-foreground`}><BookOpen className="size-3.5" /> <span className="hidden sm:inline">Main article</span><span className="sm:hidden">Main</span></Link>
                             <Link href="/wiki/articles" className={`${navBase} border-foreground/10 bg-foreground/[0.025] text-muted-foreground hover:border-sky-400/25 hover:bg-sky-500/[0.06] hover:text-foreground`}><LibraryBig className="size-3.5" /> <span className="hidden sm:inline">All articles</span><span className="sm:hidden">Articles</span></Link>
-                            <Link href="/wiki/faq" aria-current="page" className={`${navBase} border-sky-400/35 bg-sky-500/[0.1] text-sky-500 dark:text-sky-300`}><CircleHelp className="size-3.5" /> FAQ</Link>
+                            <Link href="/wiki/faq" aria-current="page" className={`${navBase} border-sky-400/35 bg-sky-500/[0.1] text-sky-500 dark:text-sky-300`}><HelpCircle className="size-3.5" /> FAQ</Link>
                         </div>
                     </div>
                     <h1 className="mt-7 max-w-4xl text-4xl font-black tracking-[-0.05em] sm:text-6xl lg:text-7xl">{content.title}</h1>
@@ -68,7 +68,7 @@ export function WikiFaqPage({ content }: { content: WikiFaqContent }) {
                             </details>
                         ))}
                     </div>
-                    {!filtered.length ? <div className="py-16 text-center"><CircleHelp className="mx-auto size-8 text-muted-foreground/35" /><p className="mt-3 text-sm font-bold">No matching questions</p><p className="mt-1 text-xs text-muted-foreground">Try another search term or category.</p></div> : null}
+                    {!filtered.length ? <div className="py-16 text-center"><HelpCircle className="mx-auto size-8 text-muted-foreground/35" /><p className="mt-3 text-sm font-bold">No matching questions</p><p className="mt-1 text-xs text-muted-foreground">Try another search term or category.</p></div> : null}
                 </section>
             </div>
         </main>
