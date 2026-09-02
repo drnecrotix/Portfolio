@@ -36,7 +36,7 @@ export async function GET() {
             prisma.page.findUnique({ where: { slug: '__experience-config' }, select: { title: true } }).catch(() => null),
         ]);
         const pageName = journeyPage?.title && journeyPage.title !== LEGACY_PAGE_TITLE ? journeyPage.title : 'Journey';
-        const normalized = items.map((item): PublicNavigationItem | null => {
+        const normalized = items.map((item): PublicNavigationItem => {
             const base: PublicNavigationItem = {
                 id: item.id,
                 label: item.label,
@@ -50,16 +50,13 @@ export async function GET() {
                 parentId: item.parentId,
             };
 
-            // v1.1.82 briefly created Wiki automatically at sort order 25. Hide that legacy
-            // signature so v1.1.83 can be fully manual. A manually added Wiki link with a
-            // user-chosen position/order remains untouched.
-            if (base.href === '/wiki' && base.label === 'Wiki' && base.sortOrder === 25) return null;
-
+            // Public navigation must honor the CMS record exactly. Wiki links are managed
+            // manually in Navigation, so no label/path/order heuristic may suppress them.
             const journeyItem = item.id === 'experience' || item.href === '/experience' || item.href === '/journey';
             if (journeyItem) return { ...base, label: pageName, href: '/journey' };
             const labItem = item.id === 'skills' || item.id === 'lab' || item.href === '/skills' || item.href === '/lab';
             return labItem ? { ...base, label: item.label === 'Skills' ? 'Lab' : item.label, href: '/lab' } : base;
-        }).filter((item): item is PublicNavigationItem => Boolean(item));
+        });
 
         return NextResponse.json(normalized.length ? normalized : fallback.map((item) => item.id === 'experience' ? { ...item, label: pageName } : item), {
             headers: { 'Cache-Control': 'no-store, max-age=0' },
