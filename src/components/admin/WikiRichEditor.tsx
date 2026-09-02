@@ -38,9 +38,8 @@ export function WikiRichEditor({
     });
 
     useEffect(() => {
-        if (!editor) return;
-        if (editor.getHTML() !== initialValue) editor.commands.setContent(initialValue || '<p></p>');
-        setHtml(initialValue);
+        if (!editor || editor.getHTML() === initialValue) return;
+        editor.commands.setContent(initialValue || '<p></p>');
     }, [editor, initialValue]);
 
     const setLink = () => {
