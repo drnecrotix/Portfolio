@@ -1,61 +1,68 @@
-'use client';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Download, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import { usePerformance } from '@/hooks/usePerformance';
-import { PdfViewer } from '@/components/ui/pdf-viewer';
+import type { Metadata } from 'next';
+import { CareerDossierPage } from '@/components/resume/CareerDossierPage';
+import { prisma } from '@/lib/prisma';
+import { normalizeExperienceContent } from '@/lib/experience-content';
+import { entryIsPublic, normalizeJourneyEntryState } from '@/lib/journey-entry-state';
+import { normalizeHomepageContent } from '@/lib/homepage-content';
+import { buildPublicIdentity } from '@/lib/public-identity';
+import { normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
 
-export default function ResumePage() {
-    const { isLowPowerMode } = usePerformance();
-    // File ID: 1mfYs2MOHpwEFLe-Ld4OCcgS1Lbo6wW7O
-    const fileId = "1mfYs2MOHpwEFLe-Ld4OCcgS1Lbo6wW7O";
-    const resumeUrl = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+const EXPERIENCE_CONFIG_SLUG = '__experience-config';
+const ENTRY_STATE_SLUG = '__journey-entry-state';
 
-    // Standard preview URL with sharing context
-    const previewUrl = `https://drive.google.com/file/d/${fileId}/preview?usp=sharing`;
+export const revalidate = 60;
+
+export const metadata: Metadata = {
+    title: 'Career Dossier | Resume',
+    description: 'A live professional dossier covering selected experience, education, capabilities and the downloadable CV.',
+    alternates: { canonical: '/resume' },
+    robots: { index: true, follow: true },
+    openGraph: {
+        title: 'Career Dossier | Resume',
+        description: 'Selected professional experience, education and capabilities in a live portfolio-native format.',
+        url: '/resume',
+        type: 'profile',
+    },
+};
+
+export default async function ResumePage() {
+    const [configPage, entryStatePage, settings, wikiPage] = await Promise.all([
+        prisma.page.findUnique({ where: { slug: EXPERIENCE_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
+        prisma.page.findUnique({ where: { slug: ENTRY_STATE_SLUG }, select: { content: true } }).catch(() => null),
+        prisma.siteSettings.findUnique({ where: { id: 'default' } }).catch(() => null),
+        prisma.page.findUnique({ where: { slug: PERSONAL_WIKI_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
+    ]);
+
+    const content = normalizeExperienceContent(configPage?.content);
+    const entryState = normalizeJourneyEntryState(entryStatePage?.content);
+    const experience = {
+        ...content,
+        educationEntries: content.educationEntries.filter((item) => entryIsPublic(entryState, 'education', item.id)),
+        journeyEntries: content.journeyEntries.filter((item) => entryIsPublic(entryState, 'journey', item.id)),
+        experienceEntries: content.experienceEntries.filter((item) => entryIsPublic(entryState, 'experience', item.id)),
+    };
+    const homepage = normalizeHomepageContent(settings?.homepageContent);
+    const identity = buildPublicIdentity(settings, homepage.profileImage);
+    const wiki = normalizePersonalWikiContent(wikiPage?.content);
+
+    const personSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'ProfilePage',
+        name: `${wiki.title || identity.name} - Career Dossier`,
+        url: '/resume',
+        mainEntity: {
+            '@type': 'Person',
+            name: wiki.title || identity.name,
+            alternateName: wiki.aliases,
+            image: wiki.portrait || identity.avatar || undefined,
+            sameAs: [identity.githubUrl, identity.linkedinUrl, identity.instagramUrl].filter(Boolean),
+        },
+    };
 
     return (
-        <div className="h-screen bg-background relative flex flex-col pt-24 pb-4 overflow-hidden">
-
-            {/* Header / Controls */}
-            <motion.div
-                initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="container-creative px-6 mb-4 flex-none flex flex-col md:flex-row justify-between items-center gap-4"
-            >
-                <Link
-                    href="/"
-                    className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
-                >
-                    <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                    <span>Back to Portfolio</span>
-                </Link>
-
-                <div className="flex items-center gap-4">
-                    <a
-                        href={resumeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-all active:scale-95 shadow-sm"
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                        <span>Open in New Tab</span>
-                    </a>
-                </div>
-            </motion.div>
-
-            {/* Resume Viewer */}
-            <motion.div
-                initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="flex-1 w-full max-w-[1400px] mx-auto px-4 md:px-6 min-h-0 pb-4 relative"
-            >
-                <div className="w-full h-full bg-muted/30 rounded-2xl border border-border/50 overflow-hidden relative group">
-                    <PdfViewer url="/resume.pdf" />
-                </div>
-            </motion.div>
-        </div>
+        <>
+            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }} />
+            <CareerDossierPage identity={identity} wiki={wiki} experience={experience} />
+        </>
     );
 }
