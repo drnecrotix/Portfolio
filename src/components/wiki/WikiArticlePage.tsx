@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, CircleHelp, Clock3, Hash, LibraryBig } from 'lucide-react';
+import { BookOpen, HelpCircle, Clock3, Hash, LibraryBig } from 'lucide-react';
 import type { PublicIdentity } from '@/lib/public-identity';
 import { prepareWikiArticleHtml, type WikiArticleContent, wikiCategoryLabel } from '@/lib/wiki-articles';
 
@@ -46,7 +46,7 @@ export function WikiArticlePage({
                         <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground"><BookOpen className="size-3.5" /> Necrotix Wiki · {wikiCategoryLabel(content.category)}</div>
                         <div className="flex flex-wrap items-center gap-2">
                             <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-[10px] font-semibold text-sky-700 transition hover:border-sky-500/45 hover:bg-sky-500/15 dark:text-sky-300"><LibraryBig className="size-3.5" /> All articles</Link>
-                            <Link href="/wiki/faq" className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/[0.035] px-3.5 py-2 text-[10px] font-semibold text-foreground/75 transition hover:border-sky-500/30 hover:bg-sky-500/[0.08] hover:text-sky-700 dark:hover:text-sky-300"><CircleHelp className="size-3.5" /> FAQ</Link>
+                            <Link href="/wiki/faq" className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/[0.035] px-3.5 py-2 text-[10px] font-semibold text-foreground/75 transition hover:border-sky-500/30 hover:bg-sky-500/[0.08] hover:text-sky-700 dark:hover:text-sky-300"><HelpCircle className="size-3.5" /> FAQ</Link>
                             <span className="inline-flex items-center gap-2 rounded-full border border-foreground/10 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground"><Clock3 className="size-3.5" /> {updatedLabel}</span>
                         </div>
                     </div>
@@ -62,7 +62,7 @@ export function WikiArticlePage({
                             <p className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Wiki</p>
                             <Link href="/wiki" className="flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-xs font-medium text-foreground/70 transition hover:border-foreground/10 hover:bg-foreground/[0.04] hover:text-foreground"><BookOpen className="size-3.5" /> Main article</Link>
                             <Link href="/wiki/articles" className="flex items-center gap-2 rounded-lg border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-xs font-semibold text-sky-700 dark:text-sky-300"><LibraryBig className="size-3.5" /> All articles</Link>
-                            <Link href="/wiki/faq" className="flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-xs font-medium text-foreground/70 transition hover:border-foreground/10 hover:bg-foreground/[0.04] hover:text-foreground"><CircleHelp className="size-3.5" /> FAQ</Link>
+                            <Link href="/wiki/faq" className="flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-xs font-medium text-foreground/70 transition hover:border-foreground/10 hover:bg-foreground/[0.04] hover:text-foreground"><HelpCircle className="size-3.5" /> FAQ</Link>
                         </nav>
                         {prepared.headings.length ? (
                             <nav className="border-l border-foreground/10 pl-4">
@@ -77,7 +77,7 @@ export function WikiArticlePage({
                     <div className="mb-6 grid grid-cols-3 gap-2 lg:hidden">
                         <Link href="/wiki" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><BookOpen className="size-4" /><span className="hidden min-[390px]:inline">Main</span></Link>
                         <Link href="/wiki/articles" className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs font-semibold text-sky-700 dark:text-sky-300"><LibraryBig className="size-4" /><span className="hidden min-[390px]:inline">Articles</span></Link>
-                        <Link href="/wiki/faq" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><CircleHelp className="size-4" /> FAQ</Link>
+                        <Link href="/wiki/faq" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><HelpCircle className="size-4" /> FAQ</Link>
                     </div>
                     {prepared.headings.length ? (
                         <details className="mb-7 rounded-xl border border-foreground/10 p-4 lg:hidden">
