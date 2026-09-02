@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getRuntimeIntegrationValue } from '@/lib/integration-runtime';
 
 const cacheHeaders = {
     'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=300',
@@ -12,7 +13,7 @@ function unavailable() {
 }
 
 export async function GET() {
-    const apiKey = process.env.WAKATIME_API_KEY;
+    const apiKey = await getRuntimeIntegrationValue('wakatime.apiKey', 'WAKATIME_API_KEY');
     if (!apiKey) return unavailable();
 
     const headers = { Authorization: `Basic ${Buffer.from(apiKey).toString('base64')}` };
