@@ -16,6 +16,7 @@ export type ApiIntegrationField = {
     envName: string;
     secret: boolean;
     configured: boolean;
+    required?: boolean;
     source: 'cms' | 'assistant' | 'environment' | 'site' | 'missing';
     help?: string;
 };
@@ -46,10 +47,14 @@ function sourceLabel(source: ApiIntegrationField['source']) {
     return 'Not configured';
 }
 
+function requiredFieldsReady(card: ApiIntegrationCard) {
+    return card.fields.filter((field) => field.required !== false).every((field) => field.configured);
+}
+
 function testStatus(card: ApiIntegrationCard, result?: ApiActionResult) {
     const test = result?.testedAt ? result : card.lastTest;
     if (test) return test.ok ? 'connected' : 'error';
-    return card.fields.every((field) => field.configured) ? 'configured' : 'missing';
+    return requiredFieldsReady(card) ? 'configured' : 'missing';
 }
 
 function StatusBadge({ status }: { status: ReturnType<typeof testStatus> }) {
@@ -125,7 +130,9 @@ function IntegrationCard({ card, testResult, onTestResult, onToast }: {
                     return (
                         <div key={field.key}>
                             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                                <label htmlFor={`${card.id}-${field.key}`} className="text-xs font-semibold">{field.label}</label>
+                                <label htmlFor={`${card.id}-${field.key}`} className="text-xs font-semibold">
+                                    {field.label}{field.required === false ? <span className="ml-1 text-[10px] font-normal text-muted-foreground">optional</span> : null}
+                                </label>
                                 <span className="text-[10px] text-muted-foreground">Source: {sourceLabel(field.source)}</span>
                             </div>
                             <input
@@ -183,7 +190,7 @@ export function ApiIntegrationsManager({ cards }: { cards: ApiIntegrationCard[] 
     const [results, setResults] = useState<Partial<Record<ApiIntegrationId, ApiActionResult>>>({});
     const [toast, setToast] = useState<Toast>(null);
     const [testingAll, startTestingAll] = useTransition();
-    const configuredCount = useMemo(() => cards.filter((card) => card.fields.every((field) => field.configured)).length, [cards]);
+    const configuredCount = useMemo(() => cards.filter(requiredFieldsReady).length, [cards]);
 
     const setTestResult = (id: ApiIntegrationId, result: ApiActionResult) => {
         setResults((current) => ({ ...current, [id]: result }));
