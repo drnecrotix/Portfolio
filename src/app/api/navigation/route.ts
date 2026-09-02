@@ -7,7 +7,7 @@ const fallback = [
     { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: null },
     { id: 'about', label: 'About', href: '#', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: true, dropdownStyle: 'auto', parentId: null },
     { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
-    { id: 'skills', label: 'Skills', href: '/skills', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
+    { id: 'lab', label: 'Lab', href: '/lab', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'experience', label: 'Journey', href: '/journey', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'blog', label: 'Blog', href: '/blog', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
@@ -28,7 +28,9 @@ export async function GET() {
         const pageName = journeyPage?.title && journeyPage.title !== LEGACY_PAGE_TITLE ? journeyPage.title : 'Journey';
         const normalized = items.map((item) => {
             const journeyItem = item.id === 'experience' || item.href === '/experience' || item.href === '/journey';
-            return journeyItem ? { ...item, label: pageName, href: '/journey' } : item;
+            if (journeyItem) return { ...item, label: pageName, href: '/journey' };
+            const labItem = item.id === 'skills' || item.id === 'lab' || item.href === '/skills' || item.href === '/lab';
+            return labItem ? { ...item, label: item.label === 'Skills' ? 'Lab' : item.label, href: '/lab' } : item;
         });
         return NextResponse.json(normalized.length ? normalized : fallback.map((item) => item.id === 'experience' ? { ...item, label: pageName } : item), {
             headers: { 'Cache-Control': 'no-store, max-age=0' },

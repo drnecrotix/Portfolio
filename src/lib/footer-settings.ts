@@ -61,7 +61,7 @@ export const defaultFooterSettings: FooterSettings = {
     aboutLabel: 'About',
     aboutLinks: [
         { label: 'Achievements', href: '/achievements' },
-        { label: 'Skills', href: '/skills' },
+        { label: 'Lab', href: '/lab' },
         { label: 'Journey', href: '/journey' },
         { label: 'Projects', href: '/projects' },
         { label: 'Blog', href: '/blog' },
@@ -90,12 +90,14 @@ function links(value: unknown, fallback: FooterLinkSetting[], maxItems: number) 
     return normalized.length ? normalized : fallback;
 }
 
-function normalizeJourneyLink(item: FooterLinkSetting): FooterLinkSetting {
-    if (item.href !== '/experience') return item;
-    return {
-        label: /^experience$/i.test(item.label) ? 'Journey' : item.label,
-        href: '/journey',
-    };
+function normalizeInternalLink(item: FooterLinkSetting): FooterLinkSetting {
+    if (item.href === '/experience') {
+        return { label: /^experience$/i.test(item.label) ? 'Journey' : item.label, href: '/journey' };
+    }
+    if (item.href === '/skills') {
+        return { label: /^skills$/i.test(item.label) ? 'Lab' : item.label, href: '/lab' };
+    }
+    return item;
 }
 
 export function normalizeFooterSettings(value: unknown): FooterSettings {
@@ -123,8 +125,8 @@ export function normalizeFooterSettings(value: unknown): FooterSettings {
         instagramUrl: typeof source.instagramUrl === 'string' ? source.instagramUrl.trim().slice(0, 2048) : defaultFooterSettings.instagramUrl,
         workspaceUrl: text(source.workspaceUrl, defaultFooterSettings.workspaceUrl, 2048),
         marquee: marquee.length ? marquee : defaultFooterSettings.marquee,
-        quickLinks: links(source.quickLinks, defaultFooterSettings.quickLinks, 6),
+        quickLinks: links(source.quickLinks, defaultFooterSettings.quickLinks, 6).map(normalizeInternalLink),
         aboutLabel: text(source.aboutLabel, defaultFooterSettings.aboutLabel, 80),
-        aboutLinks: links(source.aboutLinks, defaultFooterSettings.aboutLinks, 8).map(normalizeJourneyLink),
+        aboutLinks: links(source.aboutLinks, defaultFooterSettings.aboutLinks, 8).map(normalizeInternalLink),
     };
 }

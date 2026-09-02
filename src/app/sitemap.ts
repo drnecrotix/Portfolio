@@ -23,6 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...(seo.sitemapIncludeProjects ? [{ url: `${baseUrl}/projects`, changeFrequency: 'weekly' as const, priority: 0.9 }] : []),
         { url: `${baseUrl}/gallery`, changeFrequency: 'weekly', priority: 0.7 },
         { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
+        { url: `${baseUrl}/lab`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
         { url: `${baseUrl}/resume`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/contact`, changeFrequency: 'monthly', priority: 0.5 },
