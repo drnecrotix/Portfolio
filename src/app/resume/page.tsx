@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { CareerDossierPage } from '@/components/resume/CareerDossierPage';
 import { prisma } from '@/lib/prisma';
 import { normalizeExperienceContent } from '@/lib/experience-content';
@@ -6,6 +7,7 @@ import { entryIsPublic, normalizeJourneyEntryState } from '@/lib/journey-entry-s
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { buildPublicIdentity } from '@/lib/public-identity';
 import { normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
+import { normalizeResumeSettings, RESUME_CONFIG_SLUG } from '@/lib/resume-settings';
 
 const EXPERIENCE_CONFIG_SLUG = '__experience-config';
 const ENTRY_STATE_SLUG = '__journey-entry-state';
@@ -26,12 +28,16 @@ export const metadata: Metadata = {
 };
 
 export default async function ResumePage() {
-    const [configPage, entryStatePage, settings, wikiPage] = await Promise.all([
+    const [configPage, entryStatePage, settings, wikiPage, resumePage] = await Promise.all([
         prisma.page.findUnique({ where: { slug: EXPERIENCE_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
         prisma.page.findUnique({ where: { slug: ENTRY_STATE_SLUG }, select: { content: true } }).catch(() => null),
         prisma.siteSettings.findUnique({ where: { id: 'default' } }).catch(() => null),
         prisma.page.findUnique({ where: { slug: PERSONAL_WIKI_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
+        prisma.page.findUnique({ where: { slug: RESUME_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
     ]);
+
+    const resume = normalizeResumeSettings(resumePage?.content);
+    if (!resume.enabled) notFound();
 
     const content = normalizeExperienceContent(configPage?.content);
     const entryState = normalizeJourneyEntryState(entryStatePage?.content);
@@ -62,7 +68,7 @@ export default async function ResumePage() {
     return (
         <>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }} />
-            <CareerDossierPage identity={identity} wiki={wiki} experience={experience} />
+            <CareerDossierPage identity={identity} wiki={wiki} experience={experience} resume={resume} />
         </>
     );
 }
