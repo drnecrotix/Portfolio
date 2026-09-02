@@ -33,6 +33,7 @@ const navGroups = [
     ]],
     ['Tools', [
         ['AI Assistant', '/admin/assistant'],
+        ['API Integrations', '/admin/api-integrations'],
     ]],
     ['Administration', [
         ['Users', '/admin/users'],
