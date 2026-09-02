@@ -54,7 +54,9 @@ export function ExperiencePageClient({ content }: { content: ExperienceContent }
                     <Sparkles className="mx-auto mb-5 size-8 text-muted-foreground" />
                     <h1 className="text-3xl font-semibold">Experience is currently unavailable</h1>
                     <p className="mt-3 text-muted-foreground">This page has been temporarily disabled.</p>
-                    <Link href="/" className="mt-8 inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium">Back home <ArrowRight className="size-4" /></Link>
+                    <Link href="/" className="mt-8 inline-flex items-center gap-2 rounded-full border border-border px-5 py-3 text-sm font-medium">
+                        Back home <ArrowRight className="size-4" />
+                    </Link>
                 </div>
             </main>
         );
@@ -66,16 +68,24 @@ export function ExperiencePageClient({ content }: { content: ExperienceContent }
             {content.showHero && <Hero content={content} />}
 
             {content.showMarquee && (
-                <section className="relative z-10 border-y border-border/40 py-12 md:py-16">
-                    <div className="mx-auto mb-7 max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">{content.marqueeTitle}</p>
+                <section className="relative z-10 border-y border-border/40 bg-foreground/[0.015] py-7 md:py-9">
+                    <div className="mx-auto mb-5 flex max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <span className="h-px w-8 shrink-0 bg-cyan-500/60" />
+                            <p className="truncate text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground sm:text-xs">
+                                {content.marqueeTitle}
+                            </p>
+                        </div>
+                        <span className="hidden text-[10px] uppercase tracking-[0.22em] text-muted-foreground/45 sm:block">
+                            Collaborations & network
+                        </span>
                     </div>
                     <ExperienceMarquee />
                 </section>
             )}
 
             {availableTabs.length > 0 && (
-                <section id="experience-content" className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 md:py-28">
+                <section id="experience-content" className="relative z-10 mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8 md:py-18">
                     {content.showTabs && (
                         <TabNavigation content={content} availableTabs={availableTabs} activeTab={activeTab} onChange={setActiveTab} />
                     )}
@@ -83,11 +93,11 @@ export function ExperiencePageClient({ content }: { content: ExperienceContent }
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={activeTab}
-                            initial={{ opacity: 0, y: 18 }}
+                            initial={{ opacity: 0, y: 14 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -12 }}
+                            exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.3 }}
-                            className={content.showTabs ? 'mt-12' : ''}
+                            className={content.showTabs ? 'mt-9' : ''}
                         >
                             {activeTab === 'education' && <EducationView content={content} />}
                             {activeTab === 'journey' && <JourneyView content={content} />}
@@ -166,25 +176,43 @@ function TabNavigation({ content, availableTabs, activeTab, onChange }: { conten
         journey: { label: content.journeyLabel, description: content.journeyDescription },
         experience: { label: content.experienceLabel, description: content.experienceDescription },
     };
+    const activeCopy = copy[activeTab];
 
     return (
-        <div>
-            <div className="mb-7 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <p className="max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">{content.tabIntro}</p>
-                <p className="text-sm text-muted-foreground">{availableTabs.length} view{availableTabs.length === 1 ? '' : 's'} enabled</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
+        <div className="mx-auto max-w-4xl text-center">
+            <p className="text-2xl font-bold tracking-tight sm:text-3xl">{content.tabIntro}</p>
+            <AnimatePresence mode="wait">
+                <motion.p
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                    className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base"
+                >
+                    {activeCopy.description}
+                </motion.p>
+            </AnimatePresence>
+
+            <div className="-mx-4 mt-6 flex flex-nowrap justify-start gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:justify-center sm:px-0">
                 {availableTabs.map((id) => {
                     const Icon = icons[id];
                     const selected = id === activeTab;
                     return (
-                        <button key={id} type="button" onClick={() => onChange(id)} className={cn('group rounded-3xl border p-5 text-left transition-all', selected ? 'border-foreground bg-foreground text-background shadow-xl' : 'border-border/60 bg-card/40 hover:-translate-y-1 hover:bg-card')}>
-                            <div className="flex items-center justify-between gap-3">
-                                <Icon className="size-5" />
-                                <ArrowRight className={cn('size-4 transition-transform', selected ? 'translate-x-0' : '-translate-x-1 opacity-40 group-hover:translate-x-0 group-hover:opacity-100')} />
-                            </div>
-                            <h2 className="mt-8 text-xl font-bold">{copy[id].label}</h2>
-                            <p className={cn('mt-2 text-sm leading-6', selected ? 'text-background/65' : 'text-muted-foreground')}>{copy[id].description}</p>
+                        <button
+                            key={id}
+                            type="button"
+                            onClick={() => onChange(id)}
+                            aria-pressed={selected}
+                            className={cn(
+                                'group inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-sm transition-all duration-300 sm:px-5',
+                                selected
+                                    ? 'border-cyan-500 bg-cyan-500 text-white shadow-cyan-500/20'
+                                    : 'border-border/60 bg-card/60 text-muted-foreground hover:-translate-y-0.5 hover:border-cyan-500/40 hover:bg-card hover:text-foreground'
+                            )}
+                        >
+                            <Icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
+                            <span>{copy[id].label}</span>
                         </button>
                     );
                 })}
