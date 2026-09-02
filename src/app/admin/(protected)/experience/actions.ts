@@ -7,6 +7,8 @@ import { prisma } from '@/lib/prisma';
 import { defaultExperienceContent, normalizeExperienceContent, type ExperienceContent, type ExperienceTabId, type PartnerLogo } from '@/lib/experience-content';
 
 const CONFIG_SLUG = '__experience-config';
+const LEGACY_PAGE_TITLE = 'Experience page configuration';
+const DEFAULT_PAGE_NAME = 'Journey';
 
 export type ExperienceSaveResult =
     | { ok: true; savedAt: string }
@@ -111,12 +113,14 @@ function validatePartnerLogos(raw: unknown, existing: PartnerLogo[]): Experience
 export async function updateExperiencePage(form: FormData): Promise<ExperienceSaveResult> {
     const session = await auth();
     if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) {
-        return { ok: false, error: 'You do not have permission to edit the Experience page.' };
+        return { ok: false, error: 'You do not have permission to edit the Journey page.' };
     }
 
     try {
         const existingPage = await prisma.page.findUnique({ where: { slug: CONFIG_SLUG } });
         const existing = normalizeExperienceContent(existingPage?.content);
+        const existingPageName = existingPage?.title && existingPage.title !== LEGACY_PAGE_TITLE ? existingPage.title : DEFAULT_PAGE_NAME;
+        const pageName = readString(form, 'pageName', existingPageName, 80);
         const requestedDefault = String(form.get('defaultTab') ?? existing.defaultTab) as ExperienceTabId;
         const defaultTab: ExperienceTabId = ['education', 'journey', 'experience'].includes(requestedDefault) ? requestedDefault : defaultExperienceContent.defaultTab;
 
@@ -130,7 +134,7 @@ export async function updateExperiencePage(form: FormData): Promise<ExperienceSa
             experienceEntries = parseJsonField(form, 'experienceEntriesJson');
             partnerLogos = parseJsonField(form, 'partnerLogosJson');
         } catch {
-            return { ok: false, error: 'One of the editable Experience datasets contains invalid JSON. Reload the editor and try again.' };
+            return { ok: false, error: 'One of the editable Journey datasets contains invalid JSON. Reload the editor and try again.' };
         }
 
         const validationError = validateEducationEntries(educationEntries)
@@ -209,26 +213,25 @@ export async function updateExperiencePage(form: FormData): Promise<ExperienceSa
         });
 
         const jsonContent = candidate as unknown as Prisma.InputJsonValue;
-        await prisma.page.upsert({
-            where: { slug: CONFIG_SLUG },
-            create: {
-                slug: CONFIG_SLUG,
-                title: 'Experience page configuration',
-                status: 'PUBLISHED',
-                content: jsonContent,
-            },
-            update: {
-                title: 'Experience page configuration',
-                status: 'PUBLISHED',
-                content: jsonContent,
-            },
-        });
+        await prisma.$transaction([
+            prisma.page.upsert({
+                where: { slug: CONFIG_SLUG },
+                create: { slug: CONFIG_SLUG, title: pageName, status: 'PUBLISHED', content: jsonContent },
+                update: { title: pageName, status: 'PUBLISHED', content: jsonContent },
+            }),
+            prisma.navigationItem.updateMany({
+                where: { OR: [{ id: 'experience' }, { href: { in: ['/experience', '/journey'] } }] },
+                data: { label: pageName, href: '/journey' },
+            }),
+        ]);
 
+        revalidatePath('/journey');
         revalidatePath('/experience');
         revalidatePath('/admin/experience');
+        revalidatePath('/');
         return { ok: true, savedAt: new Date().toISOString() };
     } catch (error) {
-        console.error('Failed to save Experience page', error);
-        return { ok: false, error: 'The Experience settings could not be saved. Please retry. If the problem continues, check the server logs.' };
+        console.error('Failed to save Journey page', error);
+        return { ok: false, error: 'The Journey settings could not be saved. Please retry. If the problem continues, check the server logs.' };
     }
 }
