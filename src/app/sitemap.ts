@@ -1,16 +1,22 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
+import { defaultPersonalWikiContent, normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
     let seo = defaultSeoDefaults;
+    let wikiEnabled = defaultPersonalWikiContent.enabled;
 
     try {
-        const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+        const [settings, wikiPage] = await Promise.all([
+            prisma.siteSettings.findUnique({ where: { id: 'default' } }),
+            prisma.page.findUnique({ where: { slug: PERSONAL_WIKI_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
+        ]);
         seo = normalizeSeoDefaults(settings?.seoDefaults);
+        wikiEnabled = normalizePersonalWikiContent(wikiPage?.content).enabled;
     } catch {
         // Keep sitemap available with safe defaults if settings cannot be loaded.
     }
@@ -24,6 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { url: `${baseUrl}/gallery`, changeFrequency: 'weekly', priority: 0.7 },
         { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/lab`, changeFrequency: 'monthly', priority: 0.7 },
+        ...(wikiEnabled ? [{ url: `${baseUrl}/wiki`, changeFrequency: 'monthly' as const, priority: 0.7 }] : []),
         { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
         { url: `${baseUrl}/resume`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/contact`, changeFrequency: 'monthly', priority: 0.5 },
@@ -41,7 +48,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 ? prisma.post.findMany({ where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
             seo.sitemapIncludePages
-                ? prisma.page.findMany({ where: { status: 'PUBLISHED', slug: { not: '__experience-config' } }, select: { slug: true, updatedAt: true } })
+                ? prisma.page.findMany({
+                    where: { status: 'PUBLISHED', slug: { notIn: ['__experience-config', '__journey-entry-state', PERSONAL_WIKI_CONFIG_SLUG] } },
+                    select: { slug: true, updatedAt: true },
+                })
                 : Promise.resolve([]),
         ]);
 
