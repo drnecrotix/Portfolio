@@ -15,16 +15,21 @@ export function LoadingScreen({ onComplete, onExitStart, duration = 2500 }: Load
     const [isLoading, setIsLoading] = useState(true);
     const exitStarted = useRef(false);
     const completionTimer = useRef<number | null>(null);
+    const onCompleteRef = useRef(onComplete);
+    const onExitStartRef = useRef(onExitStart);
+
+    onCompleteRef.current = onComplete;
+    onExitStartRef.current = onExitStart;
 
     const beginExit = useCallback(() => {
         if (exitStarted.current) return;
         exitStarted.current = true;
         setIsLoading(false);
-        onExitStart?.();
+        onExitStartRef.current?.();
         completionTimer.current = window.setTimeout(() => {
-            onComplete?.();
+            onCompleteRef.current?.();
         }, EXIT_DURATION_MS);
-    }, [onComplete, onExitStart]);
+    }, []);
 
     useEffect(() => {
         // Do not depend on an animation-complete callback here. Embedded browsers
@@ -34,12 +39,12 @@ export function LoadingScreen({ onComplete, onExitStart, duration = 2500 }: Load
         const safeDuration = Number.isFinite(duration) ? Math.max(1800, duration) : 2500;
         const exitDelay = Math.max(900, safeDuration - EXIT_DURATION_MS);
         const exitTimer = window.setTimeout(beginExit, exitDelay);
-
-        return () => {
-            window.clearTimeout(exitTimer);
-            if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
-        };
+        return () => window.clearTimeout(exitTimer);
     }, [beginExit, duration]);
+
+    useEffect(() => () => {
+        if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
+    }, []);
 
     return (
         <AnimatePresence mode="wait">
