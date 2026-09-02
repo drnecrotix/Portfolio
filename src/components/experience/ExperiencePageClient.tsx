@@ -13,11 +13,9 @@ import {
     ChevronDown,
     ExternalLink,
     GraduationCap,
-    HeartHandshake,
     MapPin,
     Rocket,
     Sparkles,
-    Users,
 } from 'lucide-react';
 import { portfolioData } from '@/data/portfolio';
 import type { Education, Experience } from '@/types';
