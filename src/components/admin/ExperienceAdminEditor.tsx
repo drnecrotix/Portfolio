@@ -8,7 +8,7 @@ import {
     Briefcase,
     CheckCircle2,
     GraduationCap,
-    Handshake,
+    HeartHandshake,
     Plus,
     Route,
     Save,
@@ -39,7 +39,7 @@ const tabs: { id: AdminTab; label: string; icon: typeof Settings2 }[] = [
     { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'journey', label: 'Journey', icon: Route },
     { id: 'experience', label: 'Experience', icon: Briefcase },
-    { id: 'partners', label: 'Partners & Sponsors', icon: Handshake },
+    { id: 'partners', label: 'Partners & Sponsors', icon: HeartHandshake },
 ];
 
 function lines(value?: string[]) {
@@ -138,6 +138,12 @@ export function ExperienceAdminEditor({ content, action }: { content: Experience
         };
     }, []);
 
+    const markEditing = () => {
+        if (isPending || saveState !== 'saved') return;
+        setSaveState('idle');
+        setSaveMessage('Unsaved changes detected.');
+    };
+
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const form = event.currentTarget;
@@ -184,7 +190,7 @@ export function ExperienceAdminEditor({ content, action }: { content: Experience
 
     return (
         <>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} onInput={markEditing} onChange={markEditing} className="space-y-6">
                 <FormDraftGuard draftKey={draftKey} label="Experience settings" />
 
                 <input type="hidden" name="educationEntriesJson" value={JSON.stringify(educationEntries)} readOnly />
@@ -369,8 +375,8 @@ function EducationEditor({ item, index, onChange, onRemove }: { item: Education;
             <EditorHeader title={item.degree || item.institution || `Education ${index + 1}`} subtitle={item.institution} onRemove={onRemove} />
             <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Label title="Record ID"><input name={`education_editor_${index}_id`} value={item.id} onChange={(e) => onChange({ id: e.target.value })} className={field} /></Label>
-                <Label title="Institution"><input required name={`education_editor_${index}_institution`} value={item.institution} onChange={(e) => onChange({ institution: e.target.value })} className={field} /></Label>
-                <Label title="Degree"><input required name={`education_editor_${index}_degree`} value={item.degree} onChange={(e) => onChange({ degree: e.target.value })} className={field} /></Label>
+                <Label title="Institution"><input name={`education_editor_${index}_institution`} value={item.institution} onChange={(e) => onChange({ institution: e.target.value })} className={field} /></Label>
+                <Label title="Degree"><input name={`education_editor_${index}_degree`} value={item.degree} onChange={(e) => onChange({ degree: e.target.value })} className={field} /></Label>
                 <Label title="Major"><input name={`education_editor_${index}_major`} value={item.major} onChange={(e) => onChange({ major: e.target.value })} className={field} /></Label>
                 <Label title="Start date"><input name={`education_editor_${index}_start`} value={item.startDate} onChange={(e) => onChange({ startDate: e.target.value })} placeholder="YYYY-MM-DD" className={field} /></Label>
                 <Label title="End date"><input name={`education_editor_${index}_end`} value={item.endDate ?? ''} onChange={(e) => onChange({ endDate: e.target.value || undefined })} placeholder="YYYY-MM-DD" className={field} /></Label>
@@ -391,8 +397,8 @@ function ExperienceEntryEditor({ item, index, namespace, onChange, onRemove }: {
             <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Label title="Record ID"><input name={`${namespace}_editor_${index}_id`} value={item.id} onChange={(e) => onChange({ id: e.target.value })} className={field} /></Label>
                 <Label title="Type"><select name={`${namespace}_editor_${index}_type`} value={item.type} onChange={(e) => onChange({ type: e.target.value as Experience['type'] })} className={selectField}><option value="full-time">Full-time</option><option value="part-time">Part-time</option><option value="contract">Contract</option><option value="internship">Internship</option><option value="freelance">Freelance</option><option value="volunteer">Volunteer</option><option value="apprenticeship">Apprenticeship</option><option value="self-employed">Self-employed</option></select></Label>
-                <Label title="Company"><input required name={`${namespace}_editor_${index}_company`} value={item.company} onChange={(e) => onChange({ company: e.target.value })} className={field} /></Label>
-                <Label title="Position"><input required name={`${namespace}_editor_${index}_position`} value={item.position} onChange={(e) => onChange({ position: e.target.value })} className={field} /></Label>
+                <Label title="Company"><input name={`${namespace}_editor_${index}_company`} value={item.company} onChange={(e) => onChange({ company: e.target.value })} className={field} /></Label>
+                <Label title="Position"><input name={`${namespace}_editor_${index}_position`} value={item.position} onChange={(e) => onChange({ position: e.target.value })} className={field} /></Label>
                 <Label title="Location"><input name={`${namespace}_editor_${index}_location`} value={item.location ?? ''} onChange={(e) => onChange({ location: e.target.value || undefined })} className={field} /></Label>
                 <Label title="Logo path / URL"><input name={`${namespace}_editor_${index}_logo`} value={item.logo ?? ''} onChange={(e) => onChange({ logo: e.target.value || undefined })} className={field} /></Label>
                 <Label title="Start date"><input name={`${namespace}_editor_${index}_start`} value={item.startDate} onChange={(e) => onChange({ startDate: e.target.value })} placeholder="YYYY-MM-DD" className={field} /></Label>
@@ -427,9 +433,9 @@ function PartnerEditor({ item, index, onChange, onRemove }: { item: PartnerLogo;
                 <button type="button" onClick={onRemove} className="inline-flex items-center gap-2 rounded-lg border border-red-400/20 px-3 py-2 text-xs text-red-300 transition hover:bg-red-400/10"><Trash2 className="size-3.5" /> Remove</button>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <Label title="Name"><input required name={`partner_editor_${index}_name`} value={item.name} onChange={(e) => onChange({ name: e.target.value })} className={field} /></Label>
+                <Label title="Name"><input name={`partner_editor_${index}_name`} value={item.name} onChange={(e) => onChange({ name: e.target.value })} className={field} /></Label>
                 <Label title="ID"><input name={`partner_editor_${index}_id`} value={item.id} onChange={(e) => onChange({ id: e.target.value })} className={field} /></Label>
-                <Label title="SVG path / URL" wide><input required name={`partner_editor_${index}_src`} value={item.src} onChange={(e) => onChange({ src: e.target.value })} placeholder="/assets/partner-logo.svg" className={`${field} ${legacy ? 'border-amber-400/25' : ''}`} /><span className="mt-2 block text-[11px] text-white/35">New or changed files must end in <strong className="text-white/60">.svg</strong>. Local paths and http/https SVG URLs are accepted.</span></Label>
+                <Label title="SVG path / URL" wide><input name={`partner_editor_${index}_src`} value={item.src} onChange={(e) => onChange({ src: e.target.value })} placeholder="/assets/partner-logo.svg" className={`${field} ${legacy ? 'border-amber-400/25' : ''}`} /><span className="mt-2 block text-[11px] text-white/35">New or changed files must end in <strong className="text-white/60">.svg</strong>. Local paths and http/https SVG URLs are accepted.</span></Label>
                 <Label title="Partner website" wide><input name={`partner_editor_${index}_href`} value={item.href ?? ''} onChange={(e) => onChange({ href: e.target.value || undefined })} placeholder="https://…" className={field} /></Label>
                 <label className={`${toggle} md:col-span-2`}><input type="checkbox" name={`partner_editor_${index}_enabled`} checked={item.enabled} onChange={(e) => onChange({ enabled: e.target.checked })} className="size-4" /> Show this logo</label>
             </div>
