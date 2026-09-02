@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, CircleHelp, LibraryBig } from 'lucide-react';
+import { BookOpen, HelpCircle, LibraryBig } from 'lucide-react';
 import { WikiArticleIndex, type WikiIndexItem } from '@/components/wiki/WikiArticleIndex';
 import { prisma } from '@/lib/prisma';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
@@ -47,7 +47,7 @@ export default async function WikiArticlesPage() {
                         <div className="grid grid-cols-3 gap-2 sm:flex">
                             <Link href="/wiki" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.035] px-3 py-2 text-xs font-semibold text-foreground/75 transition hover:border-sky-400/25 hover:bg-sky-500/[0.06]"><BookOpen className="size-3.5" /><span className="hidden sm:inline">Main article</span><span className="sm:hidden">Main</span></Link>
                             <Link href="/wiki/articles" aria-current="page" className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/[0.1] px-3 py-2 text-xs font-semibold text-sky-600 dark:text-sky-300"><LibraryBig className="size-3.5" /><span className="hidden sm:inline">All articles</span><span className="sm:hidden">Articles</span></Link>
-                            <Link href="/wiki/faq" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.035] px-3 py-2 text-xs font-semibold text-foreground/75 transition hover:border-sky-400/25 hover:bg-sky-500/[0.06]"><CircleHelp className="size-3.5" /> FAQ</Link>
+                            <Link href="/wiki/faq" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.035] px-3 py-2 text-xs font-semibold text-foreground/75 transition hover:border-sky-400/25 hover:bg-sky-500/[0.06]"><HelpCircle className="size-3.5" /> FAQ</Link>
                         </div>
                     </div>
                     <h1 className="mt-5 text-4xl font-black tracking-[-0.045em] sm:text-6xl">Article index</h1>
@@ -59,7 +59,7 @@ export default async function WikiArticlesPage() {
                         <div className="flex size-11 items-center justify-center rounded-xl border border-foreground/10"><BookOpen className="size-5" /></div>
                         <div><p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Main article</p><h2 className="mt-1 text-xl font-black tracking-tight">{main.title}</h2><p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">{mainSummary}</p></div>
                     </Link>
-                    {faq.enabled ? <Link href="/wiki/faq" className="grid gap-4 rounded-2xl border border-sky-400/20 bg-sky-500/[0.045] p-5 transition hover:border-sky-400/35 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center"><div className="flex size-11 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-500/[0.06]"><CircleHelp className="size-5 text-sky-500" /></div><div><p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-sky-500">FAQ module</p><h2 className="mt-1 text-xl font-black tracking-tight">{faq.title}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">{faqCount} visible questions with search, categories and FAQPage structured data.</p></div></Link> : null}
+                    {faq.enabled ? <Link href="/wiki/faq" className="grid gap-4 rounded-2xl border border-sky-400/20 bg-sky-500/[0.045] p-5 transition hover:border-sky-400/35 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center"><div className="flex size-11 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-500/[0.06]"><HelpCircle className="size-5 text-sky-500" /></div><div><p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-sky-500">FAQ module</p><h2 className="mt-1 text-xl font-black tracking-tight">{faq.title}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">{faqCount} visible questions with search, categories and FAQPage structured data.</p></div></Link> : null}
                 </section>
 
                 <WikiArticleIndex items={items} />
