@@ -4,14 +4,16 @@ import { StatusToast } from '@/components/admin/StatusToast';
 import { prisma } from '@/lib/prisma';
 import { normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
 import { normalizeWikiArticleContent, WIKI_ARTICLE_PREFIX } from '@/lib/wiki-articles';
+import { normalizeWikiFaqContent, WIKI_FAQ_CONFIG_SLUG } from '@/lib/wiki-faq';
 
 export const dynamic = 'force-dynamic';
 
 type SearchParams = Promise<{ saved?: string; articleSaved?: string; deleted?: string; error?: string }>;
 
 export default async function WikiAdminPage({ searchParams }: { searchParams: SearchParams }) {
-    const [mainPage, articlePages, params] = await Promise.all([
+    const [mainPage, faqPage, articlePages, params] = await Promise.all([
         prisma.page.findUnique({ where: { slug: PERSONAL_WIKI_CONFIG_SLUG } }).catch(() => null),
+        prisma.page.findUnique({ where: { slug: WIKI_FAQ_CONFIG_SLUG }, select: { content: true, updatedAt: true } }).catch(() => null),
         prisma.page.findMany({
             where: { slug: { startsWith: WIKI_ARTICLE_PREFIX } },
             orderBy: { updatedAt: 'desc' },
@@ -20,6 +22,7 @@ export default async function WikiAdminPage({ searchParams }: { searchParams: Se
         searchParams,
     ]);
     const main = normalizePersonalWikiContent(mainPage?.content);
+    const faq = normalizeWikiFaqContent(faqPage?.content);
     const items: WikiAdminItem[] = articlePages.map((page) => {
         const content = normalizeWikiArticleContent(page.content, page.slug);
         return {
@@ -45,7 +48,7 @@ export default async function WikiAdminPage({ searchParams }: { searchParams: Se
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Content</p>
                     <h2 className="mt-1 text-3xl font-semibold">Wiki</h2>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Manage the main biography and every connected Wiki article from one compact index.</p>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Manage the main biography, dedicated FAQ and every connected Wiki article from one compact index.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <Link href="/wiki/articles" target="_blank" className="rounded-xl border border-foreground/10 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:text-foreground">Open public index</Link>
@@ -53,9 +56,16 @@ export default async function WikiAdminPage({ searchParams }: { searchParams: Se
                 </div>
             </div>
             <div className="mb-5 rounded-xl border border-foreground/10 bg-foreground/[0.018] px-4 py-3 text-xs leading-5 text-muted-foreground">
-                Wiki links are <strong className="text-foreground/80">manual</strong>. Add <code>/wiki</code> or <code>/wiki/articles</code> from Navigation and place them exactly where you want. The Wiki CMS no longer inserts menu items automatically.
+                Main-site navigation remains <strong className="text-foreground/80">manual</strong>. Internal Wiki navigation now links Main article, All articles and FAQ automatically. Add any of those public routes to the global Navigation only when you want them there.
             </div>
-            <WikiAdminIndex mainTitle={main.title} mainUpdatedAt={mainPage?.updatedAt.toISOString() ?? null} items={items} />
+            <WikiAdminIndex
+                mainTitle={main.title}
+                mainUpdatedAt={mainPage?.updatedAt.toISOString() ?? null}
+                faqEnabled={faq.enabled}
+                faqCount={faq.items.filter((item) => item.enabled).length}
+                faqUpdatedAt={faqPage?.updatedAt.toISOString() ?? null}
+                items={items}
+            />
         </div>
     );
 }
