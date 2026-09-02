@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 
 export default async function PagesAdminPage() {
     const pages = await prisma.page.findMany({
-        where: { slug: { not: '__experience-config' } },
+        where: { slug: { notIn: ['__experience-config', '__journey-entry-state'] } },
         orderBy: { updatedAt: 'desc' },
     });
 
