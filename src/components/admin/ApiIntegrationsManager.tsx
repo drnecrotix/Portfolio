@@ -16,7 +16,7 @@ export type ApiIntegrationField = {
     envName: string;
     secret: boolean;
     configured: boolean;
-    source: 'cms' | 'assistant' | 'environment' | 'missing';
+    source: 'cms' | 'assistant' | 'environment' | 'site' | 'missing';
     help?: string;
 };
 
@@ -42,6 +42,7 @@ function sourceLabel(source: ApiIntegrationField['source']) {
     if (source === 'cms') return 'API Integrations CMS';
     if (source === 'assistant') return 'AI Assistant CMS';
     if (source === 'environment') return 'Environment';
+    if (source === 'site') return 'Site Settings';
     return 'Not configured';
 }
 
@@ -205,7 +206,7 @@ export function ApiIntegrationsManager({ cards }: { cards: ApiIntegrationCard[] 
                     <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-background"><ServerCog className="size-5" /></div>
                     <div>
                         <div className="text-sm font-bold">{configuredCount} of {cards.length} integrations have all required fields configured</div>
-                        <div className="text-xs text-muted-foreground">Priority: API Integrations CMS → AI Assistant CMS where applicable → environment variables.</div>
+                        <div className="text-xs text-muted-foreground">Priority: API Integrations CMS → AI Assistant CMS where applicable → environment variables. GitHub can also infer the profile from Site Settings.</div>
                     </div>
                 </div>
                 <button type="button" onClick={testAll} disabled={testingAll} className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-xs font-bold disabled:opacity-50">
