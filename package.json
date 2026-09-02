@@ -16,7 +16,7 @@
         "db:validate": "prisma validate",
         "db:migrate": "prisma migrate dev",
         "db:deploy": "prisma migrate deploy",
-        "db:status": "prisma migration status",
+        "db:status": "prisma migrate status",
         "db:studio": "prisma studio",
         "db:seed": "node prisma/seed.cjs"
     },
