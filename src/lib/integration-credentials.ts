@@ -10,6 +10,13 @@ type IntegrationVault = {
     values: Record<string, string>;
 };
 
+export type IntegrationTestRecord = {
+    ok: boolean;
+    testedAt: string;
+    message: string;
+    latencyMs?: number;
+};
+
 function record(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
@@ -66,11 +73,30 @@ export function getStoredIntegrationValues(value: unknown): Record<string, strin
     return resolved;
 }
 
+export function getIntegrationTests(value: unknown): Record<string, IntegrationTestRecord> {
+    const rawTests = record(record(value).tests);
+    const tests: Record<string, IntegrationTestRecord> = {};
+    for (const [id, candidate] of Object.entries(rawTests)) {
+        const item = record(candidate);
+        const testedAt = typeof item.testedAt === 'string' ? item.testedAt : '';
+        const message = typeof item.message === 'string' ? item.message : '';
+        if (!testedAt || !message) continue;
+        tests[id] = {
+            ok: Boolean(item.ok),
+            testedAt,
+            message,
+            latencyMs: Number.isFinite(Number(item.latencyMs)) ? Number(item.latencyMs) : undefined,
+        };
+    }
+    return tests;
+}
+
 export function hasStoredIntegrationValue(value: unknown, id: string) {
     return Boolean(readVault(value).values[id]);
 }
 
 export function updateIntegrationValues(existing: unknown, changes: Record<string, string | null | undefined>) {
+    const raw = record(existing);
     const vault = readVault(existing);
     const values = { ...vault.values };
 
@@ -83,11 +109,20 @@ export function updateIntegrationValues(existing: unknown, changes: Record<strin
         if (clean) values[id] = encrypt(clean);
     }
 
-    return { version: ENVELOPE_VERSION, values };
+    return { ...raw, version: ENVELOPE_VERSION, values };
+}
+
+export function withIntegrationTest(existing: unknown, id: string, test: IntegrationTestRecord) {
+    const raw = record(existing);
+    return {
+        ...raw,
+        version: ENVELOPE_VERSION,
+        tests: { ...record(raw.tests), [id]: test },
+    };
 }
 
 export function toIntegrationSettingsJson(value: unknown): Prisma.InputJsonValue {
-    return JSON.parse(JSON.stringify(value ?? { version: ENVELOPE_VERSION, values: {} })) as Prisma.InputJsonValue;
+    return JSON.parse(JSON.stringify(value ?? { version: ENVELOPE_VERSION, values: {}, tests: {} })) as Prisma.InputJsonValue;
 }
 
 export function resolveIntegrationValue(settings: unknown, id: string, envName?: string) {
