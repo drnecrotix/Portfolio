@@ -1,14 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-    title: 'Skills',
-    description: 'My technical skills, tech stack, and tools I work with.',
+    title: 'The Lab',
+    description: 'Capabilities, technologies, systems and tools behind what I build.',
+    alternates: { canonical: '/lab' },
+    robots: { index: false, follow: true },
 };
 
-export default function SkillsLayout({
-    children,
-}: {
-    children: React.ReactNode;
-}) {
+export default function SkillsLayout({ children }: { children: React.ReactNode }) {
     return children;
 }
