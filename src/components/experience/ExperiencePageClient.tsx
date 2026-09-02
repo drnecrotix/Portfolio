@@ -8,7 +8,7 @@ import {
     ArrowRight,
     Award,
     BookOpen,
-    BriefcaseBusiness,
+    Briefcase,
     CalendarDays,
     ChevronDown,
     ExternalLink,
@@ -28,7 +28,7 @@ import ExperienceMarquee from '@/components/sections/ExperienceMarquee';
 const icons: Record<ExperienceTabId, typeof GraduationCap> = {
     education: GraduationCap,
     journey: Rocket,
-    experience: BriefcaseBusiness,
+    experience: Briefcase,
 };
 
 function enabledTabs(content: ExperienceContent) {
@@ -292,7 +292,7 @@ function ExperienceCard({ item, content }: { item: Experience; content: Experien
             <button type="button" onClick={() => hasDetails && setExpanded((value) => !value)} className={cn('w-full p-6 text-left md:p-8', hasDetails && 'cursor-pointer')}>
                 <div className="flex gap-4 md:gap-6">
                     <div className={cn('relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border/60 md:size-16', item.logoBg || 'bg-background')}>
-                        {item.logo ? <Image src={item.logo} alt="" fill className="object-contain p-2" unoptimized /> : <BriefcaseBusiness className="size-6 text-muted-foreground" />}
+                        {item.logo ? <Image src={item.logo} alt="" fill className="object-contain p-2" unoptimized /> : <Briefcase className="size-6 text-muted-foreground" />}
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-4">
