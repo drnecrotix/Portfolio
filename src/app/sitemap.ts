@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 import { defaultPersonalWikiContent, normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
 import { normalizeWikiArticleContent, WIKI_ARTICLE_PREFIX } from '@/lib/wiki-articles';
+import { defaultWikiFaqContent, normalizeWikiFaqContent, WIKI_FAQ_CONFIG_SLUG } from '@/lib/wiki-faq';
 
 export const revalidate = 3600;
 
@@ -10,14 +11,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
     let seo = defaultSeoDefaults;
     let wikiEnabled = defaultPersonalWikiContent.enabled;
+    let faqEnabled = defaultWikiFaqContent.enabled;
+    let faqIndexable = defaultWikiFaqContent.indexable;
 
     try {
-        const [settings, wikiPage] = await Promise.all([
+        const [settings, wikiPage, faqPage] = await Promise.all([
             prisma.siteSettings.findUnique({ where: { id: 'default' } }),
             prisma.page.findUnique({ where: { slug: PERSONAL_WIKI_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
+            prisma.page.findUnique({ where: { slug: WIKI_FAQ_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
         ]);
         seo = normalizeSeoDefaults(settings?.seoDefaults);
         wikiEnabled = normalizePersonalWikiContent(wikiPage?.content).enabled;
+        const faq = normalizeWikiFaqContent(faqPage?.content);
+        faqEnabled = faq.enabled;
+        faqIndexable = faq.indexable;
     } catch {
         // Keep sitemap available with safe defaults if settings cannot be loaded.
     }
@@ -34,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...(wikiEnabled ? [
             { url: `${baseUrl}/wiki`, changeFrequency: 'monthly' as const, priority: 0.8 },
             { url: `${baseUrl}/wiki/articles`, changeFrequency: 'weekly' as const, priority: 0.7 },
+            ...(faqEnabled && faqIndexable ? [{ url: `${baseUrl}/wiki/faq`, changeFrequency: 'monthly' as const, priority: 0.75 }] : []),
         ] : []),
         { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
         { url: `${baseUrl}/resume`, changeFrequency: 'monthly', priority: 0.7 },
