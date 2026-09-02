@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { HelpCircle, Plus, Trash2 } from 'lucide-react';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import { WikiRichEditor } from '@/components/admin/WikiRichEditor';
 import { WIKI_CATEGORIES, wikiCategoryLabel, type WikiArticleContent, type WikiFact, type WikiFaqItem } from '@/lib/wiki-articles';
@@ -40,6 +41,7 @@ export function WikiArticleEditor({
     const [facts, setFacts] = useState<WikiFact[]>(initial.infoboxRows);
     const [faq, setFaq] = useState<WikiFaqItem[]>(initial.faqItems);
     const [related, setRelated] = useState<string[]>(initial.relatedSlugs);
+    const categoryOptions = articleId ? WIKI_CATEGORIES : WIKI_CATEGORIES.filter((item) => item !== 'FAQ');
 
     return <>
         {articleId ? <input type="hidden" name="articleId" value={articleId} /> : null}
@@ -50,6 +52,8 @@ export function WikiArticleEditor({
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div className="space-y-4">
+                {!articleId ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/20 bg-sky-500/[0.045] px-4 py-3 text-xs text-muted-foreground"><div className="flex items-center gap-2"><HelpCircle className="size-4 text-sky-500" /><span>Creating questions? FAQ now has a dedicated editor, search, categories and structured data.</span></div><Link href="/admin/wiki/faq" className="font-semibold text-sky-500">Open FAQ manager →</Link></div> : null}
+
                 <section className={block}>
                     <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
                         <label className={label}>Article title<input name="title" required value={title} onChange={(event) => { const next = event.target.value; setTitle(next); if (!slugTouched) setSlug(slugify(next)); }} className={field} placeholder="BG-GAMER" /></label>
@@ -57,7 +61,7 @@ export function WikiArticleEditor({
                     </div>
                     <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
                         <label className={label}>Public slug<div className="mt-1.5 flex items-center rounded-lg border border-foreground/10 bg-background"><span className="pl-3 text-xs text-muted-foreground">/wiki/</span><input name="slug" required value={slug} onChange={(event) => { setSlugTouched(true); setSlug(slugify(event.target.value)); }} className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm outline-none" /></div></label>
-                        <label className={label}>Category<select name="category" value={category} onChange={(event) => setCategory(event.target.value as WikiArticleContent['category'])} className={field}>{WIKI_CATEGORIES.map((item) => <option key={item} value={item}>{wikiCategoryLabel(item)}</option>)}</select></label>
+                        <label className={label}>Category<select name="category" value={category} onChange={(event) => setCategory(event.target.value as WikiArticleContent['category'])} className={field}>{categoryOptions.map((item) => <option key={item} value={item}>{wikiCategoryLabel(item)}</option>)}</select></label>
                     </div>
                     <label className={`${label} mt-3 block`}>Summary<textarea name="summary" defaultValue={initial.summary} className={`${field} min-h-24 resize-y`} placeholder="Short description used in Wiki search results and metadata." /></label>
                 </section>
@@ -76,10 +80,11 @@ export function WikiArticleEditor({
                     </div>
                 </details>
 
-                {category === 'FAQ' ? <details className="rounded-xl border border-foreground/10 bg-foreground/[0.012]" open>
-                    <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold [&::-webkit-details-marker]:hidden">FAQ questions <span className="ml-2 text-[10px] font-normal text-muted-foreground">Adds FAQPage structured data</span></summary>
+                {category === 'FAQ' ? <details className="rounded-xl border border-amber-400/20 bg-amber-500/[0.035]">
+                    <summary className="cursor-pointer list-none px-4 py-3 text-sm font-bold [&::-webkit-details-marker]:hidden">Legacy FAQ questions <span className="ml-2 text-[10px] font-normal text-muted-foreground">Existing articles only</span></summary>
+                    <div className="border-t border-foreground/10 px-4 py-3 text-xs leading-5 text-muted-foreground">This article predates the dedicated FAQ manager. It remains editable, but new FAQ content should be created at <Link href="/admin/wiki/faq" className="font-semibold text-sky-500">Admin → Wiki → FAQ</Link>.</div>
                     <div className="space-y-3 border-t border-foreground/10 p-4">{faq.map((item, index) => <div key={item.id} className="rounded-lg border border-foreground/10 p-3"><div className="flex items-center gap-2"><input type="checkbox" checked={item.enabled} onChange={(e) => setFaq((items) => items.map((x, i) => i === index ? { ...x, enabled: e.target.checked } : x))} /><input value={item.question} onChange={(e) => setFaq((items) => items.map((x, i) => i === index ? { ...x, question: e.target.value } : x))} className={`${field} mt-0 flex-1`} placeholder="Question" /><button type="button" onClick={() => setFaq((items) => items.filter((_, i) => i !== index))} className="text-red-500/70"><Trash2 className="size-3.5" /></button></div><div className="mt-2"><WikiRichEditor name={`faq-${item.id}`} initialValue={item.answer} onChange={(answer) => setFaq((items) => items.map((x, i) => i === index ? { ...x, answer } : x))} minHeight="min-h-28" /></div></div>)}</div>
-                    <div className="px-4 pb-4"><button type="button" onClick={() => setFaq((items) => [...items, { id: uid('faq'), question: '', answer: '<p></p>', enabled: true }])} className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 px-2.5 py-1.5 text-[10px]"><Plus className="size-3" /> Add question</button></div>
+                    <div className="px-4 pb-4"><button type="button" onClick={() => setFaq((items) => [...items, { id: uid('faq'), question: '', answer: '<p></p>', enabled: true }])} className="inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 px-2.5 py-1.5 text-[10px]"><Plus className="size-3" /> Add legacy question</button></div>
                 </details> : null}
             </div>
 

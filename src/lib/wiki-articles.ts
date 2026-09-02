@@ -2,7 +2,7 @@ import sanitizeHtml from 'sanitize-html';
 import { sanitizeCmsHtml, safeCmsMediaUrl } from '@/lib/sanitize-cms-html';
 
 export const WIKI_ARTICLE_PREFIX = '__wiki-article-';
-export const WIKI_RESERVED_SLUGS = new Set(['articles']);
+export const WIKI_RESERVED_SLUGS = new Set(['articles', 'faq']);
 
 export const WIKI_CATEGORIES = [
     'PERSON',

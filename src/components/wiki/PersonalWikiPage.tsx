@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, Clock3, ExternalLink, Hash, LibraryBig, Link2 } from 'lucide-react';
+import { BookOpen, HelpCircle, Clock3, ExternalLink, Hash, LibraryBig, Link2 } from 'lucide-react';
 import type { PublicIdentity } from '@/lib/public-identity';
 import type { PersonalWikiContent, WikiRelatedLink } from '@/lib/wiki-content';
 
@@ -48,6 +48,7 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
                         <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">{content.eyebrow}</p>
                         <div className="flex flex-wrap items-center gap-2">
                             <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-[10px] font-semibold text-sky-700 transition hover:border-sky-500/45 hover:bg-sky-500/15 dark:text-sky-300"><LibraryBig className="size-3.5" /> Browse Wiki</Link>
+                            <Link href="/wiki/faq" className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/[0.035] px-3.5 py-2 text-[10px] font-semibold text-foreground/75 transition hover:border-sky-500/30 hover:bg-sky-500/[0.08] hover:text-sky-700 dark:hover:text-sky-300"><HelpCircle className="size-3.5" /> FAQ</Link>
                             <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.02] px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground"><Clock3 className="size-3.5" /> Updated {updatedLabel}</div>
                         </div>
                     </div>
@@ -59,7 +60,7 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
                         </div>
                         <div className="border-l border-foreground/10 pl-5">
                             <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"><BookOpen className="size-3.5" /> Main Wiki article</div>
-                            <p className="mt-3 text-xs leading-5 text-muted-foreground">The biography is the root article. Projects, communities, organizations and future FAQ entries live in the connected Wiki archive.</p>
+                            <p className="mt-3 text-xs leading-5 text-muted-foreground">The biography is the root article. Projects, communities, organizations and the dedicated FAQ live in the connected Wiki archive.</p>
                         </div>
                     </div>
                 </div>
@@ -67,9 +68,10 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
 
             {content.showContents && toc.length > 1 ? (
                 <div className="mx-auto mt-6 max-w-7xl px-5 sm:px-8 lg:hidden">
-                    <div className="mb-3 grid grid-cols-2 gap-2">
-                        <Link href="/wiki" className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs font-semibold text-sky-700 dark:text-sky-300"><BookOpen className="size-4" /> Main article</Link>
-                        <Link href="/wiki/articles" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><LibraryBig className="size-4" /> All articles</Link>
+                    <div className="mb-3 grid grid-cols-3 gap-2">
+                        <Link href="/wiki" className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs font-semibold text-sky-700 dark:text-sky-300"><BookOpen className="size-4" /><span className="hidden min-[390px]:inline">Main</span></Link>
+                        <Link href="/wiki/articles" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><LibraryBig className="size-4" /><span className="hidden min-[390px]:inline">Articles</span></Link>
+                        <Link href="/wiki/faq" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><HelpCircle className="size-4" /> FAQ</Link>
                     </div>
                     <details className="rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4">
                         <summary className="cursor-pointer list-none font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground [&::-webkit-details-marker]:hidden">Contents</summary>
@@ -87,6 +89,7 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
                             <p className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Wiki</p>
                             <Link href="/wiki" className="flex items-center gap-2 rounded-lg border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-xs font-semibold text-sky-700 dark:text-sky-300"><BookOpen className="size-3.5" /> Main article</Link>
                             <Link href="/wiki/articles" className="flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-xs font-medium text-foreground/70 transition hover:border-foreground/10 hover:bg-foreground/[0.04] hover:text-foreground"><LibraryBig className="size-3.5" /> All articles</Link>
+                            <Link href="/wiki/faq" className="flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-xs font-medium text-foreground/70 transition hover:border-foreground/10 hover:bg-foreground/[0.04] hover:text-foreground"><HelpCircle className="size-3.5" /> FAQ</Link>
                         </nav>
                         {content.showContents ? (
                             <nav className="border-l border-foreground/10 pl-4">
