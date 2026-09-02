@@ -1,10 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { normalizeWikiFaqContent, WIKI_FAQ_CONFIG_SLUG } from '@/lib/wiki-faq';
+
+export type WikiFaqSaveResult = {
+    ok: boolean;
+    message: string;
+    savedAt?: string;
+};
 
 async function requireEditor() {
     const session = await auth();
@@ -19,7 +24,7 @@ function json(form: FormData, key: string, fallback: unknown) {
     try { return JSON.parse(String(form.get(key) ?? '')) as unknown; } catch { return fallback; }
 }
 
-export async function saveWikiFaq(form: FormData) {
+export async function saveWikiFaq(form: FormData): Promise<WikiFaqSaveResult> {
     try {
         await requireEditor();
         const content = normalizeWikiFaqContent({
@@ -38,10 +43,11 @@ export async function saveWikiFaq(form: FormData) {
         const seoTitle = value(form, 'seoTitle', 180) || null;
         const seoDescription = value(form, 'seoDescription', 320) || null;
 
-        await prisma.page.upsert({
+        const saved = await prisma.page.upsert({
             where: { slug: WIKI_FAQ_CONFIG_SLUG },
             update: { title: content.title, status: 'DRAFT', content, seoTitle, seoDescription },
             create: { slug: WIKI_FAQ_CONFIG_SLUG, title: content.title, status: 'DRAFT', content, seoTitle, seoDescription },
+            select: { updatedAt: true },
         });
 
         revalidatePath('/admin/wiki');
@@ -50,8 +56,16 @@ export async function saveWikiFaq(form: FormData) {
         revalidatePath('/wiki/articles');
         revalidatePath('/wiki/faq');
         revalidatePath('/sitemap.xml');
+
+        return {
+            ok: true,
+            message: `FAQ saved successfully. ${content.items.filter((item) => item.enabled).length} visible questions are ready for the public Wiki.`,
+            savedAt: saved.updatedAt.toISOString(),
+        };
     } catch (error) {
-        redirect(`/admin/wiki/faq?error=${encodeURIComponent(error instanceof Error ? error.message : 'FAQ could not be saved.')}`);
+        return {
+            ok: false,
+            message: error instanceof Error ? error.message : 'FAQ could not be saved.',
+        };
     }
-    redirect('/admin/wiki/faq?saved=1');
 }
