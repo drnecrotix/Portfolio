@@ -1,7 +1,7 @@
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
-const useN0cWasmSwc = process.env.NEXT_N0C_WASM_SWC === '1';
+const useN0cBuildTuning = process.env.NEXT_N0C_WASM_SWC === '1';
 const buildDistDir = process.env.NEXT_DIST_DIR?.trim() || '.next';
 const publicAssetCacheHeader = { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' };
 const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'woff', 'woff2'];
@@ -35,9 +35,8 @@ const nextConfig = {
     reactStrictMode: true,
     transpilePackages: ['three'],
     experimental: {
-        ...(useN0cWasmSwc
+        ...(useN0cBuildTuning
             ? {
-                  useWasmBinary: true,
                   cpus: 1,
                   webpackBuildWorker: true,
                   webpackMemoryOptimizations: true,
@@ -48,7 +47,7 @@ const nextConfig = {
         },
         proxyClientMaxBodySize: '12mb',
     },
-    ...(useN0cWasmSwc
+    ...(useN0cBuildTuning
         ? {
               webpack(config) {
                   config.cache = false;
@@ -72,12 +71,6 @@ const nextConfig = {
                 source: '/api/:path*',
                 headers: [
                     { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' },
-                ],
-            },
-            {
-                source: '/_next/static/:path*',
-                headers: [
-                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
             ...publicAssetExtensions.map((extension) => ({
