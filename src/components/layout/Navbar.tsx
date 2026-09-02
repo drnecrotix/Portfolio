@@ -46,6 +46,11 @@ function Clock() {
     return <span className="font-mono text-xl font-black tracking-widest text-gradient transition-all duration-300 hover:tracking-[0.2em] md:text-2xl">{time}</span>;
 }
 
+function readLocaleCookie() {
+    if (typeof document === 'undefined') return 'en';
+    return document.cookie.split('; ').find((row) => row.startsWith('locale='))?.split('=')[1] || 'en';
+}
+
 export function Navbar() {
     const pathname = usePathname();
     const { resolvedTheme } = useTheme();
@@ -56,21 +61,19 @@ export function Navbar() {
     const [isVisible, setIsVisible] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const [lastScrollY, setLastScrollY] = useState(0);
-    const [locale, setLocale] = useState('en');
+    const [locale, setLocale] = useState(readLocaleCookie);
 
     useEffect(() => {
         fetch('/api/navigation', { cache: 'no-store' })
             .then((response) => response.ok ? response.json() : fallbackItems)
             .then((data) => Array.isArray(data) && data.length ? setItems(data) : setItems(fallbackItems))
             .catch(() => setItems(fallbackItems));
-        setLocale(document.cookie.split('; ').find((row) => row.startsWith('locale='))?.split('=')[1] || 'en');
     }, []);
 
     useEffect(() => {
         document.body.style.overflow = isMenuOpen ? 'hidden' : '';
         return () => { document.body.style.overflow = ''; };
     }, [isMenuOpen]);
-    useEffect(() => setIsMenuOpen(false), [pathname]);
 
     useMotionValueEvent(scrollY, 'change', (latest) => {
         if (isMenuOpen) return;
@@ -111,6 +114,7 @@ export function Navbar() {
                 href={item.href}
                 target={external ? '_blank' : undefined}
                 rel={external ? 'noopener noreferrer' : undefined}
+                onClick={mobile ? () => setIsMenuOpen(false) : undefined}
                 className={mobile
                     ? cn('text-3xl font-black transition-colors', pathname === item.href ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')
                     : cn('relative rounded-full px-5 py-2 text-sm font-bold transition-all duration-300', pathname === item.href ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground')}
