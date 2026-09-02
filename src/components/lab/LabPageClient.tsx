@@ -3,8 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useRef } from 'react';
-import { motion, useMotionValue, useReducedMotion, useScroll, useTransform } from 'framer-motion';
-import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, Palette, Sparkles, Workflow } from 'lucide-react';
+import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
+import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, Palette } from 'lucide-react';
 import { SplineScene } from '@/components/ui/SplineScene';
 import { DeferredMount } from '@/components/ui/DeferredMount';
 import { portfolioData } from '@/data/portfolio';
@@ -27,7 +27,16 @@ const toolchain = [
     { label: 'AI & Automation', items: ['OpenAI', 'Codex', 'Claude', 'Agents', 'Automation'] },
 ];
 
-const bubbles = [
+type Bubble = {
+    name: string;
+    icon: string;
+    top: string;
+    left?: string;
+    right?: string;
+    duration: number;
+};
+
+const bubbles: Bubble[] = [
     { name: 'Python', icon: 'python', top: '14%', left: '8%', duration: 8.4 },
     { name: 'React', icon: 'react', top: '28%', left: '20%', duration: 9.2 },
     { name: 'PyTorch', icon: 'pytorch', top: '45%', left: '6%', duration: 10.1 },
@@ -38,9 +47,9 @@ const bubbles = [
     { name: 'TypeScript', icon: 'typescript', top: '52%', right: '10%', duration: 8.7 },
     { name: 'Pandas', icon: 'pandas', top: '68%', right: '24%', duration: 9.7 },
     { name: 'PostgreSQL', icon: 'postgresql', top: '82%', right: '15%', duration: 10.4 },
-] as const;
+];
 
-function FloatingTechnology({ item, mouseX, mouseY }: { item: (typeof bubbles)[number]; mouseX: ReturnType<typeof useMotionValue<number>>; mouseY: ReturnType<typeof useMotionValue<number>> }) {
+function FloatingTechnology({ item, mouseX, mouseY }: { item: Bubble; mouseX: MotionValue<number>; mouseY: MotionValue<number> }) {
     const ref = useRef<HTMLButtonElement>(null);
     const reduceMotion = useReducedMotion();
     const x = useTransform(mouseX, (value) => {
@@ -63,11 +72,18 @@ function FloatingTechnology({ item, mouseX, mouseY }: { item: (typeof bubbles)[n
             onClick={() => document.getElementById('toolchain')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' })}
             animate={reduceMotion ? undefined : { translateY: [0, -20, 0] }}
             transition={reduceMotion ? undefined : { duration: item.duration, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ top: item.top, left: 'left' in item ? item.left : undefined, right: 'right' in item ? item.right : undefined, x, y: yPointer }}
+            style={{ top: item.top, left: item.left, right: item.right, x, y: yPointer }}
             className="group absolute z-20 flex size-14 items-center justify-center rounded-full border border-white/10 bg-black/25 backdrop-blur-xl transition hover:border-white/30 hover:bg-white/10 sm:size-16 lg:size-20"
             aria-label={`Explore ${item.name}`}
         >
-            <Image src={`https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${item.icon}/${item.icon}-original.svg`} alt="" width={42} height={42} className="size-7 grayscale opacity-45 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:size-8 lg:size-10" />
+            <Image
+                src={`https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${item.icon}/${item.icon}-original.svg`}
+                alt=""
+                width={42}
+                height={42}
+                unoptimized
+                className="size-7 grayscale opacity-45 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:size-8 lg:size-10"
+            />
             <span className="pointer-events-none absolute top-full mt-2 whitespace-nowrap rounded-md border border-white/10 bg-black/80 px-2 py-1 font-mono text-[9px] uppercase tracking-widest text-white/70 opacity-0 transition group-hover:opacity-100">{item.name}</span>
         </motion.button>
     );
