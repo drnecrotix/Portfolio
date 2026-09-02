@@ -3,39 +3,14 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { usePerformance } from '@/hooks/usePerformance';
+import type { PartnerLogo } from '@/lib/experience-content';
 
-const logos = [
-    '/assets/DBSLogo.webp',
-    '/assets/HMITlogo.webp',
-    '/assets/HumicLogo.webp',
-    '/assets/McKinseylogo.webp',
-    '/assets/TelkomUniversityLogo.webp',
-    '/assets/aieseclogo.webp',
-    '/assets/aselablogo.webp',
-    '/assets/birulangitlogo.webp',
-    '/assets/cisometriclogo.webp',
-    '/assets/dicodinglogo.webp',
-    '/assets/dinas-pangan-dan-pertanian-kota-bandung.webp',
-    '/assets/flyrankailogo.webp',
-    '/assets/iflablogo.webp',
-    '/assets/indosat-ooredoo-hutchison-digital-camp.webp',
-    '/assets/logobei.webp',
-    '/assets/logocps.webp',
-    '/assets/logodigistar.webp',
-    '/assets/logogdsc.webp',
-    '/assets/microsotlogo.webp',
-    '/assets/sman88logo.webp',
-    '/assets/softagelogo.webp',
-    '/assets/yotlogo.webp',
-    '/assets/youth-ranger-indonesia.webp',
-];
-
-function PartnerLogo({ src }: { src: string }) {
-    return (
+function PartnerLogoItem({ item }: { item: PartnerLogo }) {
+    const body = (
         <div className="group relative flex h-16 w-32 shrink-0 items-center justify-center rounded-2xl border border-border/35 bg-card/20 px-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-border/70 hover:bg-card/45 sm:h-20 sm:w-40">
             <Image
-                src={src}
-                alt="Partner or sponsor logo"
+                src={item.src}
+                alt={`${item.name} logo`}
                 fill
                 sizes="(max-width: 640px) 128px, 160px"
                 unoptimized
@@ -43,10 +18,17 @@ function PartnerLogo({ src }: { src: string }) {
             />
         </div>
     );
+
+    if (item.href) {
+        return <a href={item.href} target="_blank" rel="noreferrer" aria-label={`Visit ${item.name}`}>{body}</a>;
+    }
+    return body;
 }
 
-export default function ExperienceMarquee() {
+export default function ExperienceMarquee({ logos }: { logos: PartnerLogo[] }) {
     const { isLowPowerMode } = usePerformance();
+    if (logos.length === 0) return null;
+
     const repeatedLogos = [...logos, ...logos, ...logos];
 
     return (
@@ -68,7 +50,7 @@ export default function ExperienceMarquee() {
                     }}
                 >
                     {repeatedLogos.map((logo, index) => (
-                        <PartnerLogo key={`${logo}-${index}`} src={logo} />
+                        <PartnerLogoItem key={`${logo.id}-${index}`} item={logo} />
                     ))}
                 </motion.div>
             </div>
