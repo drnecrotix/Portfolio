@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CircleHelp, FilePlus2, Search, Star } from 'lucide-react';
+import { FilePlus2, HelpCircle, Search, Star } from 'lucide-react';
 import { wikiCategoryLabel, type WikiCategory } from '@/lib/wiki-articles';
 
 export type WikiAdminItem = {
@@ -52,7 +52,7 @@ export function WikiAdminIndex({ mainTitle, mainUpdatedAt, faqEnabled, faqCount,
                     <span className="text-[10px] text-muted-foreground sm:text-right">{mainUpdatedAt ? new Date(mainUpdatedAt).toLocaleDateString('en-GB') : 'Default'}</span>
                 </Link>
                 <Link href="/admin/wiki/faq" className="grid gap-2 py-4 transition hover:bg-sky-500/[0.035] sm:grid-cols-[115px_minmax(0,1fr)_100px_90px] sm:items-center sm:px-3">
-                    <span className="inline-flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-sky-500"><CircleHelp className="size-3.5" /> FAQ</span>
+                    <span className="inline-flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-sky-500"><HelpCircle className="size-3.5" /> FAQ</span>
                     <div><p className="font-semibold">Frequently asked questions</p><p className="mt-0.5 text-[11px] text-muted-foreground">/wiki/faq · {faqCount} visible questions · dedicated schema</p></div>
                     <span className={`text-[10px] font-medium ${faqEnabled ? 'text-emerald-500' : 'text-muted-foreground'}`}>{faqEnabled ? 'Enabled' : 'Disabled'}</span>
                     <span className="text-[10px] text-muted-foreground sm:text-right">{faqUpdatedAt ? new Date(faqUpdatedAt).toLocaleDateString('en-GB') : 'Default'}</span>
