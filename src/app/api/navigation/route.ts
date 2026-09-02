@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
 
 const LEGACY_PAGE_TITLE = 'Experience page configuration';
 
@@ -22,7 +21,6 @@ const fallback: PublicNavigationItem[] = [
     { id: 'about', label: 'About', href: '#', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: true, dropdownStyle: 'auto', parentId: null },
     { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'lab', label: 'Lab', href: '/lab', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
-    { id: 'wiki', label: 'Wiki', href: '/wiki', location: 'primary', sortOrder: 25, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'experience', label: 'Journey', href: '/journey', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'blog', label: 'Blog', href: '/blog', location: 'primary', sortOrder: 50, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
@@ -33,18 +31,12 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const [items, journeyPage, wikiPage] = await Promise.all([
-            prisma.navigationItem.findMany({
-                where: { isVisible: true },
-                orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
-            }),
+        const [items, journeyPage] = await Promise.all([
+            prisma.navigationItem.findMany({ where: { isVisible: true }, orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }] }),
             prisma.page.findUnique({ where: { slug: '__experience-config' }, select: { title: true } }).catch(() => null),
-            prisma.page.findUnique({ where: { slug: PERSONAL_WIKI_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
         ]);
         const pageName = journeyPage?.title && journeyPage.title !== LEGACY_PAGE_TITLE ? journeyPage.title : 'Journey';
-        const wiki = normalizePersonalWikiContent(wikiPage?.content);
-
-        let normalized: PublicNavigationItem[] = items.map((item) => {
+        const normalized = items.map((item): PublicNavigationItem | null => {
             const base: PublicNavigationItem = {
                 id: item.id,
                 label: item.label,
@@ -57,40 +49,22 @@ export async function GET() {
                 dropdownStyle: item.dropdownStyle,
                 parentId: item.parentId,
             };
+
+            // v1.1.82 briefly created Wiki automatically at sort order 25. Hide that legacy
+            // signature so v1.1.83 can be fully manual. A manually added Wiki link with a
+            // user-chosen position/order remains untouched.
+            if (base.href === '/wiki' && base.label === 'Wiki' && base.sortOrder === 25) return null;
+
             const journeyItem = item.id === 'experience' || item.href === '/experience' || item.href === '/journey';
             if (journeyItem) return { ...base, label: pageName, href: '/journey' };
             const labItem = item.id === 'skills' || item.id === 'lab' || item.href === '/skills' || item.href === '/lab';
             return labItem ? { ...base, label: item.label === 'Skills' ? 'Lab' : item.label, href: '/lab' } : base;
-        });
+        }).filter((item): item is PublicNavigationItem => Boolean(item));
 
-        if (!wiki.enabled || !wiki.showInNavigation) {
-            normalized = normalized.filter((item) => item.href !== '/wiki' && item.id !== 'wiki');
-        } else if (!normalized.some((item) => item.href === '/wiki' || item.id === 'wiki')) {
-            const about = normalized.find((item) => item.isDropdown && !item.parentId && item.label.toLowerCase() === 'about');
-            normalized.push({
-                id: 'wiki-auto',
-                label: 'Wiki',
-                href: '/wiki',
-                location: 'primary',
-                sortOrder: about ? 25 : 25,
-                isVisible: true,
-                isExternal: false,
-                isDropdown: false,
-                dropdownStyle: 'auto',
-                parentId: about?.id ?? null,
-            });
-        }
-
-        const fallbackWithJourney = fallback
-            .filter((item) => wiki.enabled && wiki.showInNavigation ? true : item.href !== '/wiki')
-            .map((item) => item.id === 'experience' ? { ...item, label: pageName } : item);
-
-        return NextResponse.json(normalized.length ? normalized : fallbackWithJourney, {
+        return NextResponse.json(normalized.length ? normalized : fallback.map((item) => item.id === 'experience' ? { ...item, label: pageName } : item), {
             headers: { 'Cache-Control': 'no-store, max-age=0' },
         });
     } catch {
-        return NextResponse.json(fallback, {
-            headers: { 'Cache-Control': 'no-store, max-age=0' },
-        });
+        return NextResponse.json(fallback, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
     }
 }
