@@ -14,7 +14,7 @@ The repository now has a committed Prisma migration baseline and CI verifies it 
 - Strong `AUTH_SECRET` stored only in the deployment secret manager.
 - SMTP credentials when the contact form should deliver email.
 - Cloudflare R2 credentials when managed media uploads are enabled.
-- Optional GitHub, WakaTime, Groq, and Gemini credentials only when their related integrations are enabled.
+- Optional GitHub, WakaTime, OpenAI, Groq, Gemini and OpenRouter credentials only when their related integrations are enabled.
 
 Never commit real credentials to the repository.
 
@@ -113,6 +113,10 @@ Store production secrets in the hosting platform's secret manager or a root-read
 
 The production preflight command fails startup when core variables are missing, the canonical URL is not HTTPS, `AUTH_SECRET` is too short, or SMTP/R2 is only partially configured.
 
+API credentials can also be managed by OWNER/ADMIN users from **Admin → Tools → API Integrations**. Values stored there are encrypted with AES-256-GCM before PostgreSQL storage and override the matching environment variable at runtime. Set `INTEGRATION_CREDENTIALS_SECRET` to a dedicated long random value when possible; when it is omitted, the CMS falls back to `AI_CREDENTIALS_SECRET` and then `AUTH_SECRET`.
+
+The API Integrations screen never returns stored secret values to the browser. It reports the credential source, last test result, timestamp and latency, and can test each configured external service independently.
+
 ## Health monitoring
 
 `GET /api/health` performs a lightweight database query and returns `200` when the application and PostgreSQL connection are healthy or `503` when the database is unavailable. Responses are `no-store` and expose no credentials or raw database errors.
@@ -135,7 +139,7 @@ Verify the selected mode from a logged-out browser before and after a production
 
 ## Media / Cloudflare R2
 
-When R2 is enabled, configure all of these together:
+When R2 is enabled, configure all of these together either through Admin → Tools → API Integrations or environment variables:
 
 ```env
 R2_ACCOUNT_ID=""
@@ -163,12 +167,19 @@ Before launch, submit a real contact-form test through the production hostname a
 
 ## Optional integrations
 
+These values can be provided through environment variables or managed from Admin → Tools → API Integrations:
+
 ```env
+INTEGRATION_CREDENTIALS_SECRET=""
 GITHUB_TOKEN=""
 WAKATIME_API_KEY=""
+OPENAI_API_KEY=""
 GROQ_API_KEY=""
 GEMINI_API_KEY=""
+OPENROUTER_API_KEY=""
 ```
+
+The CMS page documents what each integration powers and provides **Test connection** plus **Test all** controls. For AI providers, API Integrations is synchronized with the existing AI Assistant credential vault so the assistant continues to use the same selected provider/model configuration.
 
 Use the minimum token permissions required. Monitor AI API cost and abuse in production even though the public chat endpoint already includes input limits, throttling, upstream timeouts, and CMS-grounded context.
 

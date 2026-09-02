@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
+import { getRuntimeIntegrationValue } from '@/lib/integration-runtime';
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const cacheHeaders = { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400' };
 
 const languageMap: Record<string, string> = {
@@ -145,7 +145,8 @@ function addTextTechnologies(text: string | undefined, technologies: Set<string>
 }
 
 export async function GET() {
-  if (!GITHUB_TOKEN) {
+  const githubToken = await getRuntimeIntegrationValue('github.apiKey', 'GITHUB_TOKEN');
+  if (!githubToken) {
     return NextResponse.json(
       { error: 'GitHub proof data is unavailable.' },
       { status: 503, headers: { 'Cache-Control': 'no-store' } },
@@ -198,7 +199,7 @@ export async function GET() {
     const response = await fetch('https://api.github.com/graphql', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${githubToken}`,
         'Content-Type': 'application/json',
         'User-Agent': 'NecrotixLab-Portfolio',
       },

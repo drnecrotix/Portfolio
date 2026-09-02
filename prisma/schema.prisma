@@ -76,7 +76,7 @@ model Project {
   sortOrder       Int           @default(0)
   content         Json?
   seoTitle        String?
-  seoDescription  String?
+  seoDescription String?
   publishedAt     DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -217,6 +217,7 @@ model SiteSettings {
   galleryContent        Json?
   seoDefaults           Json?
   assistantSettings     Json?
+  integrationSettings   Json?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
