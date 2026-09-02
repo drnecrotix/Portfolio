@@ -46,16 +46,16 @@ export function WikiFaqPage({ content }: { content: WikiFaqContent }) {
 
             <div className="mx-auto mt-8 max-w-6xl px-5 sm:px-8">
                 {(content.showSearch || (content.showCategories && categories.length > 2)) ? (
-                    <div className="sticky top-20 z-10 rounded-2xl border border-foreground/10 bg-background/90 p-3 shadow-sm backdrop-blur-xl">
+                    <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.012] p-3 shadow-sm">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            {content.showSearch ? <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-foreground/10 bg-foreground/[0.018] px-3 py-2.5"><Search className="size-4 text-muted-foreground" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search FAQ..." className="min-w-0 flex-1 bg-transparent text-sm outline-none" /></label> : null}
+                            {content.showSearch ? <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-foreground/10 bg-background px-3 py-2.5"><Search className="size-4 text-muted-foreground" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search FAQ..." className="min-w-0 flex-1 bg-transparent text-sm outline-none" /></label> : null}
                             <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">{filtered.length} of {enabled.length}</div>
                         </div>
-                        {content.showCategories && categories.length > 2 ? <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{categories.map((item) => <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold transition ${category === item ? 'border-sky-400/35 bg-sky-500/[0.1] text-sky-500 dark:text-sky-300' : 'border-foreground/10 text-muted-foreground hover:text-foreground'}`}>{item}</button>)}</div> : null}
+                        {content.showCategories && categories.length > 2 ? <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{categories.map((item) => <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold transition ${category === item ? 'border-sky-400/35 bg-sky-500/[0.1] text-sky-500 dark:text-sky-300' : 'border-foreground/10 text-muted-foreground hover:text-foreground'}`}>{item}</button>)}</div> : null}
                     </div>
                 ) : null}
 
-                <section className="mt-7">
+                <section className="mt-8">
                     <div className="divide-y divide-foreground/10 border-y border-foreground/10">
                         {filtered.map((item, index) => (
                             <details key={item.id} id={item.id} open={content.defaultExpanded || undefined} className="group scroll-mt-32 py-1">
