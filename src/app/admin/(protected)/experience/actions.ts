@@ -120,9 +120,15 @@ export async function updateExperiencePage(form: FormData): Promise<ExperienceSa
         const existingPage = await prisma.page.findUnique({ where: { slug: CONFIG_SLUG } });
         const existing = normalizeExperienceContent(existingPage?.content);
         const existingPageName = existingPage?.title && existingPage.title !== LEGACY_PAGE_TITLE ? existingPage.title : DEFAULT_PAGE_NAME;
+        const editingGeneral = form.has('pageName');
+        const editingPartners = form.has('marqueeTitle');
+        const editingCategories = form.has('category_0_label');
+        const editingEducationHighlight = form.has('educationHighlightTitle');
+        const editingJourneyHighlight = form.has('journeyHighlightTitle');
+        const editingExperienceHighlight = form.has('experienceHighlightTitle');
         const pageName = readString(form, 'pageName', existingPageName, 80);
         const requestedDefault = String(form.get('defaultTab') ?? existing.defaultTab) as ExperienceTabId;
-        const defaultTab: ExperienceTabId = ['education', 'journey', 'experience'].includes(requestedDefault) ? requestedDefault : defaultExperienceContent.defaultTab;
+        const defaultTab: ExperienceTabId = ['education', 'journey', 'experience'].includes(requestedDefault) ? requestedDefault : existing.defaultTab;
 
         let educationEntries: unknown;
         let journeyEntries: unknown;
@@ -145,19 +151,19 @@ export async function updateExperiencePage(form: FormData): Promise<ExperienceSa
 
         const candidate: ExperienceContent = normalizeExperienceContent({
             ...existing,
-            pageEnabled: readBoolean(form, 'pageEnabled'),
-            showHero: readBoolean(form, 'showHero'),
-            showDecorations: readBoolean(form, 'showDecorations'),
-            showMarquee: readBoolean(form, 'showMarquee'),
-            showTabs: readBoolean(form, 'showTabs'),
-            showEducation: readBoolean(form, 'showEducation'),
-            showJourney: readBoolean(form, 'showJourney'),
-            showExperience: readBoolean(form, 'showExperience'),
-            showHighlights: readBoolean(form, 'showHighlights'),
-            showSkills: readBoolean(form, 'showSkills'),
-            showResponsibilities: readBoolean(form, 'showResponsibilities'),
-            showImpact: readBoolean(form, 'showImpact'),
-            showKeyLearnings: readBoolean(form, 'showKeyLearnings'),
+            pageEnabled: editingGeneral ? readBoolean(form, 'pageEnabled') : existing.pageEnabled,
+            showHero: editingGeneral ? readBoolean(form, 'showHero') : existing.showHero,
+            showDecorations: editingGeneral ? readBoolean(form, 'showDecorations') : existing.showDecorations,
+            showMarquee: editingGeneral ? readBoolean(form, 'showMarquee') : existing.showMarquee,
+            showTabs: editingGeneral ? readBoolean(form, 'showTabs') : existing.showTabs,
+            showEducation: editingGeneral ? readBoolean(form, 'showEducation') : existing.showEducation,
+            showJourney: editingGeneral ? readBoolean(form, 'showJourney') : existing.showJourney,
+            showExperience: editingGeneral ? readBoolean(form, 'showExperience') : existing.showExperience,
+            showHighlights: editingGeneral ? readBoolean(form, 'showHighlights') : existing.showHighlights,
+            showSkills: editingGeneral ? readBoolean(form, 'showSkills') : existing.showSkills,
+            showResponsibilities: editingGeneral ? readBoolean(form, 'showResponsibilities') : existing.showResponsibilities,
+            showImpact: editingGeneral ? readBoolean(form, 'showImpact') : existing.showImpact,
+            showKeyLearnings: editingGeneral ? readBoolean(form, 'showKeyLearnings') : existing.showKeyLearnings,
             defaultTab,
             heroEyebrow: readString(form, 'heroEyebrow', existing.heroEyebrow, 120),
             heroTitle: readString(form, 'heroTitle', existing.heroTitle, 160),
@@ -167,7 +173,7 @@ export async function updateExperiencePage(form: FormData): Promise<ExperienceSa
             heroPrimaryUrl: readUrl(form, 'heroPrimaryUrl', existing.heroPrimaryUrl),
             heroSecondaryLabel: readString(form, 'heroSecondaryLabel', existing.heroSecondaryLabel, 80),
             heroSecondaryUrl: readUrl(form, 'heroSecondaryUrl', existing.heroSecondaryUrl),
-            marqueeTitle: readString(form, 'marqueeTitle', existing.marqueeTitle, 120),
+            marqueeTitle: editingPartners ? readString(form, 'marqueeTitle', existing.marqueeTitle, 120) : existing.marqueeTitle,
             tabIntro: readString(form, 'tabIntro', existing.tabIntro, 240),
             educationLabel: readString(form, 'educationLabel', existing.educationLabel, 80),
             educationDescription: readString(form, 'educationDescription', existing.educationDescription, 240),
@@ -179,32 +185,34 @@ export async function updateExperiencePage(form: FormData): Promise<ExperienceSa
             archiveTitle: readString(form, 'archiveTitle', existing.archiveTitle, 160),
             archiveDescription: readString(form, 'archiveDescription', existing.archiveDescription, 360),
             emptyState: readString(form, 'emptyState', existing.emptyState, 240),
-            categories: existing.categories.map((category, index) => ({
-                id: category.id,
-                label: readString(form, `category_${index}_label`, category.label, 120),
-                description: readString(form, `category_${index}_description`, category.description, 240),
-                prefix: readString(form, `category_${index}_prefix`, category.prefix, 40),
-                enabled: readBoolean(form, `category_${index}_enabled`),
-            })),
+            categories: editingCategories
+                ? existing.categories.map((category, index) => ({
+                    id: category.id,
+                    label: readString(form, `category_${index}_label`, category.label, 120),
+                    description: readString(form, `category_${index}_description`, category.description, 240),
+                    prefix: readString(form, `category_${index}_prefix`, category.prefix, 40),
+                    enabled: readBoolean(form, `category_${index}_enabled`),
+                }))
+                : existing.categories,
             highlights: {
-                education: {
+                education: editingEducationHighlight ? {
                     title: readString(form, 'educationHighlightTitle', existing.highlights.education.title, 120),
                     highlight: readString(form, 'educationHighlightText', existing.highlights.education.highlight, 120),
                     description: readString(form, 'educationHighlightDescription', existing.highlights.education.description, 500),
                     enabled: readBoolean(form, 'educationHighlightEnabled'),
-                },
-                journey: {
+                } : existing.highlights.education,
+                journey: editingJourneyHighlight ? {
                     title: readString(form, 'journeyHighlightTitle', existing.highlights.journey.title, 120),
                     highlight: readString(form, 'journeyHighlightText', existing.highlights.journey.highlight, 120),
                     description: readString(form, 'journeyHighlightDescription', existing.highlights.journey.description, 500),
                     enabled: readBoolean(form, 'journeyHighlightEnabled'),
-                },
-                experience: {
+                } : existing.highlights.journey,
+                experience: editingExperienceHighlight ? {
                     title: readString(form, 'experienceHighlightTitle', existing.highlights.experience.title, 120),
                     highlight: readString(form, 'experienceHighlightText', existing.highlights.experience.highlight, 120),
                     description: readString(form, 'experienceHighlightDescription', existing.highlights.experience.description, 500),
                     enabled: readBoolean(form, 'experienceHighlightEnabled'),
-                },
+                } : existing.highlights.experience,
             },
             educationEntries,
             journeyEntries,
