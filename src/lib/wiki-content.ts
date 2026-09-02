@@ -1,3 +1,5 @@
+import { plainTextToWikiHtml } from '@/lib/wiki-articles';
+
 export const PERSONAL_WIKI_CONFIG_SLUG = '__personal-wiki-config';
 
 export type WikiInfoboxRow = {
@@ -34,7 +36,6 @@ export type WikiRelatedLink = {
 
 export type PersonalWikiContent = {
     enabled: boolean;
-    showInNavigation: boolean;
     eyebrow: string;
     title: string;
     subtitle: string;
@@ -58,7 +59,6 @@ export type PersonalWikiContent = {
 
 export const defaultPersonalWikiContent: PersonalWikiContent = {
     enabled: true,
-    showInNavigation: true,
     eyebrow: 'Personal knowledge base',
     title: 'Nikola Stoyanov',
     subtitle: 'Also known as Nicholas Stoyanov · Dr Necrotix · Necrotix',
@@ -83,48 +83,13 @@ export const defaultPersonalWikiContent: PersonalWikiContent = {
         { id: 'website', label: 'Website', value: 'Necrotix Lab', href: '/', enabled: true },
     ],
     sections: [
-        {
-            id: 'early-life',
-            title: 'Early life',
-            body: 'Nikola Stoyanov was born in Karnobat, Bulgaria. During childhood his family spent time in Burgas, where digital culture and local creative subcultures became part of his environment. He later returned to Karnobat and completed his secondary education at Hristo Botev High School.',
-            enabled: true,
-        },
-        {
-            id: 'education',
-            title: 'Education',
-            body: 'His education combines creative and technical disciplines. He studied Digital Design through SoftUni Creative and later continued professional technical education at Todor Kableshkov University of Transport in Sofia, with a focus on locomotive systems and rail engineering.',
-            enabled: true,
-        },
-        {
-            id: 'career',
-            title: 'Career',
-            body: 'Stoyanov has worked in industrial and transport roles alongside his digital practice. Public biographical information lists work as a CNC/CPU operator and programmer at KAMT AD from 2016 to 2018, a train operator at BDZ Cargo from 2019 to 2022, and Operator LK32 at Mini Maritsa Iztok AD from 2022 onward.\n\nHis technical background includes CNC hydraulic machinery, CAD and G-code programming, and work with locomotive systems. In parallel, he has continued developing projects in digital media, web technology, design and content creation.',
-            enabled: true,
-        },
-        {
-            id: 'artistic-work',
-            title: 'Artistic work',
-            body: 'Under the artistic identity Dr Necrotix, Stoyanov works with poetry, digital art and dark visual aesthetics influenced by cyber culture, gaming and introspective storytelling.\n\nTwo recurring literary projects are “До моята Луна” (To My Moon), developed as a dark-poetry digital project, and “Гарванова История” (Raven Story), which expands the same creative universe through themes of decay, rebirth and identity. The broader visual language often treats imperfection, ruin and transformation as sources of meaning rather than defects to be hidden.',
-            enabled: true,
-        },
-        {
-            id: 'digital-projects',
-            title: 'Digital projects and communities',
-            body: 'His online work extends beyond personal publishing into software, infrastructure and community projects. Kreatrics and BG-GAMER are recurring parts of that ecosystem, while Necrotix Lab serves as the public portfolio and experimental layer connecting development, design, automation and creative work. Current technical work is documented in the Projects archive and The Lab.',
-            enabled: true,
-        },
-        {
-            id: 'online-presence',
-            title: 'Online presence',
-            body: 'Stoyanov has used several connected online identities, including Nicholas Stoyanov, Dr Necrotix, dr.necrotix and mr.necrotix. His public profiles have been used for poetry, visual work, gaming, technical projects and personal publishing. Necrotix Lab now acts as the maintained reference point for this work rather than relying on a single social platform.',
-            enabled: true,
-        },
-        {
-            id: 'personal-profile',
-            title: 'Personal profile',
-            body: 'Outside professional and technical work, his recurring interests include gaming, digital design and writing. He has publicly described himself as introverted and drawn to quiet, late-night creative work. A recurring theme across his projects is the contrast between engineering structure and emotional or symbolic expression.',
-            enabled: true,
-        },
+        { id: 'early-life', title: 'Early life', body: 'Nikola Stoyanov was born in Karnobat, Bulgaria. During childhood his family spent time in Burgas, where digital culture and local creative subcultures became part of his environment. He later returned to Karnobat and completed his secondary education at Hristo Botev High School.', enabled: true },
+        { id: 'education', title: 'Education', body: 'His education combines creative and technical disciplines. He studied Digital Design through SoftUni Creative and later continued professional technical education at Todor Kableshkov University of Transport in Sofia, with a focus on locomotive systems and rail engineering.', enabled: true },
+        { id: 'career', title: 'Career', body: 'Stoyanov has worked in industrial and transport roles alongside his digital practice. Public biographical information lists work as a CNC/CPU operator and programmer at KAMT AD from 2016 to 2018, a train operator at BDZ Cargo from 2019 to 2022, and Operator LK32 at Mini Maritsa Iztok AD from 2022 onward.\n\nHis technical background includes CNC hydraulic machinery, CAD and G-code programming, and work with locomotive systems. In parallel, he has continued developing projects in digital media, web technology, design and content creation.', enabled: true },
+        { id: 'artistic-work', title: 'Artistic work', body: 'Under the artistic identity Dr Necrotix, Stoyanov works with poetry, digital art and dark visual aesthetics influenced by cyber culture, gaming and introspective storytelling.\n\nTwo recurring literary projects are “До моята Луна” (To My Moon), developed as a dark-poetry digital project, and “Гарванова История” (Raven Story), which expands the same creative universe through themes of decay, rebirth and identity. The broader visual language often treats imperfection, ruin and transformation as sources of meaning rather than defects to be hidden.', enabled: true },
+        { id: 'digital-projects', title: 'Digital projects and communities', body: 'His online work extends beyond personal publishing into software, infrastructure and community projects. Kreatrics and BG-GAMER are recurring parts of that ecosystem, while Necrotix Lab serves as the public portfolio and experimental layer connecting development, design, automation and creative work. Current technical work is documented in the Projects archive and The Lab.', enabled: true },
+        { id: 'online-presence', title: 'Online presence', body: 'Stoyanov has used several connected online identities, including Nicholas Stoyanov, Dr Necrotix, dr.necrotix and mr.necrotix. His public profiles have been used for poetry, visual work, gaming, technical projects and personal publishing. Necrotix Lab now acts as the maintained reference point for this work rather than relying on a single social platform.', enabled: true },
+        { id: 'personal-profile', title: 'Personal profile', body: 'Outside professional and technical work, his recurring interests include gaming, digital design and writing. He has publicly described himself as introverted and drawn to quiet, late-night creative work. A recurring theme across his projects is the contrast between engineering structure and emotional or symbolic expression.', enabled: true },
     ],
     showTimeline: true,
     timelineTitle: 'Selected chronology',
@@ -207,7 +172,7 @@ function normalizeSections(value: unknown): WikiSection[] {
         return {
             id: safeId(section.id, `section-${index + 1}`),
             title: optionalText(section.title, 120),
-            body: optionalText(section.body, 12_000),
+            body: plainTextToWikiHtml(section.body).slice(0, 30_000),
             enabled: bool(section.enabled, true),
         };
     }).filter((item) => item.title && item.body);
@@ -246,11 +211,10 @@ export function normalizePersonalWikiContent(value: unknown): PersonalWikiConten
     const input = record(value);
     return {
         enabled: bool(input.enabled, defaultPersonalWikiContent.enabled),
-        showInNavigation: bool(input.showInNavigation, defaultPersonalWikiContent.showInNavigation),
         eyebrow: text(input.eyebrow, defaultPersonalWikiContent.eyebrow, 80),
         title: text(input.title, defaultPersonalWikiContent.title, 120),
         subtitle: text(input.subtitle, defaultPersonalWikiContent.subtitle, 200),
-        lead: text(input.lead, defaultPersonalWikiContent.lead, 1800),
+        lead: plainTextToWikiHtml(input.lead || defaultPersonalWikiContent.lead).slice(0, 20_000),
         portrait: optionalText(input.portrait, 2048),
         portraitCaption: text(input.portraitCaption, defaultPersonalWikiContent.portraitCaption, 160),
         aliases: normalizeAliases(input.aliases),

@@ -1,20 +1,14 @@
 import Link from 'next/link';
-import { BookOpen, Clock3, ExternalLink, Hash, Link2 } from 'lucide-react';
+import { BookOpen, Clock3, ExternalLink, Hash, LibraryBig, Link2 } from 'lucide-react';
 import type { PublicIdentity } from '@/lib/public-identity';
 import type { PersonalWikiContent, WikiRelatedLink } from '@/lib/wiki-content';
-
-function paragraphs(value: string) {
-    return value.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
-}
 
 function isExternal(href: string) {
     return /^https?:\/\//i.test(href);
 }
 
 function SmartLink({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
-    if (isExternal(href)) {
-        return <a href={href} target="_blank" rel="noreferrer" className={className}>{children}</a>;
-    }
+    if (isExternal(href)) return <a href={href} target="_blank" rel="noreferrer" className={className}>{children}</a>;
     return <Link href={href} className={className}>{children}</Link>;
 }
 
@@ -30,24 +24,15 @@ function RelatedLinkCard({ item }: { item: WikiRelatedLink }) {
     );
 }
 
-export function PersonalWikiPage({
-    content,
-    identity,
-    updatedAt,
-}: {
-    content: PersonalWikiContent;
-    identity: PublicIdentity;
-    updatedAt: Date | null;
-}) {
+const richTextClass = 'prose max-w-none prose-headings:font-black prose-headings:tracking-[-0.025em] prose-p:text-foreground/78 prose-p:leading-8 prose-a:text-sky-400 prose-a:underline-offset-4 prose-strong:text-foreground prose-blockquote:border-foreground/20 prose-blockquote:text-foreground/70 prose-li:text-foreground/75 prose-code:before:content-none prose-code:after:content-none dark:prose-invert';
+
+export function PersonalWikiPage({ content, identity, updatedAt }: { content: PersonalWikiContent; identity: PublicIdentity; updatedAt: Date | null }) {
     const sections = content.sections.filter((section) => section.enabled);
     const timeline = content.timeline.filter((entry) => entry.enabled);
     const related = content.relatedLinks.filter((item) => item.enabled);
     const facts = content.infoboxRows.filter((item) => item.enabled);
     const portrait = content.portrait || identity.avatar || '/dr-necrotix-mark.svg';
-    const updatedLabel = updatedAt
-        ? updatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
-        : 'Living document';
-
+    const updatedLabel = updatedAt ? updatedAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Living document';
     const toc = [
         { id: 'introduction', label: 'Introduction' },
         ...sections.map((section) => ({ id: section.id, label: section.title })),
@@ -59,10 +44,11 @@ export function PersonalWikiPage({
         <main className="min-h-screen bg-background pb-28 pt-28 text-foreground sm:pt-36">
             <header className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
                 <div className="border-b border-foreground/10 pb-10 sm:pb-14">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">{content.eyebrow}</p>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.02] px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-                            <Clock3 className="size-3.5" /> Updated {updatedLabel}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-[10px] font-semibold text-muted-foreground transition hover:text-foreground"><LibraryBig className="size-3.5" /> Browse Wiki</Link>
+                            <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.02] px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground"><Clock3 className="size-3.5" /> Updated {updatedLabel}</div>
                         </div>
                     </div>
 
@@ -72,8 +58,8 @@ export function PersonalWikiPage({
                             <p className="mt-5 max-w-3xl text-base font-medium leading-7 text-foreground/70 sm:text-lg">{content.subtitle}</p>
                         </div>
                         <div className="border-l border-foreground/10 pl-5">
-                            <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"><BookOpen className="size-3.5" /> Personal index</div>
-                            <p className="mt-3 text-xs leading-5 text-muted-foreground">A maintained reference page for identity, work, chronology and connected parts of the site.</p>
+                            <div className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"><BookOpen className="size-3.5" /> Main Wiki article</div>
+                            <p className="mt-3 text-xs leading-5 text-muted-foreground">The biography is the root article. Projects, communities, organizations and future FAQ entries live in the connected Wiki archive.</p>
                         </div>
                     </div>
                 </div>
@@ -81,6 +67,10 @@ export function PersonalWikiPage({
 
             {content.showContents && toc.length > 1 ? (
                 <div className="mx-auto mt-6 max-w-7xl px-5 sm:px-8 lg:hidden">
+                    <div className="mb-3 grid grid-cols-2 gap-2">
+                        <Link href="/wiki" className="rounded-xl border border-foreground/10 bg-foreground/[0.02] px-3 py-2 text-xs font-semibold">Main article</Link>
+                        <Link href="/wiki/articles" className="rounded-xl border border-foreground/10 bg-foreground/[0.02] px-3 py-2 text-xs font-semibold text-muted-foreground">All articles</Link>
+                    </div>
                     <details className="rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4">
                         <summary className="cursor-pointer list-none font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground [&::-webkit-details-marker]:hidden">Contents</summary>
                         <nav className="mt-4 grid gap-2 border-t border-foreground/10 pt-4">
@@ -90,38 +80,36 @@ export function PersonalWikiPage({
                 </div>
             ) : null}
 
-            <div className="mx-auto mt-10 grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[190px_minmax(0,1fr)_300px] lg:px-10 xl:grid-cols-[220px_minmax(0,1fr)_320px]">
+            <div className="mx-auto mt-10 grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[190px_minmax(0,1fr)_280px] lg:px-10 xl:grid-cols-[210px_minmax(0,1fr)_300px]">
                 <aside className="hidden lg:block">
-                    {content.showContents ? (
-                        <nav className="sticky top-28 border-l border-foreground/10 pl-4">
-                            <p className="mb-4 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Contents</p>
-                            <div className="space-y-1">
-                                {toc.map((item, index) => (
-                                    <a key={item.id} href={`#${item.id}`} className="group flex items-start gap-2 py-1.5 text-xs leading-5 text-muted-foreground transition hover:text-foreground">
-                                        <span className="mt-px font-mono text-[8px] opacity-40 group-hover:opacity-70">{String(index + 1).padStart(2, '0')}</span>
-                                        <span>{item.label}</span>
-                                    </a>
-                                ))}
-                            </div>
+                    <div className="sticky top-28 space-y-8">
+                        <nav className="border-l border-foreground/10 pl-4">
+                            <p className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Wiki</p>
+                            <Link href="/wiki" className="block py-1.5 text-xs font-semibold text-foreground">Main article</Link>
+                            <Link href="/wiki/articles" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">All articles</Link>
                         </nav>
-                    ) : null}
+                        {content.showContents ? (
+                            <nav className="border-l border-foreground/10 pl-4">
+                                <p className="mb-4 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Contents</p>
+                                <div className="space-y-1">
+                                    {toc.map((item, index) => <a key={item.id} href={`#${item.id}`} className="group flex items-start gap-2 py-1.5 text-xs leading-5 text-muted-foreground transition hover:text-foreground"><span className="mt-px font-mono text-[8px] opacity-40 group-hover:opacity-70">{String(index + 1).padStart(2, '0')}</span><span>{item.label}</span></a>)}
+                                </div>
+                            </nav>
+                        ) : null}
+                    </div>
                 </aside>
 
                 <article className="min-w-0">
                     <section id="introduction" className="scroll-mt-28 border-b border-foreground/10 pb-12">
                         <div className="mb-5 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"><Hash className="size-3.5" /> 01 · Introduction</div>
-                        <div className="space-y-5 text-[1.04rem] leading-8 text-foreground/80 sm:text-lg sm:leading-9">
-                            {paragraphs(content.lead).map((item, index) => <p key={index}>{item}</p>)}
-                        </div>
+                        <div className={`${richTextClass} text-[1.04rem] sm:text-lg`} dangerouslySetInnerHTML={{ __html: content.lead }} />
                     </section>
 
                     {sections.map((section, index) => (
                         <section key={section.id} id={section.id} className="scroll-mt-28 border-b border-foreground/10 py-12">
                             <div className="mb-5 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"><Hash className="size-3.5" /> {String(index + 2).padStart(2, '0')} · Article</div>
                             <h2 className="text-3xl font-black tracking-[-0.035em] sm:text-4xl">{section.title}</h2>
-                            <div className="mt-7 space-y-5 text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8">
-                                {paragraphs(section.body).map((item, paragraphIndex) => <p key={paragraphIndex}>{item}</p>)}
-                            </div>
+                            <div className={`${richTextClass} mt-7`} dangerouslySetInnerHTML={{ __html: section.body }} />
                         </section>
                     ))}
 
@@ -147,39 +135,24 @@ export function PersonalWikiPage({
                         <section id="related" className="scroll-mt-28 py-12">
                             <div className="mb-5 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground"><Link2 className="size-3.5" /> Index links</div>
                             <h2 className="text-3xl font-black tracking-[-0.035em] sm:text-4xl">{content.relatedTitle}</h2>
-                            <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                                {related.map((item) => <RelatedLinkCard key={item.id} item={item} />)}
-                            </div>
+                            <div className="mt-8 grid gap-3 sm:grid-cols-2">{related.map((item) => <RelatedLinkCard key={item.id} item={item} />)}</div>
                         </section>
                     ) : null}
                 </article>
 
                 <aside>
                     {content.showInfobox ? (
-                        <div className="sticky top-28 overflow-hidden rounded-[1.6rem] border border-foreground/10 bg-foreground/[0.018]">
-                            <div className="border-b border-foreground/10 p-3">
+                        <div className="sticky top-28 overflow-hidden rounded-[1.4rem] border border-foreground/10 bg-foreground/[0.018]">
+                            <div className="border-b border-foreground/10 p-4 text-center">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={portrait} alt={content.title || identity.name} className="aspect-[4/3] w-full rounded-[1.15rem] border border-foreground/10 bg-foreground/[0.03] object-cover" />
-                                <p className="mt-2 px-1 font-mono text-[8px] uppercase tracking-[0.16em] text-muted-foreground">{content.portraitCaption}</p>
+                                <img src={portrait} alt={content.title || identity.name} className="mx-auto h-40 w-40 rounded-2xl border border-foreground/10 bg-foreground/[0.03] object-cover sm:h-44 sm:w-44" />
+                                <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.16em] text-muted-foreground">{content.portraitCaption}</p>
                             </div>
                             <div className="p-5">
                                 <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{content.infoboxTitle}</p>
-                                <h2 className="mt-2 text-2xl font-black tracking-[-0.035em]">{content.title || identity.name}</h2>
+                                <h2 className="mt-2 text-xl font-black tracking-[-0.035em]">{content.title || identity.name}</h2>
                                 {content.aliases.length ? <div className="mt-3 flex flex-wrap gap-1.5">{content.aliases.map((alias) => <span key={alias} className="rounded-full border border-foreground/10 px-2 py-1 font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground">{alias}</span>)}</div> : null}
-
-                                {facts.length ? (
-                                    <dl className="mt-6 divide-y divide-foreground/10 border-y border-foreground/10">
-                                        {facts.map((fact) => (
-                                            <div key={fact.id} className="grid grid-cols-[85px_minmax(0,1fr)] gap-3 py-3 text-xs leading-5">
-                                                <dt className="font-medium text-muted-foreground">{fact.label}</dt>
-                                                <dd className="min-w-0 font-semibold text-foreground/85">
-                                                    {fact.href ? <SmartLink href={fact.href} className="break-words transition hover:opacity-65">{fact.value}</SmartLink> : fact.value}
-                                                </dd>
-                                            </div>
-                                        ))}
-                                    </dl>
-                                ) : null}
-
+                                {facts.length ? <dl className="mt-5 divide-y divide-foreground/10 border-y border-foreground/10">{facts.map((fact) => <div key={fact.id} className="grid grid-cols-[78px_minmax(0,1fr)] gap-3 py-2.5 text-[11px] leading-5"><dt className="font-medium text-muted-foreground">{fact.label}</dt><dd className="min-w-0 font-semibold text-foreground/85">{fact.href ? <SmartLink href={fact.href} className="break-words transition hover:opacity-65">{fact.value}</SmartLink> : fact.value}</dd></div>)}</dl> : null}
                                 <div className="mt-5 flex flex-wrap gap-2">
                                     {identity.githubUrl ? <a href={identity.githubUrl} target="_blank" rel="noreferrer" className="rounded-full border border-foreground/10 px-3 py-1.5 text-[10px] font-semibold text-muted-foreground transition hover:text-foreground">GitHub</a> : null}
                                     {identity.linkedinUrl ? <a href={identity.linkedinUrl} target="_blank" rel="noreferrer" className="rounded-full border border-foreground/10 px-3 py-1.5 text-[10px] font-semibold text-muted-foreground transition hover:text-foreground">LinkedIn</a> : null}
@@ -191,9 +164,7 @@ export function PersonalWikiPage({
                 </aside>
             </div>
 
-            <footer className="mx-auto mt-12 max-w-7xl px-5 sm:px-8 lg:px-10">
-                <div className="border-t border-foreground/10 pt-6 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">{content.footerNote}</div>
-            </footer>
+            <footer className="mx-auto mt-12 max-w-7xl px-5 sm:px-8 lg:px-10"><div className="border-t border-foreground/10 pt-6 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">{content.footerNote}</div></footer>
         </main>
     );
 }
