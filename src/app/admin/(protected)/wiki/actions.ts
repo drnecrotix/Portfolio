@@ -57,23 +57,51 @@ export async function savePersonalWiki(form: FormData) {
             footerNote: value(form, 'footerNote', 500),
         });
 
-        await prisma.page.upsert({
-            where: { slug: PERSONAL_WIKI_CONFIG_SLUG },
-            create: {
-                slug: PERSONAL_WIKI_CONFIG_SLUG,
-                title: 'Personal Wiki configuration',
-                status: 'DRAFT',
-                content,
-            },
-            update: {
-                title: 'Personal Wiki configuration',
-                status: 'DRAFT',
-                content,
-            },
+        await prisma.$transaction(async (tx) => {
+            await tx.page.upsert({
+                where: { slug: PERSONAL_WIKI_CONFIG_SLUG },
+                create: {
+                    slug: PERSONAL_WIKI_CONFIG_SLUG,
+                    title: 'Personal Wiki configuration',
+                    status: 'DRAFT',
+                    content,
+                },
+                update: {
+                    title: 'Personal Wiki configuration',
+                    status: 'DRAFT',
+                    content,
+                },
+            });
+
+            const existingWikiNav = await tx.navigationItem.findFirst({
+                where: { OR: [{ href: '/wiki' }, { id: 'wiki' }] },
+            });
+            const shouldShow = content.enabled && content.showInNavigation;
+
+            if (existingWikiNav) {
+                await tx.navigationItem.update({
+                    where: { id: existingWikiNav.id },
+                    data: { isVisible: shouldShow, href: '/wiki' },
+                });
+            } else if (shouldShow) {
+                const about = await tx.navigationItem.findFirst({
+                    where: { parentId: null, isDropdown: true, label: { equals: 'About', mode: 'insensitive' } },
+                    orderBy: { sortOrder: 'asc' },
+                });
+                await tx.navigationItem.create({
+                    data: {
+                        label: 'Wiki',
+                        href: '/wiki',
+                        sortOrder: 25,
+                        parentId: about?.id ?? null,
+                    },
+                });
+            }
         });
 
         revalidatePath('/wiki');
         revalidatePath('/admin/wiki');
+        revalidatePath('/admin/navigation');
         revalidatePath('/api/navigation');
         revalidatePath('/', 'layout');
     } catch (error) {
