@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Check, Copy, Heart, Languages } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Eye, Heart, Languages } from 'lucide-react';
 import type { CmsPostContent } from '@/lib/cms-posts';
 
 export type RelatedBlogPost = {
@@ -27,11 +27,32 @@ type LocalizedPayload = {
     error?: string;
 };
 
+function formatCompactCount(value: number) {
+    const count = Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
+    if (count < 1_000) return String(count);
+
+    const units = [
+        { divisor: 1_000_000_000, suffix: 'B' },
+        { divisor: 1_000_000, suffix: 'M' },
+        { divisor: 1_000, suffix: 'K' },
+    ];
+
+    for (const unit of units) {
+        if (count < unit.divisor) continue;
+        const scaled = count / unit.divisor;
+        const decimals = scaled < 100 ? 1 : 0;
+        return `${scaled.toFixed(decimals).replace(/\.0$/, '').replace('.', ',')}${unit.suffix}`;
+    }
+
+    return String(count);
+}
+
 export function BlogArticleFrame({
     postId,
     slug,
     postType,
     initialLikeCount,
+    initialViewCount,
     initiallyLiked,
     title,
     excerpt,
@@ -51,6 +72,7 @@ export function BlogArticleFrame({
     slug: string;
     postType: string;
     initialLikeCount: number;
+    initialViewCount: number;
     initiallyLiked: boolean;
     title: string;
     excerpt: string | null;
@@ -67,9 +89,11 @@ export function BlogArticleFrame({
     comments?: ReactNode;
 }) {
     const router = useRouter();
+    const viewRecordedRef = useRef(false);
     const [copied, setCopied] = useState(false);
     const [liked, setLiked] = useState(initiallyLiked);
     const [likeCount, setLikeCount] = useState(initialLikeCount);
+    const [viewCount, setViewCount] = useState(initialViewCount);
     const [liking, setLiking] = useState(false);
     const [switchingLocale, setSwitchingLocale] = useState(false);
     const [activeLocale, setActiveLocale] = useState(currentLocale);
@@ -77,6 +101,35 @@ export function BlogArticleFrame({
     const [displayExcerpt, setDisplayExcerpt] = useState(excerpt);
     const [displayContent, setDisplayContent] = useState<CmsPostContent>(initialContent);
     const [languageError, setLanguageError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (viewRecordedRef.current) return;
+        viewRecordedRef.current = true;
+        const storageKey = `necrotix:blog-view:${postId}`;
+
+        try {
+            if (sessionStorage.getItem(storageKey) === '1') return;
+            sessionStorage.setItem(storageKey, '1');
+        } catch {
+            // Embedded browsers can restrict storage. The view endpoint still works without it.
+        }
+
+        void fetch('/api/blog/views', {
+            method: 'POST',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId }),
+        })
+            .then(async (response) => {
+                const data = await response.json() as { count?: number };
+                if (!response.ok) throw new Error('Unable to record view.');
+                setViewCount(Number(data.count) || 0);
+            })
+            .catch(() => {
+                try { sessionStorage.removeItem(storageKey); } catch { /* storage is optional */ }
+                viewRecordedRef.current = false;
+            });
+    }, [postId]);
 
     const copyLink = async () => {
         await navigator.clipboard.writeText(window.location.href);
@@ -190,8 +243,12 @@ export function BlogArticleFrame({
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         <motion.button type="button" onClick={() => void toggleLike()} disabled={liking} aria-pressed={liked} aria-label={liked ? 'Unlike this publication' : 'Like this publication'} whileTap={{ scale: 0.9 }} className={`inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-medium transition ${liked ? 'border-rose-500/25 bg-rose-500/10 text-rose-500' : 'border-foreground/10 bg-foreground/[0.03] text-muted-foreground hover:text-foreground'}`}>
                             <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-                            <span>{likeCount}</span>
+                            <span>{formatCompactCount(likeCount)}</span>
                         </motion.button>
+                        <div className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs font-medium text-muted-foreground" title={`${viewCount.toLocaleString()} views`} aria-label={`${viewCount.toLocaleString()} views`}>
+                            <Eye className="h-4 w-4" />
+                            <span>{formatCompactCount(viewCount)}</span>
+                        </div>
                         <button onClick={copyLink} className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground">
                             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             <span>{copied ? 'Copied' : 'Share'}</span>
