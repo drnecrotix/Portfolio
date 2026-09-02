@@ -12,6 +12,23 @@ import type { PublicIdentity } from '@/lib/public-identity';
 import type { PublicPost } from '@/lib/cms-posts';
 import type { Project } from '@/types';
 
+function readPortfolioLoaded() {
+    try {
+        return window.sessionStorage.getItem('portfolioLoaded');
+    } catch {
+        return null;
+    }
+}
+
+function writePortfolioLoaded() {
+    try {
+        window.sessionStorage.setItem('portfolioLoaded', 'true');
+    } catch {
+        // Some embedded browsers can restrict sessionStorage. The loader should
+        // still complete normally even when persistence is unavailable.
+    }
+}
+
 export default function HomeClient({ content, identity, posts, projects }: { content: HomepageContent; identity: PublicIdentity; posts: PublicPost[]; projects: Project[] }) {
     const { phase } = usePreloadState();
     const [isLoading, setIsLoading] = useState(true);
@@ -20,7 +37,7 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     const autoScrollInProgress = useRef(false);
 
     useEffect(() => {
-        const hasLoaded = sessionStorage.getItem('portfolioLoaded');
+        const hasLoaded = readPortfolioLoaded();
         if (!hasLoaded) return;
         const frame = window.requestAnimationFrame(() => { setSkipAnimation(true); setIsLoading(false); });
         return () => window.cancelAnimationFrame(frame);
@@ -33,7 +50,7 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     const handleLoadingComplete = () => {
         setIsLoading(false);
         window.scrollTo({ top: 0, behavior: 'instant' });
-        sessionStorage.setItem('portfolioLoaded', 'true');
+        writePortfolioLoaded();
     };
 
     const smoothTo = (id: string) => {
