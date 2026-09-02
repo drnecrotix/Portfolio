@@ -100,8 +100,12 @@ try {
 
   status('running', `Installing Portfolio ${targetVersion || 'latest'}…`, { targetVersion });
 
+  // Mirror release-controlled files so files removed upstream cannot linger in the
+  // production tree and still participate in TypeScript/Next.js builds. Runtime
+  // state and locally uploaded media are explicitly excluded and therefore kept.
   run('rsync', [
     '-a',
+    '--delete-delay',
     '--exclude=.git',
     '--exclude=.env',
     '--exclude=node_modules',
@@ -109,6 +113,8 @@ try {
     '--exclude=.next-update',
     '--exclude=tmp',
     '--exclude=public/.htaccess',
+    '--exclude=public/.well-known',
+    '--exclude=public/uploads',
     `${checkout}/`,
     `${appRoot}/`,
   ]);
@@ -180,11 +186,6 @@ try {
   const nextCli = resolvePackageFile('next/dist/bin/next');
   if (!nextCli) {
     throw new Error('Next.js CLI is not installed in the active N0C Node environment.');
-  }
-
-  const wasmSwc = resolvePackageFile('@next/swc-wasm-nodejs');
-  if (!wasmSwc) {
-    throw new Error('WASM SWC is not installed. Retry the update so N0C installs @next/swc-wasm-nodejs before building.');
   }
 
   status('running', 'Building the production application without touching the live .next directory…', { targetVersion });
