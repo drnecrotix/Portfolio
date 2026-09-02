@@ -238,21 +238,23 @@ export function BlogArticleFrame({
             )}
 
             <div className="container mx-auto mt-10 max-w-5xl px-6">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.16 }} className="mx-auto flex max-w-3xl items-center justify-between gap-5 border-y border-foreground/10 py-4">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A note from the journal</span>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                        <motion.button type="button" onClick={() => void toggleLike()} disabled={liking} aria-pressed={liked} aria-label={liked ? 'Unlike this publication' : 'Like this publication'} whileTap={{ scale: 0.9 }} className={`inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-medium transition ${liked ? 'border-rose-500/25 bg-rose-500/10 text-rose-500' : 'border-foreground/10 bg-foreground/[0.03] text-muted-foreground hover:text-foreground'}`}>
-                            <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-                            <span>{formatCompactCount(likeCount)}</span>
-                        </motion.button>
-                        <div className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs font-medium text-muted-foreground" title={`${viewCount.toLocaleString()} views`} aria-label={`${viewCount.toLocaleString()} views`}>
-                            <Eye className="h-4 w-4" />
-                            <span>{formatCompactCount(viewCount)}</span>
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.16 }} className="mx-auto flex max-w-3xl items-center justify-center gap-5 border-y border-foreground/10 py-4 sm:justify-between">
+                    <span className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:block">A note from the journal</span>
+                    <div className="flex w-full flex-col items-center gap-2 sm:w-auto sm:flex-row sm:justify-end">
+                        <div className="flex w-full flex-nowrap items-center justify-center gap-2 sm:w-auto">
+                            <motion.button type="button" onClick={() => void toggleLike()} disabled={liking} aria-pressed={liked} aria-label={liked ? 'Unlike this publication' : 'Like this publication'} whileTap={{ scale: 0.9 }} className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-medium transition ${liked ? 'border-rose-500/25 bg-rose-500/10 text-rose-500' : 'border-foreground/10 bg-foreground/[0.03] text-muted-foreground hover:text-foreground'}`}>
+                                <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
+                                <span>{formatCompactCount(likeCount)}</span>
+                            </motion.button>
+                            <div className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs font-medium text-muted-foreground" title={`${viewCount.toLocaleString()} views`} aria-label={`${viewCount.toLocaleString()} views`}>
+                                <Eye className="h-4 w-4" />
+                                <span>{formatCompactCount(viewCount)}</span>
+                            </div>
+                            <button onClick={copyLink} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground">
+                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                <span>{copied ? 'Copied' : 'Share'}</span>
+                            </button>
                         </div>
-                        <button onClick={copyLink} className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground">
-                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                            <span>{copied ? 'Copied' : 'Share'}</span>
-                        </button>
                         {showLanguageSwitch && (
                             <motion.div layout className="inline-flex h-9 items-center gap-1 rounded-full border border-foreground/10 bg-foreground/[0.03] p-1" aria-label="Publication language">
                                 <Languages className={`ml-2 h-4 w-4 ${switchingLocale ? 'animate-spin text-fuchsia-500' : 'text-muted-foreground'}`} />
