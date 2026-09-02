@@ -23,13 +23,13 @@ function formatBytes(size: number) {
 
 export default async function MediaLibraryPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
-  const [assets, totalAssets, imageCount, totalBytes] = await Promise.all([
+  const [assets, totalAssets, imageCount, totalBytes, backend] = await Promise.all([
     prisma.mediaAsset.findMany({ orderBy: { createdAt: 'desc' } }),
     prisma.mediaAsset.count(),
     prisma.mediaAsset.count({ where: { mimeType: { startsWith: 'image/' } } }),
     prisma.mediaAsset.aggregate({ _sum: { size: true } }),
+    mediaStorageBackend(),
   ]);
-  const backend = mediaStorageBackend();
   const savedMessage = params.saved ? savedMessages[params.saved] || 'Changes saved and applied.' : undefined;
   const serialized = assets.map((asset) => ({
     id: asset.id,
