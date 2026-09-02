@@ -126,7 +126,7 @@ export async function saveApiIntegration(input: {
             ? withoutIntegrationTest(updatedIntegrationSettings, input.id)
             : updatedIntegrationSettings;
 
-        let nextAssistantSettings = existing?.assistantSettings;
+        let nextAssistantSettings: unknown = existing?.assistantSettings;
         if (aiProviders.has(input.id)) {
             const apiField = `${input.id}.apiKey`;
             if (apiField in changes) {
@@ -141,16 +141,20 @@ export async function saveApiIntegration(input: {
             }
         }
 
+        const assistantSettingsJson = nextAssistantSettings
+            ? toAssistantSettingsJson(nextAssistantSettings as Record<string, unknown>)
+            : undefined;
+
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
             create: {
                 id: 'default',
                 integrationSettings: toIntegrationSettingsJson(nextIntegrationSettings),
-                ...(nextAssistantSettings ? { assistantSettings: toAssistantSettingsJson(nextAssistantSettings as Record<string, unknown>) } : {}),
+                ...(assistantSettingsJson ? { assistantSettings: assistantSettingsJson } : {}),
             },
             update: {
                 integrationSettings: toIntegrationSettingsJson(nextIntegrationSettings),
-                ...(nextAssistantSettings ? { assistantSettings: toAssistantSettingsJson(nextAssistantSettings as Record<string, unknown>) } : {}),
+                ...(assistantSettingsJson ? { assistantSettings: assistantSettingsJson } : {}),
             },
         });
 
