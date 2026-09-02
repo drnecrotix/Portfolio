@@ -246,11 +246,16 @@ async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, s
 }
 
 export async function testApiIntegration(id: ApiIntegrationId): Promise<ApiActionResult> {
+    try {
+        await requireApiAdmin();
+    } catch {
+        return { ok: false, message: 'Forbidden' };
+    }
+    if (!validIntegrationId(id)) return { ok: false, message: 'Unknown API integration.' };
+
     const startedAt = Date.now();
     let result: ApiActionResult;
     try {
-        await requireApiAdmin();
-        if (!validIntegrationId(id)) return { ok: false, message: 'Unknown API integration.' };
         const settings = await loadRuntimeSettings();
         const values = effectiveValues(settings?.integrationSettings, settings?.assistantSettings);
         const message = await runIntegrationTest(id, values);
