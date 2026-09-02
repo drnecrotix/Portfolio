@@ -11,6 +11,7 @@ const dashboardItem = ['Dashboard', '/admin'] as const satisfies AdminNavItem;
 const navGroups = [
     ['Content', [
         ['Homepage', '/admin/homepage'],
+        ['Experience', '/admin/experience'],
         ['Projects', '/admin/projects'],
         ['Blog', '/admin/blog'],
         ['Comments', '/admin/comments'],

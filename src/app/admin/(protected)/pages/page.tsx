@@ -2,7 +2,10 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 
 export default async function PagesAdminPage() {
-    const pages = await prisma.page.findMany({ orderBy: { updatedAt: 'desc' } });
+    const pages = await prisma.page.findMany({
+        where: { slug: { not: '__experience-config' } },
+        orderBy: { updatedAt: 'desc' },
+    });
 
     return (
         <div className="max-w-6xl mx-auto">
