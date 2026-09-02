@@ -8,12 +8,13 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const ALLOWED_UPLOAD_TYPES = new Set([
     'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
     'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-m4v',
+    'application/pdf',
     'application/zip', 'application/x-zip-compressed',
 ]);
 const ALLOWED_UPLOAD_EXTENSIONS = new Set([
     'jpg', 'jpeg', 'png', 'webp', 'gif', 'avif',
     'mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v',
-    'zip',
+    'pdf', 'zip',
 ]);
 
 async function requireEditor() {
@@ -37,6 +38,11 @@ function typeAllowed(file: File) {
     if (!ALLOWED_UPLOAD_EXTENSIONS.has(ext)) return false;
     if (!file.type || file.type === 'application/octet-stream') return true;
     return ALLOWED_UPLOAD_TYPES.has(file.type);
+}
+
+function normalizedMimeType(file: File) {
+    if (extension(file.name) === 'pdf') return 'application/pdf';
+    return file.type || 'application/octet-stream';
 }
 
 export async function GET() {
@@ -78,7 +84,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Maximum upload size is 10 MB.' }, { status: 413 });
         }
         if (!typeAllowed(file)) {
-            return NextResponse.json({ error: 'Unsupported file type. Upload an image, video, or ZIP archive.' }, { status: 415 });
+            return NextResponse.json({ error: 'Unsupported file type. Upload an image, video, PDF document, or ZIP archive.' }, { status: 415 });
         }
 
         const fileName = safeFileName(file.name) || `asset-${Date.now()}`;
@@ -90,7 +96,7 @@ export async function POST(request: Request) {
                 data: {
                     key: stored.key,
                     fileName,
-                    mimeType: file.type || 'application/octet-stream',
+                    mimeType: normalizedMimeType(file),
                     size: file.size,
                     altText: String(formData.get('altText') ?? '').trim().slice(0, 500) || null,
                     caption: String(formData.get('caption') ?? '').trim().slice(0, 2000) || null,
