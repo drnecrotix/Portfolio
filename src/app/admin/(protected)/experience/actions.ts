@@ -37,6 +37,38 @@ function parseJsonField(form: FormData, key: string): unknown {
     return JSON.parse(raw) as unknown;
 }
 
+function objectValue(value: unknown) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function requiredValue(record: Record<string, unknown>, key: string) {
+    return typeof record[key] === 'string' ? String(record[key]).trim() : '';
+}
+
+function validateEducationEntries(raw: unknown): ExperienceSaveResult | null {
+    if (!Array.isArray(raw)) return { ok: false, error: 'Education records are invalid.' };
+    for (let index = 0; index < raw.length; index += 1) {
+        const record = objectValue(raw[index]);
+        if (!record) return { ok: false, error: `Education record ${index + 1} is invalid.` };
+        if (!requiredValue(record, 'institution') || !requiredValue(record, 'degree') || !requiredValue(record, 'startDate')) {
+            return { ok: false, error: `Education record ${index + 1} needs an institution, degree and start date before it can be saved.` };
+        }
+    }
+    return null;
+}
+
+function validateExperienceEntries(raw: unknown, label: string): ExperienceSaveResult | null {
+    if (!Array.isArray(raw)) return { ok: false, error: `${label} records are invalid.` };
+    for (let index = 0; index < raw.length; index += 1) {
+        const record = objectValue(raw[index]);
+        if (!record) return { ok: false, error: `${label} record ${index + 1} is invalid.` };
+        if (!requiredValue(record, 'company') || !requiredValue(record, 'position') || !requiredValue(record, 'startDate')) {
+            return { ok: false, error: `${label} record ${index + 1} needs a company, position and start date before it can be saved.` };
+        }
+    }
+    return null;
+}
+
 function isSvgSource(value: string) {
     const clean = value.trim().split(/[?#]/, 1)[0].toLowerCase();
     if (!clean.endsWith('.svg')) return false;
@@ -50,22 +82,26 @@ function isSvgSource(value: string) {
 }
 
 function validatePartnerLogos(raw: unknown, existing: PartnerLogo[]): ExperienceSaveResult | null {
-    if (!Array.isArray(raw)) return { ok: false, error: 'Partners & Sponsors data is invalid.', field: 'partnerLogosJson' };
+    if (!Array.isArray(raw)) return { ok: false, error: 'Partners & Sponsors data is invalid.' };
     const existingById = new Map(existing.map((item) => [item.id, item]));
+    const seenIds = new Set<string>();
 
-    for (const item of raw) {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
-        const candidate = item as Partial<PartnerLogo>;
-        const id = String(candidate.id ?? '').trim();
-        const src = String(candidate.src ?? '').trim();
-        if (!src) continue;
+    for (let index = 0; index < raw.length; index += 1) {
+        const item = objectValue(raw[index]);
+        if (!item) return { ok: false, error: `Partner logo ${index + 1} is invalid.` };
+        const id = requiredValue(item, 'id');
+        const name = requiredValue(item, 'name');
+        const src = requiredValue(item, 'src');
+        if (!id || !name || !src) return { ok: false, error: `Partner logo ${index + 1} needs an ID, name and image path.` };
+        if (seenIds.has(id)) return { ok: false, error: `Partner logo ID “${id}” is duplicated. Each logo needs a unique ID.` };
+        seenIds.add(id);
+
         const previous = existingById.get(id);
         const unchangedLegacy = Boolean(previous && previous.src === src);
         if (!unchangedLegacy && !isSvgSource(src)) {
             return {
                 ok: false,
-                error: `Partner logo “${String(candidate.name ?? id || 'Untitled')}” must use an .svg image. Existing legacy logos can remain until they are replaced.`,
-                field: 'partnerLogosJson',
+                error: `Partner logo “${name || id || 'Untitled'}” must use an .svg image. Existing legacy logos can remain until they are replaced.`,
             };
         }
     }
@@ -97,8 +133,11 @@ export async function updateExperiencePage(form: FormData): Promise<ExperienceSa
             return { ok: false, error: 'One of the editable Experience datasets contains invalid JSON. Reload the editor and try again.' };
         }
 
-        const partnerError = validatePartnerLogos(partnerLogos, existing.partnerLogos);
-        if (partnerError) return partnerError;
+        const validationError = validateEducationEntries(educationEntries)
+            ?? validateExperienceEntries(journeyEntries, 'Journey')
+            ?? validateExperienceEntries(experienceEntries, 'Experience')
+            ?? validatePartnerLogos(partnerLogos, existing.partnerLogos);
+        if (validationError) return validationError;
 
         const candidate: ExperienceContent = normalizeExperienceContent({
             ...existing,
