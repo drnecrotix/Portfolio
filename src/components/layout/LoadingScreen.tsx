@@ -18,8 +18,10 @@ export function LoadingScreen({ onComplete, onExitStart, duration = 2500 }: Load
     const onCompleteRef = useRef(onComplete);
     const onExitStartRef = useRef(onExitStart);
 
-    onCompleteRef.current = onComplete;
-    onExitStartRef.current = onExitStart;
+    useEffect(() => {
+        onCompleteRef.current = onComplete;
+        onExitStartRef.current = onExitStart;
+    }, [onComplete, onExitStart]);
 
     const beginExit = useCallback(() => {
         if (exitStarted.current) return;
