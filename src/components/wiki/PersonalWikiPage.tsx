@@ -47,7 +47,7 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">{content.eyebrow}</p>
                         <div className="flex flex-wrap items-center gap-2">
-                            <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-[10px] font-semibold text-muted-foreground transition hover:text-foreground"><LibraryBig className="size-3.5" /> Browse Wiki</Link>
+                            <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-[10px] font-semibold text-sky-700 transition hover:border-sky-500/45 hover:bg-sky-500/15 dark:text-sky-300"><LibraryBig className="size-3.5" /> Browse Wiki</Link>
                             <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.02] px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground"><Clock3 className="size-3.5" /> Updated {updatedLabel}</div>
                         </div>
                     </div>
@@ -68,8 +68,8 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
             {content.showContents && toc.length > 1 ? (
                 <div className="mx-auto mt-6 max-w-7xl px-5 sm:px-8 lg:hidden">
                     <div className="mb-3 grid grid-cols-2 gap-2">
-                        <Link href="/wiki" className="rounded-xl border border-foreground/10 bg-foreground/[0.02] px-3 py-2 text-xs font-semibold">Main article</Link>
-                        <Link href="/wiki/articles" className="rounded-xl border border-foreground/10 bg-foreground/[0.02] px-3 py-2 text-xs font-semibold text-muted-foreground">All articles</Link>
+                        <Link href="/wiki" className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs font-semibold text-sky-700 dark:text-sky-300"><BookOpen className="size-4" /> Main article</Link>
+                        <Link href="/wiki/articles" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><LibraryBig className="size-4" /> All articles</Link>
                     </div>
                     <details className="rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4">
                         <summary className="cursor-pointer list-none font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground [&::-webkit-details-marker]:hidden">Contents</summary>
@@ -83,10 +83,10 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
             <div className="mx-auto mt-10 grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[190px_minmax(0,1fr)_280px] lg:px-10 xl:grid-cols-[210px_minmax(0,1fr)_300px]">
                 <aside className="hidden lg:block">
                     <div className="sticky top-28 space-y-8">
-                        <nav className="border-l border-foreground/10 pl-4">
+                        <nav className="space-y-1.5 border-l border-foreground/10 pl-4">
                             <p className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Wiki</p>
-                            <Link href="/wiki" className="block py-1.5 text-xs font-semibold text-foreground">Main article</Link>
-                            <Link href="/wiki/articles" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">All articles</Link>
+                            <Link href="/wiki" className="flex items-center gap-2 rounded-lg border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-xs font-semibold text-sky-700 dark:text-sky-300"><BookOpen className="size-3.5" /> Main article</Link>
+                            <Link href="/wiki/articles" className="flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-xs font-medium text-foreground/70 transition hover:border-foreground/10 hover:bg-foreground/[0.04] hover:text-foreground"><LibraryBig className="size-3.5" /> All articles</Link>
                         </nav>
                         {content.showContents ? (
                             <nav className="border-l border-foreground/10 pl-4">
@@ -145,7 +145,7 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
                         <div className="sticky top-28 overflow-hidden rounded-[1.4rem] border border-foreground/10 bg-foreground/[0.018]">
                             <div className="border-b border-foreground/10 p-4 text-center">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={portrait} alt={content.title || identity.name} className="mx-auto h-40 w-40 rounded-2xl border border-foreground/10 bg-foreground/[0.03] object-cover sm:h-44 sm:w-44" />
+                                <img src={portrait} alt={content.title || identity.name} className="mx-auto h-52 w-52 rounded-2xl border border-foreground/10 bg-foreground/[0.03] object-cover sm:h-56 sm:w-56 lg:h-52 lg:w-52 xl:h-56 xl:w-56" />
                                 <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.16em] text-muted-foreground">{content.portraitCaption}</p>
                             </div>
                             <div className="p-5">

@@ -45,7 +45,7 @@ export function WikiArticlePage({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground"><BookOpen className="size-3.5" /> Necrotix Wiki · {wikiCategoryLabel(content.category)}</div>
                         <div className="flex items-center gap-2">
-                            <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-foreground/10 px-3 py-1.5 text-[10px] font-semibold text-muted-foreground transition hover:text-foreground"><LibraryBig className="size-3.5" /> All articles</Link>
+                            <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-[10px] font-semibold text-sky-700 transition hover:border-sky-500/45 hover:bg-sky-500/15 dark:text-sky-300"><LibraryBig className="size-3.5" /> All articles</Link>
                             <span className="inline-flex items-center gap-2 rounded-full border border-foreground/10 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground"><Clock3 className="size-3.5" /> {updatedLabel}</span>
                         </div>
                     </div>
@@ -57,10 +57,10 @@ export function WikiArticlePage({
             <div className="mx-auto mt-8 grid max-w-7xl gap-9 px-5 sm:px-8 lg:grid-cols-[190px_minmax(0,1fr)_280px] lg:px-10 xl:grid-cols-[210px_minmax(0,1fr)_300px]">
                 <aside className="hidden lg:block">
                     <div className="sticky top-28 space-y-7">
-                        <nav className="border-l border-foreground/10 pl-4">
+                        <nav className="space-y-1.5 border-l border-foreground/10 pl-4">
                             <p className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Wiki</p>
-                            <Link href="/wiki" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">Main article</Link>
-                            <Link href="/wiki/articles" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">All articles</Link>
+                            <Link href="/wiki" className="flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-2 text-xs font-medium text-foreground/70 transition hover:border-foreground/10 hover:bg-foreground/[0.04] hover:text-foreground"><BookOpen className="size-3.5" /> Main article</Link>
+                            <Link href="/wiki/articles" className="flex items-center gap-2 rounded-lg border border-sky-500/25 bg-sky-500/10 px-2.5 py-2 text-xs font-semibold text-sky-700 dark:text-sky-300"><LibraryBig className="size-3.5" /> All articles</Link>
                         </nav>
                         {prepared.headings.length ? (
                             <nav className="border-l border-foreground/10 pl-4">
@@ -73,8 +73,8 @@ export function WikiArticlePage({
 
                 <article className="min-w-0">
                     <div className="mb-6 grid grid-cols-2 gap-2 lg:hidden">
-                        <Link href="/wiki" className="rounded-xl border border-foreground/10 px-3 py-2 text-xs font-semibold">Main article</Link>
-                        <Link href="/wiki/articles" className="rounded-xl border border-foreground/10 px-3 py-2 text-xs font-semibold text-muted-foreground">All articles</Link>
+                        <Link href="/wiki" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><BookOpen className="size-4" /> Main article</Link>
+                        <Link href="/wiki/articles" className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2.5 text-xs font-semibold text-sky-700 dark:text-sky-300"><LibraryBig className="size-4" /> All articles</Link>
                     </div>
                     {prepared.headings.length ? (
                         <details className="mb-7 rounded-xl border border-foreground/10 p-4 lg:hidden">
