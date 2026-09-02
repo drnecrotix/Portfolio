@@ -7,11 +7,12 @@ import { AdminDesktopNavigation } from '@/components/admin/AdminDesktopNavigatio
 import { AdminMobileNavigation, type AdminNavGroup, type AdminNavItem } from '@/components/admin/AdminMobileNavigation';
 
 const dashboardItem = ['Dashboard', '/admin'] as const satisfies AdminNavItem;
+const LEGACY_JOURNEY_TITLE = 'Experience page configuration';
 
 const navGroups = [
     ['Content', [
         ['Homepage', '/admin/homepage'],
-        ['Experience', '/admin/experience'],
+        ['Journey', '/admin/experience'],
         ['Projects', '/admin/projects'],
         ['Blog', '/admin/blog'],
         ['Comments', '/admin/comments'],
@@ -50,12 +51,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const session = await auth();
     if (!session?.user) redirect('/admin/login');
 
-    const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' }, select: { siteName: true } }).catch(() => null);
+    const [settings, journeyPage] = await Promise.all([
+        prisma.siteSettings.findUnique({ where: { id: 'default' }, select: { siteName: true } }).catch(() => null),
+        prisma.page.findUnique({ where: { slug: '__experience-config' }, select: { title: true } }).catch(() => null),
+    ]);
     const siteName = settings?.siteName ?? 'Portfolio';
+    const journeyPageName = journeyPage?.title && journeyPage.title !== LEGACY_JOURNEY_TITLE ? journeyPage.title : 'Journey';
     const canModerateComments = session.user.role === 'OWNER' || session.user.role === 'ADMIN';
-    const visibleNavGroups = navGroups.map(([groupLabel, items]) => [
+    const visibleNavGroups: AdminNavGroup[] = navGroups.map(([groupLabel, items]) => [
         groupLabel,
-        items.filter(([label]) => label !== 'Comments' || canModerateComments),
+        items
+            .filter(([label]) => label !== 'Comments' || canModerateComments)
+            .map(([label, href]) => [href === '/admin/experience' ? journeyPageName : label, href] as const),
     ] as const).filter(([, items]) => items.length > 0);
 
     return (

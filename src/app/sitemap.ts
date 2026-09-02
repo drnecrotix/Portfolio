@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...(seo.sitemapIncludeBlog ? [{ url: `${baseUrl}/blog`, changeFrequency: 'daily' as const, priority: 0.9 }] : []),
         ...(seo.sitemapIncludeProjects ? [{ url: `${baseUrl}/projects`, changeFrequency: 'weekly' as const, priority: 0.9 }] : []),
         { url: `${baseUrl}/gallery`, changeFrequency: 'weekly', priority: 0.7 },
-        { url: `${baseUrl}/experience`, changeFrequency: 'monthly', priority: 0.7 },
+        { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
         { url: `${baseUrl}/resume`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/contact`, changeFrequency: 'monthly', priority: 0.5 },
@@ -40,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 ? prisma.post.findMany({ where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
             seo.sitemapIncludePages
-                ? prisma.page.findMany({ where: { status: 'PUBLISHED' }, select: { slug: true, updatedAt: true } })
+                ? prisma.page.findMany({ where: { status: 'PUBLISHED', slug: { not: '__experience-config' } }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
         ]);
 

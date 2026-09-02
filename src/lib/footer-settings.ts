@@ -62,7 +62,7 @@ export const defaultFooterSettings: FooterSettings = {
     aboutLinks: [
         { label: 'Achievements', href: '/achievements' },
         { label: 'Skills', href: '/skills' },
-        { label: 'Experience', href: '/experience' },
+        { label: 'Journey', href: '/journey' },
         { label: 'Projects', href: '/projects' },
         { label: 'Blog', href: '/blog' },
         { label: 'Gallery', href: '/gallery' },
@@ -88,6 +88,14 @@ function links(value: unknown, fallback: FooterLinkSetting[], maxItems: number) 
         };
     }).filter((item) => item.label && item.href);
     return normalized.length ? normalized : fallback;
+}
+
+function normalizeJourneyLink(item: FooterLinkSetting): FooterLinkSetting {
+    if (item.href !== '/experience') return item;
+    return {
+        label: /^experience$/i.test(item.label) ? 'Journey' : item.label,
+        href: '/journey',
+    };
 }
 
 export function normalizeFooterSettings(value: unknown): FooterSettings {
@@ -117,6 +125,6 @@ export function normalizeFooterSettings(value: unknown): FooterSettings {
         marquee: marquee.length ? marquee : defaultFooterSettings.marquee,
         quickLinks: links(source.quickLinks, defaultFooterSettings.quickLinks, 6),
         aboutLabel: text(source.aboutLabel, defaultFooterSettings.aboutLabel, 80),
-        aboutLinks: links(source.aboutLinks, defaultFooterSettings.aboutLinks, 8),
+        aboutLinks: links(source.aboutLinks, defaultFooterSettings.aboutLinks, 8).map(normalizeJourneyLink),
     };
 }
