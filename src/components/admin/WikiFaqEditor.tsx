@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CircleHelp, Plus, Save, Search, Star, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, HelpCircle, Plus, Save, Search, Star, Trash2 } from 'lucide-react';
 import { saveWikiFaq, type WikiFaqSaveResult } from '@/app/admin/(protected)/wiki/faq/actions';
 import { FormDraftGuard, markDraftCommitted } from '@/components/admin/FormDraftGuard';
 import { WikiRichEditor } from '@/components/admin/WikiRichEditor';
@@ -40,11 +40,11 @@ export function WikiFaqEditor({ initial, seoTitle, seoDescription }: { initial: 
 
     const touch = () => requestAnimationFrame(() => formRef.current?.dispatchEvent(new Event('input', { bubbles: true })));
 
-    function showToast(result: WikiFaqSaveResult) {
+    const showToast = useCallback((result: WikiFaqSaveResult) => {
         setToast(result);
         if (toastTimer.current) clearTimeout(toastTimer.current);
         toastTimer.current = setTimeout(() => setToast(null), 6500);
-    }
+    }, []);
 
     function patch(id: string, update: Partial<WikiFaqEntry>) {
         setItems((current) => current.map((item) => item.id === id ? { ...item, ...update } : item));
@@ -98,7 +98,7 @@ export function WikiFaqEditor({ initial, seoTitle, seoDescription }: { initial: 
             window.removeEventListener('necrotix:draft-restore', restore);
             if (toastTimer.current) clearTimeout(toastTimer.current);
         };
-    }, []);
+    }, [showToast]);
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -143,7 +143,7 @@ export function WikiFaqEditor({ initial, seoTitle, seoDescription }: { initial: 
                             {visible.map((item) => (
                                 <button key={item.id} type="button" onClick={() => setSelectedId(item.id)} className={`w-full rounded-lg border px-3 py-2.5 text-left transition ${selectedId === item.id ? 'border-sky-400/35 bg-sky-500/[0.09]' : 'border-transparent hover:border-foreground/10 hover:bg-foreground/[0.025]'}`}>
                                     <div className="flex items-start gap-2">
-                                        <CircleHelp className={`mt-0.5 size-3.5 shrink-0 ${item.enabled ? 'text-sky-400' : 'text-muted-foreground/50'}`} />
+                                        <HelpCircle className={`mt-0.5 size-3.5 shrink-0 ${item.enabled ? 'text-sky-400' : 'text-muted-foreground/50'}`} />
                                         <div className="min-w-0 flex-1"><p className="line-clamp-2 text-xs font-semibold leading-5">{item.question || 'Untitled question'}</p><div className="mt-1 flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground"><span>{item.category || 'General'}</span>{item.featured ? <Star className="size-2.5 fill-current text-amber-400" /> : null}{!item.enabled ? <span>Hidden</span> : null}</div></div>
                                     </div>
                                 </button>
@@ -176,7 +176,7 @@ export function WikiFaqEditor({ initial, seoTitle, seoDescription }: { initial: 
                             <div className="mt-4"><div className="mb-2"><p className="text-sm font-bold">Answer</p><p className="mt-0.5 text-[10px] text-muted-foreground">Rich text supports headings, links, lists, quote, code and formatting.</p></div><WikiRichEditor key={selected.id} name={`faq-answer-${selected.id}`} initialValue={selected.answer} onChange={(answer) => patch(selected.id, { answer })} minHeight="min-h-[20rem]" /></div>
                         </div>
                     ) : (
-                        <div className="flex min-h-[28rem] flex-col items-center justify-center text-center"><CircleHelp className="size-8 text-muted-foreground/40" /><p className="mt-3 text-sm font-bold">No question selected</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">Add a question or choose one from the list to edit it.</p><button type="button" onClick={addQuestion} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 px-3 py-2 text-xs font-semibold"><Plus className="size-3.5" /> Add first question</button></div>
+                        <div className="flex min-h-[28rem] flex-col items-center justify-center text-center"><HelpCircle className="size-8 text-muted-foreground/40" /><p className="mt-3 text-sm font-bold">No question selected</p><p className="mt-1 max-w-xs text-xs leading-5 text-muted-foreground">Add a question or choose one from the list to edit it.</p><button type="button" onClick={addQuestion} className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-foreground/10 px-3 py-2 text-xs font-semibold"><Plus className="size-3.5" /> Add first question</button></div>
                     )}
                 </section>
 
