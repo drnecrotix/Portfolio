@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, CircleAlert, CircleDashed, PlugZap, RefreshCw, Save, ServerCog } from 'lucide-react';
+import { AlertCircle, CheckCircle2, CircleDashed, PlugZap, RefreshCw, Save, ServerCog } from 'lucide-react';
 import {
     saveApiIntegration,
     testApiIntegration,
@@ -55,7 +55,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof testStatus> }) {
     const content = status === 'connected'
         ? { label: 'Connected', icon: CheckCircle2, className: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' }
         : status === 'error'
-            ? { label: 'Test failed', icon: CircleAlert, className: 'border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400' }
+            ? { label: 'Test failed', icon: AlertCircle, className: 'border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400' }
             : status === 'configured'
                 ? { label: 'Configured', icon: PlugZap, className: 'border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400' }
                 : { label: 'Not configured', icon: CircleDashed, className: 'border-border bg-muted/40 text-muted-foreground' };
@@ -76,6 +76,7 @@ function IntegrationCard({ card, testResult, onTestResult, onToast }: {
     const [testing, startTesting] = useTransition();
     const status = testStatus(card, testResult);
     const lastTest = testResult?.testedAt ? testResult : card.lastTest;
+    const lastTestTime = lastTest?.testedAt ? new Date(lastTest.testedAt).toLocaleString() : null;
 
     const save = () => {
         startSaving(async () => {
@@ -160,7 +161,7 @@ function IntegrationCard({ card, testResult, onTestResult, onToast }: {
                 <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${lastTest.ok ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
                     <div className="font-semibold">{lastTest.message}</div>
                     <div className="mt-1 text-[10px] text-muted-foreground">
-                        Tested {new Date(lastTest.testedAt).toLocaleString()} {typeof lastTest.latencyMs === 'number' ? `· ${lastTest.latencyMs} ms` : ''}
+                        {lastTestTime ? `Tested ${lastTestTime}` : 'Test completed'} {typeof lastTest.latencyMs === 'number' ? `· ${lastTest.latencyMs} ms` : ''}
                     </div>
                 </div>
             ) : null}
@@ -221,7 +222,7 @@ export function ApiIntegrationsManager({ cards }: { cards: ApiIntegrationCard[] 
             {toast ? (
                 <div aria-live="polite" className={`fixed bottom-5 right-5 z-[100] max-w-sm rounded-xl border px-4 py-3 text-sm shadow-2xl backdrop-blur ${toast.ok ? 'border-emerald-500/25 bg-background/95' : 'border-red-500/30 bg-background/95'}`}>
                     <div className="flex items-start gap-2">
-                        {toast.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" /> : <CircleAlert className="mt-0.5 size-4 shrink-0 text-red-500" />}
+                        {toast.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" /> : <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-500" />}
                         <div className="pr-3">{toast.message}</div>
                         <button type="button" className="text-xs text-muted-foreground" onClick={() => setToast(null)}>×</button>
                     </div>
