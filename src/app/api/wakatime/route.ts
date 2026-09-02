@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { getRuntimeIntegrationValue } from '@/lib/integration-runtime';
 
 const headers = {
     'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=300',
 };
 
 export async function GET() {
-    const apiKey = process.env.WAKATIME_API_KEY;
+    const apiKey = await getRuntimeIntegrationValue('wakatime.apiKey', 'WAKATIME_API_KEY');
 
     if (!apiKey) {
         return NextResponse.json({ error: 'Metrics are unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
