@@ -379,8 +379,13 @@ function normalizeItems(value: unknown, fallbackDescription: string): GalleryIte
     const type: GalleryItemSetting['type'] = creativeType === 'video' ? 'video' : 'image';
     const title = text(raw.title, `Gallery item ${index + 1}`, 160);
     const rawMediaUrl = normalizeUrl(raw.mediaUrl ?? raw.url);
+    const explicitSourceUrl = normalizeUrl(raw.sourceUrl ?? raw.externalUrl);
     const sourceUrl = type === 'video'
-      ? socialVideoSourceUrl(raw.sourceUrl ?? raw.externalUrl ?? rawMediaUrl)
+      ? explicitSourceUrl && !isDirectVideoUrl(explicitSourceUrl)
+        ? socialVideoSourceUrl(explicitSourceUrl)
+        : !isDirectVideoUrl(rawMediaUrl)
+          ? socialVideoSourceUrl(rawMediaUrl)
+          : ''
       : '';
     const mediaUrl = type === 'video'
       ? (isDirectVideoUrl(rawMediaUrl) ? rawMediaUrl : socialVideoEmbedUrl(sourceUrl || rawMediaUrl))
