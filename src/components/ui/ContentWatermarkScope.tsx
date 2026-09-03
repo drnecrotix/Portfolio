@@ -3,7 +3,9 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import type { ContentWatermarkSettings } from '@/lib/content-watermark';
 
-export function ContentWatermarkScope({ settings, children }: { settings: ContentWatermarkSettings; children: ReactNode }) {
+type WatermarkMode = 'all' | 'first';
+
+export function ContentWatermarkScope({ settings, children, mode = 'all' }: { settings: ContentWatermarkSettings; children: ReactNode; mode?: WatermarkMode }) {
     const rootRef = useRef<HTMLDivElement>(null);
     const label = `© ${settings.text}`;
     const style = {
@@ -15,10 +17,21 @@ export function ContentWatermarkScope({ settings, children }: { settings: Conten
         if (!root || !settings.enabled) return;
 
         const marked = new Set<HTMLElement>();
-        const applyWatermarks = () => {
-            root.querySelectorAll<HTMLImageElement>('img').forEach((image) => {
-                if (image.closest('[data-watermark-ignore="true"]')) return;
+        const clearMarked = () => {
+            marked.forEach((host) => {
+                host.removeAttribute('data-content-watermark-host');
+                host.removeAttribute('data-content-watermark-label');
+            });
+            marked.clear();
+        };
 
+        const applyWatermarks = () => {
+            clearMarked();
+            const images = Array.from(root.querySelectorAll<HTMLImageElement>('img'))
+                .filter((image) => !image.closest('[data-watermark-ignore="true"]'));
+            const targets = mode === 'first' ? images.slice(0, 1) : images;
+
+            targets.forEach((image) => {
                 const host = (image.closest('figure, button') || image.closest('p') || image.parentElement) as HTMLElement | null;
                 if (!host || !root.contains(host)) return;
 
@@ -34,12 +47,9 @@ export function ContentWatermarkScope({ settings, children }: { settings: Conten
 
         return () => {
             observer.disconnect();
-            marked.forEach((host) => {
-                host.removeAttribute('data-content-watermark-host');
-                host.removeAttribute('data-content-watermark-label');
-            });
+            clearMarked();
         };
-    }, [label, settings.enabled]);
+    }, [label, mode, settings.enabled]);
 
     return (
         <div
