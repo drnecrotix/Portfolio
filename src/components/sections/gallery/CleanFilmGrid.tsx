@@ -24,11 +24,34 @@ type GalleryItem = {
     detailUrl?: string;
 };
 
+type GridVariant = 'small' | 'wide' | 'tall' | 'large';
+
+const editorialPattern: GridVariant[] = [
+    'large', 'tall', 'small', 'small', 'wide', 'small', 'tall', 'wide', 'small', 'large', 'small', 'wide',
+];
+
+function gridVariant(index: number, item: GalleryItem): GridVariant {
+    if (item.type === 'video' && index % 5 === 2) return 'wide';
+    return editorialPattern[index % editorialPattern.length];
+}
+
+function gridSpan(variant: GridVariant) {
+    if (variant === 'large') return 'col-span-2 row-span-2 md:col-span-2 xl:col-span-2';
+    if (variant === 'wide') return 'col-span-2 row-span-1';
+    if (variant === 'tall') return 'col-span-1 row-span-2';
+    return 'col-span-1 row-span-1';
+}
+
+function gridSizes(variant: GridVariant) {
+    if (variant === 'large' || variant === 'wide') return '(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw';
+    return '(max-width: 767px) 50vw, (max-width: 1279px) 25vw, 17vw';
+}
+
 export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerMode?: boolean; content: GallerySettings }) {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterType>('all');
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
-    const [visibleCount, setVisibleCount] = useState(12);
+    const [visibleCount, setVisibleCount] = useState(18);
     const [fallbackItems, setFallbackItems] = useState<GalleryItem[]>([]);
     const scrollContainerRef = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -103,17 +126,17 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     };
     const changeFilter = (next: FilterType) => {
         setFilter(next);
-        setVisibleCount(12);
+        setVisibleCount(18);
     };
 
     const filterLabel = (value: FilterType) => value === 'all' ? content.filterAll : value === 'image' ? content.filterPhotos : content.filterVideos;
 
     return (
-        <section className="relative min-h-screen px-6 py-24 md:px-16 lg:px-24">
+        <section className="relative min-h-screen px-4 py-20 sm:px-6 md:px-10 lg:px-14 xl:px-16">
             <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-96 bg-gradient-to-b from-transparent to-background" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 top-96 z-0 bg-background" />
 
-            <div className="relative z-10 mx-auto mb-12 flex max-w-[1920px] flex-col items-start justify-between gap-6 border-b border-neutral-500 pb-6 dark:border-white/20 md:flex-row md:items-end">
+            <div className="relative z-10 mx-auto mb-9 flex max-w-[1920px] flex-col items-start justify-between gap-6 border-b border-neutral-500 pb-5 dark:border-white/20 md:flex-row md:items-end">
                 <div className="flex-1">
                     <span className="mb-3 block text-[11px] font-medium uppercase tracking-[0.3em] text-muted-foreground/80 transition-colors duration-300 md:text-xs">{content.sectionEyebrow}</span>
                     <h2 className="text-3xl font-medium leading-tight tracking-tight text-foreground/90 transition-colors duration-300 md:text-5xl">{content.sectionTitle}</h2>
@@ -148,7 +171,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                     </div>
                 )}
 
-                <div className="min-w-0 flex-1 space-y-16">
+                <div className="min-w-0 flex-1 space-y-14">
                     {viewMode === 'rows' && categories.map((category) => (
                         <div key={category} id={`category-${category}`} className="group/section relative">
                             <div className="mb-6 flex items-center justify-between px-1">
@@ -160,14 +183,14 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                             </div>
                             <div ref={(element) => { scrollContainerRef.current[category] = element; }} className={cn('flex gap-4 overflow-x-auto px-1 pb-8 scrollbar-hide', !isLowPowerMode && 'snap-x snap-mandatory')} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                                 {groupedItems[category].map((item, index) => (
-                                    <motion.div key={item.id} initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '0px -50px 0px 0px' }} transition={{ duration: 0.5, delay: isLowPowerMode ? 0 : index * 0.1 }} className="group/card relative aspect-video w-[85vw] flex-none cursor-pointer snap-center md:w-[400px]" onClick={() => openLightbox(item.id)}>
-                                        <div className="relative h-full w-full overflow-hidden rounded-sm bg-muted">
-                                            <Image src={item.thumbnail || item.url} alt={item.title} fill sizes="(max-width: 768px) 85vw, 400px" loading="lazy" className={cn('object-cover transition-transform duration-700', !isLowPowerMode && 'group-hover/card:scale-110')} />
+                                    <motion.div key={item.id} initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '0px -50px 0px 0px' }} transition={{ duration: 0.5, delay: isLowPowerMode ? 0 : index * 0.08 }} className="group/card relative aspect-video w-[78vw] flex-none cursor-pointer snap-center sm:w-[340px] md:w-[380px]" onClick={() => openLightbox(item.id)}>
+                                        <div className="relative h-full w-full overflow-hidden rounded-xl bg-muted">
+                                            <Image src={item.thumbnail || item.url} alt={item.title} fill sizes="(max-width: 768px) 78vw, 380px" loading="lazy" className={cn('object-cover transition-transform duration-700', !isLowPowerMode && 'group-hover/card:scale-105')} />
                                             <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-white backdrop-blur-sm">{item.type === 'video' ? <Video className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}<span>{item.type}</span></div>
-                                            <div className={cn('absolute inset-0 z-10 flex items-center justify-center bg-black/40 opacity-0 transition-all duration-300 group-hover/card:opacity-100', isLowPowerMode && 'hidden md:flex')}><div className="rounded-full border border-white/20 bg-white/10 p-4 backdrop-blur-md">{item.type === 'video' ? <Play className="h-6 w-6 fill-current text-white" /> : <Maximize2 className="h-6 w-6 text-white" />}</div></div>
+                                            <div className={cn('absolute inset-0 z-10 flex items-center justify-center bg-black/35 opacity-0 transition-all duration-300 group-hover/card:opacity-100', isLowPowerMode && 'hidden md:flex')}><div className="rounded-full border border-white/20 bg-white/10 p-4 backdrop-blur-md">{item.type === 'video' ? <Play className="h-6 w-6 fill-current text-white" /> : <Maximize2 className="h-6 w-6 text-white" />}</div></div>
                                             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent opacity-60 transition-opacity duration-300 group-hover/card:opacity-90" />
                                         </div>
-                                        <div className="absolute bottom-4 left-4 right-4 z-20 translate-y-2 transition-transform duration-300 group-hover/card:translate-y-0"><h4 className="truncate text-lg font-medium leading-tight text-white drop-shadow-md">{item.title}</h4><div className="mt-2 flex items-center justify-end opacity-0 transition-opacity delay-75 duration-300 group-hover/card:opacity-100"><span className="rounded-full border border-white/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-white/60">{content.viewLabel}</span></div></div>
+                                        <div className="absolute bottom-4 left-4 right-4 z-20"><h4 className="truncate text-base font-medium leading-tight text-white drop-shadow-md">{item.title}</h4></div>
                                     </motion.div>
                                 ))}
                             </div>
@@ -175,23 +198,38 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                     ))}
 
                     {viewMode === 'grid' && (
-                        <div className="space-y-12">
-                            <div className="columns-1 gap-3 space-y-3 md:columns-2 lg:columns-3">
-                                {visibleItems.map((item, index) => (
-                                    <motion.div key={item.id} initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-10%' }} transition={{ duration: 0.4, delay: isLowPowerMode ? 0 : index * 0.05 }} className="group relative break-inside-avoid cursor-pointer transition-all" onClick={() => openLightbox(item.id)}>
-                                        <div className="relative aspect-auto overflow-hidden rounded-none bg-muted transition-all duration-500 ease-out group-hover:rounded-[2rem]">
-                                            <Image src={item.thumbnail || item.url} alt={item.title} width={800} height={600} loading="lazy" className={cn('object-cover transition-transform duration-700', !isLowPowerMode && 'group-hover:scale-105')} />
-                                            <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-white backdrop-blur-sm">{item.type === 'video' ? <Video className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}<span>{item.type}</span></div>
-                                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 p-4 text-center opacity-0 transition-all duration-300 group-hover:opacity-100"><div className="mb-4 translate-y-4 rounded-full border border-white/20 bg-white/10 p-3 backdrop-blur-md transition-transform duration-300 group-hover:translate-y-0">{item.type === 'video' ? <Play className="h-5 w-5 fill-current text-white" /> : <Maximize2 className="h-5 w-5 text-white" />}</div><h3 className="line-clamp-2 translate-y-4 text-sm font-bold uppercase tracking-wide text-white transition-transform delay-75 duration-300 group-hover:translate-y-0">{item.title}</h3><p className="mt-2 translate-y-4 font-mono text-xs text-white/70 transition-transform delay-100 duration-300 group-hover:translate-y-0">{item.category}</p></div>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                        <div className="space-y-10">
+                            <div className="grid auto-rows-[132px] grid-cols-2 grid-flow-row-dense gap-2 sm:auto-rows-[150px] sm:gap-3 md:grid-cols-4 md:auto-rows-[158px] lg:auto-rows-[168px] xl:grid-cols-6 xl:auto-rows-[176px]">
+                                {visibleItems.map((item, index) => {
+                                    const variant = gridVariant(index, item);
+                                    return (
+                                        <motion.div
+                                            key={item.id}
+                                            initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                                            whileInView={{ opacity: 1, y: 0 }}
+                                            viewport={{ once: true, margin: '-8%' }}
+                                            transition={{ duration: 0.35, delay: isLowPowerMode ? 0 : Math.min(index, 8) * 0.035 }}
+                                            className={cn('group relative min-h-0 cursor-pointer overflow-hidden rounded-lg bg-muted transition-[border-radius,transform] duration-500 hover:z-10 hover:rounded-2xl', gridSpan(variant))}
+                                            onClick={() => openLightbox(item.id)}
+                                        >
+                                            <Image src={item.thumbnail || item.url} alt={item.title} fill sizes={gridSizes(variant)} loading="lazy" className={cn('object-cover transition-transform duration-700', !isLowPowerMode && 'group-hover:scale-[1.035]')} />
+                                            <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded bg-black/45 px-1.5 py-1 font-mono text-[9px] uppercase tracking-wider text-white/85 backdrop-blur-sm">{item.type === 'video' ? <Video className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}<span className="hidden sm:inline">{item.type}</span></div>
+                                            <div className="absolute inset-0 z-10 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/5 to-transparent p-3 opacity-80 transition-opacity duration-300 group-hover:opacity-100 sm:p-4">
+                                                <div className="translate-y-1 transition-transform duration-300 group-hover:translate-y-0">
+                                                    <h3 className={cn('line-clamp-2 font-medium leading-tight text-white drop-shadow-md', variant === 'large' ? 'text-base sm:text-lg' : 'text-xs sm:text-sm')}>{item.title}</h3>
+                                                    <p className="mt-1 hidden font-mono text-[9px] uppercase tracking-[0.14em] text-white/55 sm:block">{item.category}</p>
+                                                </div>
+                                            </div>
+                                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/25 opacity-0 transition-opacity duration-300 group-hover:opacity-100"><div className="rounded-full border border-white/20 bg-black/20 p-2.5 text-white backdrop-blur-md">{item.type === 'video' ? <Play className="h-4 w-4 fill-current" /> : <Maximize2 className="h-4 w-4" />}</div></div>
+                                        </motion.div>
+                                    );
+                                })}
                             </div>
-                            {visibleCount < flattenedFilteredItems.length && <div className="flex justify-center pb-12 pt-8"><MagneticEffect><button onClick={() => setVisibleCount((value) => value + 12)} className="group relative mt-6 flex flex-col items-center gap-4 px-8 py-4"><span className="absolute top-[-10px] -translate-y-4 whitespace-nowrap font-mono text-[11px] font-bold uppercase tracking-[3px] text-foreground opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:opacity-100">{content.loadMoreLabel}</span><div className="z-10 flex h-14 w-14 items-center justify-center rounded-full border border-neutral-500 bg-background shadow-sm transition-all duration-500 ease-out group-hover:scale-110 group-hover:bg-foreground group-hover:text-background group-hover:shadow-xl dark:border-white/20"><ArrowDownUp className="h-5 w-5" /></div></button></MagneticEffect></div>}
+                            {visibleCount < flattenedFilteredItems.length && <div className="flex justify-center pb-10 pt-4"><MagneticEffect><button onClick={() => setVisibleCount((value) => value + 18)} className="group relative mt-4 flex flex-col items-center gap-4 px-8 py-4"><span className="absolute top-[-10px] -translate-y-4 whitespace-nowrap font-mono text-[11px] font-bold uppercase tracking-[3px] text-foreground opacity-0 transition-all duration-500 ease-out group-hover:translate-y-0 group-hover:opacity-100">{content.loadMoreLabel}</span><div className="z-10 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-500 bg-background shadow-sm transition-all duration-500 ease-out group-hover:scale-110 group-hover:bg-foreground group-hover:text-background group-hover:shadow-xl dark:border-white/20"><ArrowDownUp className="h-4 w-4" /></div></button></MagneticEffect></div>}
                         </div>
                     )}
 
-                    {viewMode === 'infinite' && <div className="relative mt-2 h-[800px] w-full"><InfiniteImageField images={flattenedFilteredItems.map((item) => item.thumbnail || item.url)} /></div>}
+                    {viewMode === 'infinite' && <div className="relative mt-2 h-[720px] w-full"><InfiniteImageField images={flattenedFilteredItems.map((item) => item.thumbnail || item.url)} /></div>}
                     {categories.length === 0 && <div className="py-20 text-center"><p className="font-mono text-muted-foreground">{content.emptyLabel}</p></div>}
                 </div>
             </div>
