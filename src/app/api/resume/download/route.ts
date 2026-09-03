@@ -15,7 +15,7 @@ function downloadHeaders(fileName: string) {
     };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     const page = await prisma.page.findUnique({
         where: { slug: RESUME_CONFIG_SLUG },
         select: { content: true },
@@ -26,7 +26,7 @@ export async function GET() {
     if (url === '/resume.pdf') {
         try {
             const bytes = await readFile(path.join(process.cwd(), 'public', 'resume.pdf'));
-            return new NextResponse(bytes, { headers: downloadHeaders('Nikola-Stoyanov-CV.pdf') });
+            return new NextResponse(new Uint8Array(bytes), { headers: downloadHeaders('Nikola-Stoyanov-CV.pdf') });
         } catch {
             return NextResponse.json({ error: 'Default CV PDF is unavailable.' }, { status: 404 });
         }
@@ -41,7 +41,8 @@ export async function GET() {
     }
 
     try {
-        const upstream = await fetch(asset.url, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+        const sourceUrl = new URL(asset.url, request.url);
+        const upstream = await fetch(sourceUrl, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
         if (!upstream.ok) throw new Error(`PDF source returned ${upstream.status}`);
         const bytes = await upstream.arrayBuffer();
         return new NextResponse(bytes, { headers: downloadHeaders(asset.fileName) });
