@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, HelpCircle, Clock3, ExternalLink, Hash, LibraryBig, Link2 } from 'lucide-react';
+import { BookOpen, Briefcase, HelpCircle, Clock3, ExternalLink, Hash, LibraryBig, Link2 } from 'lucide-react';
 import type { PublicIdentity } from '@/lib/public-identity';
 import type { PersonalWikiContent, WikiRelatedLink } from '@/lib/wiki-content';
 
@@ -47,8 +47,9 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-muted-foreground">{content.eyebrow}</p>
                         <div className="flex flex-wrap items-center gap-2">
-                            <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-[10px] font-semibold text-sky-700 transition hover:border-sky-500/45 hover:bg-sky-500/15 dark:text-sky-300"><LibraryBig className="size-3.5" /> Browse Wiki</Link>
+                            <Link href="/wiki/articles" className="inline-flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/10 px-3.5 py-2 text-[10px] font-semibold text-sky-700 transition hover:border-sky-500/45 hover:bg-sky-500/15 dark:text-sky-300"><LibraryBig className="size-3.5" /> Articles</Link>
                             <Link href="/wiki/faq" className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/[0.035] px-3.5 py-2 text-[10px] font-semibold text-foreground/75 transition hover:border-sky-500/30 hover:bg-sky-500/[0.08] hover:text-sky-700 dark:hover:text-sky-300"><HelpCircle className="size-3.5" /> FAQ</Link>
+                            <Link href="/resume" className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-foreground/[0.035] px-3.5 py-2 text-[10px] font-semibold text-foreground/75 transition hover:border-violet-400/30 hover:bg-violet-500/[0.08] hover:text-violet-700 dark:hover:text-violet-300"><Briefcase className="size-3.5" /> Career Dossier</Link>
                             <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.02] px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground"><Clock3 className="size-3.5" /> Updated {updatedLabel}</div>
                         </div>
                     </div>
