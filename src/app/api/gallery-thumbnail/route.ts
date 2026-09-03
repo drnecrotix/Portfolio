@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { socialVideoSourceUrl } from '@/lib/gallery-settings';
 
 const allowedRoles = new Set(['OWNER', 'ADMIN', 'EDITOR']);
 const allowedHosts = [
@@ -7,10 +8,22 @@ const allowedHosts = [
   'facebook.com', 'fb.watch', 'x.com', 'twitter.com', 'pinterest.com', 'pin.it',
   'dailymotion.com', 'dai.ly',
 ];
+const allowedThumbnailHosts = [
+  'ytimg.com', 'vimeocdn.com', 'tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com',
+  'cdninstagram.com', 'fbcdn.net', 'twimg.com', 'pinimg.com', 'dmcdn.net',
+];
+
+function matchesHost(hostname: string, allowedHostsList: string[]) {
+  const host = hostname.toLowerCase().replace(/^www\./, '');
+  return allowedHostsList.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+}
 
 function hostAllowed(hostname: string) {
-  const host = hostname.toLowerCase().replace(/^www\./, '');
-  return allowedHosts.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
+  return matchesHost(hostname, allowedHosts);
+}
+
+function thumbnailHostAllowed(hostname: string) {
+  return matchesHost(hostname, allowedThumbnailHosts);
 }
 
 function safeUrl(value: unknown) {
@@ -19,6 +32,15 @@ function safeUrl(value: unknown) {
     return url.protocol === 'https:' && hostAllowed(url.hostname) ? url : null;
   } catch {
     return null;
+  }
+}
+
+function safeThumbnailUrl(value: unknown, base?: URL) {
+  try {
+    const url = base ? new URL(String(value ?? '').trim(), base) : new URL(String(value ?? '').trim());
+    return url.protocol === 'https:' && thumbnailHostAllowed(url.hostname) ? url.toString() : '';
+  } catch {
+    return '';
   }
 }
 
@@ -49,7 +71,10 @@ function metaImage(html: string) {
 async function fetchJson(url: string) {
   const response = await fetch(url, {
     cache: 'no-store',
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NecrotixLabThumbnailBot/1.0)' },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; NecrotixLabThumbnailBot/1.1)',
+      Accept: 'application/json,text/plain;q=0.9,*/*;q=0.8',
+    },
     signal: AbortSignal.timeout(7000),
   });
   if (!response.ok) return null;
@@ -61,7 +86,7 @@ async function fetchMetadataImage(url: URL) {
     cache: 'no-store',
     redirect: 'follow',
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; NecrotixLabThumbnailBot/1.0)',
+      'User-Agent': 'Mozilla/5.0 (compatible; NecrotixLabThumbnailBot/1.1)',
       Accept: 'text/html,application/xhtml+xml',
     },
     signal: AbortSignal.timeout(7000),
@@ -71,16 +96,12 @@ async function fetchMetadataImage(url: URL) {
   if (!finalUrl) return '';
   const html = (await response.text()).slice(0, 1_000_000);
   const image = metaImage(html);
-  if (!image) return '';
-  try {
-    const resolved = new URL(image, finalUrl);
-    return resolved.protocol === 'https:' ? resolved.toString() : '';
-  } catch {
-    return '';
-  }
+  return image ? safeThumbnailUrl(image, finalUrl) : '';
 }
 
-async function resolveThumbnail(url: URL) {
+async function resolveThumbnail(input: URL) {
+  const canonicalValue = socialVideoSourceUrl(input.toString()) || input.toString();
+  const url = safeUrl(canonicalValue) || input;
   const host = url.hostname.toLowerCase().replace(/^www\./, '');
 
   const yt = youtubeId(url);
@@ -88,20 +109,26 @@ async function resolveThumbnail(url: URL) {
 
   if (host.endsWith('vimeo.com')) {
     const data = await fetchJson(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url.toString())}`);
-    const thumbnailUrl = typeof data?.thumbnail_url === 'string' ? data.thumbnail_url : '';
+    const thumbnailUrl = safeThumbnailUrl(data?.thumbnail_url);
     if (thumbnailUrl) return { thumbnailUrl, source: 'vimeo-oembed' };
   }
 
   if (host.endsWith('tiktok.com')) {
     const data = await fetchJson(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url.toString())}`);
-    const thumbnailUrl = typeof data?.thumbnail_url === 'string' ? data.thumbnail_url : '';
+    const thumbnailUrl = safeThumbnailUrl(data?.thumbnail_url);
     if (thumbnailUrl) return { thumbnailUrl, source: 'tiktok-oembed' };
   }
 
   if (host === 'pinterest.com' || host.endsWith('.pinterest.com') || host === 'pin.it') {
     const data = await fetchJson(`https://www.pinterest.com/oembed.json?url=${encodeURIComponent(url.toString())}`);
-    const thumbnailUrl = typeof data?.thumbnail_url === 'string' ? data.thumbnail_url : '';
+    const thumbnailUrl = safeThumbnailUrl(data?.thumbnail_url);
     if (thumbnailUrl) return { thumbnailUrl, source: 'pinterest-oembed' };
+  }
+
+  if (host === 'dailymotion.com' || host === 'dai.ly') {
+    const data = await fetchJson(`https://www.dailymotion.com/services/oembed?url=${encodeURIComponent(url.toString())}&format=json`);
+    const thumbnailUrl = safeThumbnailUrl(data?.thumbnail_url);
+    if (thumbnailUrl) return { thumbnailUrl, source: 'dailymotion-oembed' };
   }
 
   const metadataThumbnail = await fetchMetadataImage(url).catch(() => '');
