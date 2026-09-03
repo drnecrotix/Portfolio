@@ -1,12 +1,44 @@
+export type GalleryCreativeType =
+  | 'photography'
+  | 'photoshoot'
+  | 'drawing'
+  | 'painting'
+  | 'digital-art'
+  | 'mixed-media'
+  | 'video'
+  | 'other';
+
 export type GalleryItemSetting = {
   id: string;
   mediaUrl: string;
   thumbnailUrl: string;
+  additionalImages: string[];
+  socialImageUrl: string;
   title: string;
+  slug: string;
   description: string;
+  story: string;
+  altText: string;
   category: string;
+  creativeType: GalleryCreativeType;
+  tags: string[];
   type: 'image' | 'video';
+  artist: string;
+  photographer: string;
+  model: string;
+  location: string;
+  dateCreated: string;
+  medium: string;
+  dimensions: string;
+  software: string;
+  camera: string;
+  lens: string;
+  copyrightHolder: string;
+  license: string;
+  seoTitle: string;
+  seoDescription: string;
   isVisible: boolean;
+  isIndexable: boolean;
   order: number;
 };
 
@@ -37,6 +69,17 @@ export type GallerySettings = {
   maximizeTitle: string;
   items: GalleryItemSetting[];
 };
+
+export const galleryCreativeTypeOptions: Array<{ value: GalleryCreativeType; label: string }> = [
+  { value: 'photography', label: 'Photography' },
+  { value: 'photoshoot', label: 'Photoshoot' },
+  { value: 'drawing', label: 'Drawing' },
+  { value: 'painting', label: 'Painting' },
+  { value: 'digital-art', label: 'Digital Art' },
+  { value: 'mixed-media', label: 'Mixed Media' },
+  { value: 'video', label: 'Video' },
+  { value: 'other', label: 'Other' },
+];
 
 export const defaultGallerySettings: GallerySettings = {
   heroEyebrow: 'The',
@@ -72,9 +115,27 @@ function text(value: unknown, fallback: string, max = 500) {
   return trimmed ? trimmed.slice(0, max) : fallback;
 }
 
+function optionalText(value: unknown, max = 500) {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, max);
+}
+
 function safeId(value: unknown, fallback: string) {
   const normalized = String(value ?? '').trim().replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-').slice(0, 80);
   return normalized || fallback;
+}
+
+export function gallerySlug(value: unknown, fallback = 'work') {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLocaleLowerCase('en')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-')
+    .slice(0, 120);
+  return normalized || safeId(fallback, 'work').toLowerCase();
 }
 
 function normalizeUrl(value: unknown) {
@@ -87,6 +148,49 @@ function normalizeUrl(value: unknown) {
   } catch {
     return '';
   }
+}
+
+function normalizeUrlList(value: unknown, max = 60) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map(normalizeUrl).filter(Boolean))].slice(0, max);
+}
+
+function normalizeTags(value: unknown) {
+  const source = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',')
+      : [];
+  return [...new Set(source
+    .map((entry) => String(entry ?? '').trim().slice(0, 60))
+    .filter(Boolean))].slice(0, 30);
+}
+
+function normalizeCreativeType(value: unknown, mediaType: GalleryItemSetting['type'], category: unknown): GalleryCreativeType {
+  const accepted = new Set<GalleryCreativeType>(galleryCreativeTypeOptions.map((option) => option.value));
+  if (typeof value === 'string' && accepted.has(value as GalleryCreativeType)) return value as GalleryCreativeType;
+  if (mediaType === 'video') return 'video';
+
+  const categoryValue = String(category ?? '').trim().toLowerCase();
+  if (categoryValue.includes('photoshoot') || categoryValue.includes('photo session')) return 'photoshoot';
+  if (categoryValue.includes('drawing') || categoryValue.includes('sketch')) return 'drawing';
+  if (categoryValue.includes('painting')) return 'painting';
+  if (categoryValue.includes('digital')) return 'digital-art';
+  if (categoryValue.includes('mixed')) return 'mixed-media';
+  return 'photography';
+}
+
+export function galleryCreativeTypeLabel(value: GalleryCreativeType) {
+  return galleryCreativeTypeOptions.find((option) => option.value === value)?.label || 'Other';
+}
+
+export function galleryItemHref(slug: string) {
+  return `/gallery/${encodeURIComponent(slug)}`;
+}
+
+export function galleryItemImages(item: GalleryItemSetting) {
+  if (item.type !== 'image') return item.thumbnailUrl ? [item.thumbnailUrl] : [];
+  return [...new Set([item.mediaUrl, ...item.additionalImages].filter(Boolean))];
 }
 
 export function socialVideoEmbedUrl(value: unknown) {
@@ -148,7 +252,6 @@ export function socialVideoEmbedUrl(value: unknown) {
       return id ? `https://www.dailymotion.com/embed/video/${encodeURIComponent(id.split('_')[0])}` : '';
     }
 
-    // Never pass an arbitrary external URL into a public iframe.
     return '';
   } catch {
     return '';
@@ -157,24 +260,60 @@ export function socialVideoEmbedUrl(value: unknown) {
 
 function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescription: string): GalleryItemSetting[] {
   if (!Array.isArray(value)) return [];
-  return value.slice(0, 250).map((entry, index) => {
+
+  const normalized = value.slice(0, 250).map((entry, index) => {
     const raw = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry as Record<string, unknown> : {};
     const type: GalleryItemSetting['type'] = raw.type === 'video' ? 'video' : 'image';
+    const creativeType = normalizeCreativeType(raw.creativeType, type, raw.category);
+    const title = text(raw.title, `Gallery item ${index + 1}`, 160);
     const mediaUrl = type === 'video' ? socialVideoEmbedUrl(raw.mediaUrl ?? raw.url) : normalizeUrl(raw.mediaUrl ?? raw.url);
     const rawThumbnail = normalizeUrl(raw.thumbnailUrl ?? raw.thumbnail);
     const thumbnailUrl = type === 'image' ? (rawThumbnail || mediaUrl) : rawThumbnail;
+    const categoryFallback = creativeType === 'other' ? fallbackCategory : galleryCreativeTypeLabel(creativeType);
+
     return {
       id: safeId(raw.id, `gallery-item-${index + 1}`),
       mediaUrl,
       thumbnailUrl,
-      title: text(raw.title, `Gallery item ${index + 1}`, 160),
-      description: text(raw.description, fallbackDescription, 1200),
-      category: text(raw.category, fallbackCategory, 120),
+      additionalImages: type === 'image' ? normalizeUrlList(raw.additionalImages ?? raw.images) : [],
+      socialImageUrl: normalizeUrl(raw.socialImageUrl ?? raw.ogImage),
+      title,
+      slug: gallerySlug(raw.slug || title, `gallery-item-${index + 1}`),
+      description: text(raw.description, fallbackDescription, 1600),
+      story: optionalText(raw.story ?? raw.about, 12000),
+      altText: text(raw.altText, title, 280),
+      category: text(raw.category, categoryFallback, 120),
+      creativeType,
+      tags: normalizeTags(raw.tags),
       type,
+      artist: optionalText(raw.artist, 160),
+      photographer: optionalText(raw.photographer, 160),
+      model: optionalText(raw.model, 240),
+      location: optionalText(raw.location, 240),
+      dateCreated: optionalText(raw.dateCreated ?? raw.date, 80),
+      medium: optionalText(raw.medium, 240),
+      dimensions: optionalText(raw.dimensions, 120),
+      software: optionalText(raw.software, 240),
+      camera: optionalText(raw.camera, 240),
+      lens: optionalText(raw.lens, 240),
+      copyrightHolder: optionalText(raw.copyrightHolder, 200),
+      license: optionalText(raw.license, 240),
+      seoTitle: optionalText(raw.seoTitle, 180),
+      seoDescription: optionalText(raw.seoDescription, 320),
       isVisible: raw.isVisible !== false,
+      isIndexable: raw.isIndexable !== false,
       order: Number.isFinite(Number(raw.order)) ? Math.max(0, Math.min(100000, Number(raw.order))) : index,
     };
-  }).filter((item) => item.mediaUrl).sort((a, b) => a.order - b.order);
+  }).filter((item) => item.mediaUrl);
+
+  const usedSlugs = new Set<string>();
+  return normalized.map((item) => {
+    let slug = item.slug;
+    let suffix = 2;
+    while (usedSlugs.has(slug)) slug = `${item.slug}-${suffix++}`.slice(0, 120);
+    usedSlugs.add(slug);
+    return { ...item, slug };
+  }).sort((a, b) => a.order - b.order);
 }
 
 export function normalizeGallerySettings(value: unknown): GallerySettings {

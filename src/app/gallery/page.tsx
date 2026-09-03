@@ -1,44 +1,88 @@
-"use client";
+import type { Metadata } from 'next';
+import { GalleryPageClient } from '@/components/sections/gallery/GalleryPageClient';
+import { prisma } from '@/lib/prisma';
+import { galleryItemHref, galleryItemImages, normalizeGallerySettings } from '@/lib/gallery-settings';
+import { getPublicSiteUrl } from '@/lib/social-metadata';
 
-import { useEffect, useState } from "react";
-import CleanFilmGrid from "@/components/sections/gallery/CleanFilmGrid";
-import ManifestoHero from "@/components/sections/gallery/ManifestoHero";
-import dynamic from "next/dynamic";
-import { usePerformance } from "@/hooks/usePerformance";
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { DeferredMount } from '@/components/ui/DeferredMount';
-import { defaultGallerySettings, type GallerySettings } from '@/lib/gallery-settings';
+export const dynamic = 'force-dynamic';
+const siteUrl = getPublicSiteUrl();
 
-const GLSLHills = dynamic(() => import("@/components/ui/glsl-hills").then(mod => mod.GLSLHills), {
-    ssr: false,
-});
+function absoluteMediaUrl(value: string) {
+  if (!value) return '';
+  if (value.startsWith('/')) return `${siteUrl}${value}`;
+  return value;
+}
 
-export default function GalleryPage() {
-    const { isLowPowerMode } = usePerformance();
-    const [content, setContent] = useState<GallerySettings>(defaultGallerySettings);
+async function loadGallery() {
+  const settings = await prisma.siteSettings.findUnique({
+    where: { id: 'default' },
+    select: { siteName: true, siteDescription: true, galleryContent: true },
+  }).catch(() => null);
 
-    useEffect(() => {
-        fetch('/api/gallery-settings', { cache: 'no-store' })
-            .then((response) => response.ok ? response.json() : defaultGallerySettings)
-            .then((data) => setContent({ ...defaultGallerySettings, ...data }))
-            .catch(() => setContent(defaultGallerySettings));
-    }, []);
+  return {
+    siteName: settings?.siteName || 'NecrotixLab',
+    siteDescription: settings?.siteDescription || '',
+    content: normalizeGallerySettings(settings?.galleryContent),
+  };
+}
 
-    return (
-        <main className="bg-background min-h-screen selection:bg-cyan-500/30 selection:text-cyan-500 overflow-x-hidden relative">
-            {!isLowPowerMode && (
-                <div className="fixed inset-0 z-0 pointer-events-none opacity-50 dark:opacity-50 mix-blend-multiply dark:mix-blend-screen">
-                    <DeferredMount>
-                        <GLSLHills />
-                    </DeferredMount>
-                </div>
-            )}
-            <div className="relative z-10">
-                <ManifestoHero isLowPowerMode={isLowPowerMode} content={content} />
-                <ErrorBoundary fallback={<div className="container mx-auto py-20 text-center">Gallery Grid Unavailable</div>}>
-                    <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} />
-                </ErrorBoundary>
-            </div>
-        </main>
-    );
+export async function generateMetadata(): Promise<Metadata> {
+  const { siteName, siteDescription, content } = await loadGallery();
+  const firstImage = content.items
+    .filter((item) => item.isVisible && item.type === 'image')
+    .map((item) => item.socialImageUrl || item.mediaUrl)
+    .find(Boolean);
+  const description = siteDescription || content.heroQuote || 'Creative work, photography, drawings, paintings and visual experiments.';
+  const title = `Gallery - ${siteName}`;
+  const canonical = `${siteUrl}/gallery`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: { index: true, follow: true },
+    openGraph: {
+      type: 'website',
+      url: canonical,
+      title,
+      description,
+      images: firstImage ? [{ url: absoluteMediaUrl(firstImage) }] : undefined,
+    },
+    twitter: {
+      card: firstImage ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      images: firstImage ? [absoluteMediaUrl(firstImage)] : undefined,
+    },
+  };
+}
+
+export default async function GalleryPage() {
+  const { siteName, content } = await loadGallery();
+  const visibleItems = content.items.filter((item) => item.isVisible && item.mediaUrl);
+  const indexableItems = visibleItems.filter((item) => item.isIndexable && item.slug);
+  const gallerySchema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: `${siteName} Gallery`,
+    url: `${siteUrl}/gallery`,
+    description: content.heroQuote,
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: indexableItems.map((item, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        url: `${siteUrl}${galleryItemHref(item.slug)}`,
+        name: item.title,
+        image: galleryItemImages(item).map(absoluteMediaUrl),
+      })),
+    },
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(gallerySchema).replace(/</g, '\\u003c') }} />
+      <GalleryPageClient content={content} />
+    </>
+  );
 }
