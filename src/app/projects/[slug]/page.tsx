@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ProjectComposerPage } from '@/components/projects/ProjectComposerPage';
+import { ContentWatermarkScope } from '@/components/ui/ContentWatermarkScope';
 import { getProjectImages } from '@/app/actions/getProjectImages';
 import { prisma } from '@/lib/prisma';
 import { cmsProjectToPortfolioProject } from '@/lib/cms-projects';
+import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from '@/lib/content-watermark';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
 import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
@@ -55,7 +57,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
 
-    const cmsProject = await prisma.project.findUnique({ where: { slug } });
+    const [cmsProject, watermarkPage] = await Promise.all([
+        prisma.project.findUnique({ where: { slug } }),
+        prisma.page.findUnique({ where: { slug: CONTENT_WATERMARK_CONFIG_SLUG }, select: { content: true } }),
+    ]);
     if (!cmsProject || cmsProject.status === 'ARCHIVED') notFound();
 
     const project = cmsProjectToPortfolioProject(cmsProject);
@@ -65,6 +70,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
         image: galleryImages.length > 0 ? galleryImages[0] : project.image,
         galleryImages: galleryImages.length > 0 ? galleryImages : project.galleryImages,
     };
+    const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
 
-    return <ProjectComposerPage project={updatedProject} />;
+    return (
+        <ContentWatermarkScope settings={watermark}>
+            <ProjectComposerPage project={updatedProject} />
+        </ContentWatermarkScope>
+    );
 }

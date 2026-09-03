@@ -26,6 +26,7 @@ const navGroups = [
     ['Appearance', [
         ['Navigation', '/admin/navigation'],
         ['Footer', '/admin/footer'],
+        ['Watermark', '/admin/watermark'],
     ]],
     ['Publishing & SEO', [
         ['Revisions', '/admin/revisions'],
