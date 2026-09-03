@@ -1,6 +1,5 @@
 export type GalleryCreativeType =
   | 'photography'
-  | 'photoshoot'
   | 'drawing'
   | 'painting'
   | 'digital-art'
@@ -19,7 +18,6 @@ export type GalleryItemSetting = {
   description: string;
   story: string;
   altText: string;
-  category: string;
   creativeType: GalleryCreativeType;
   tags: string[];
   type: 'image' | 'video';
@@ -31,8 +29,30 @@ export type GalleryItemSetting = {
   medium: string;
   dimensions: string;
   software: string;
+  deviceType: string;
   camera: string;
   lens: string;
+  filmStock: string;
+  sensorFormat: string;
+  focalLength: string;
+  aperture: string;
+  shutterSpeed: string;
+  iso: string;
+  lighting: string;
+  surface: string;
+  materials: string;
+  technique: string;
+  resolution: string;
+  videoCredits: string;
+  cinematographyCredits: string;
+  editingCredits: string;
+  audioCredits: string;
+  musicCredits: string;
+  textCredits: string;
+  colorGradingCredits: string;
+  motionGraphicsCredits: string;
+  duration: string;
+  frameRate: string;
   copyrightHolder: string;
   license: string;
   seoTitle: string;
@@ -54,13 +74,10 @@ export type GallerySettings = {
   sectionEyebrow: string;
   sectionTitle: string;
   filterAll: string;
-  filterPhotos: string;
-  filterVideos: string;
   collectionsLabel: string;
   viewLabel: string;
   loadMoreLabel: string;
   emptyLabel: string;
-  galleryCategoryLabel: string;
   defaultImageDescription: string;
   rowsViewTitle: string;
   gridViewTitle: string;
@@ -72,7 +89,6 @@ export type GallerySettings = {
 
 export const galleryCreativeTypeOptions: Array<{ value: GalleryCreativeType; label: string }> = [
   { value: 'photography', label: 'Photography' },
-  { value: 'photoshoot', label: 'Photoshoot' },
   { value: 'drawing', label: 'Drawing' },
   { value: 'painting', label: 'Painting' },
   { value: 'digital-art', label: 'Digital Art' },
@@ -93,13 +109,10 @@ export const defaultGallerySettings: GallerySettings = {
   sectionEyebrow: 'Exhibition Space',
   sectionTitle: 'Selected Works',
   filterAll: 'All',
-  filterPhotos: 'Photos',
-  filterVideos: 'Videos',
-  collectionsLabel: 'Collections',
+  collectionsLabel: 'Creative Types',
   viewLabel: 'View',
   loadMoreLabel: 'Load More',
-  emptyLabel: 'No items found matching filter.',
-  galleryCategoryLabel: 'Gallery',
+  emptyLabel: 'No items found matching this creative type.',
   defaultImageDescription: 'Gallery Image',
   rowsViewTitle: 'Rows View',
   gridViewTitle: 'Grid View',
@@ -166,13 +179,14 @@ function normalizeTags(value: unknown) {
     .filter(Boolean))].slice(0, 30);
 }
 
-function normalizeCreativeType(value: unknown, mediaType: GalleryItemSetting['type'], category: unknown): GalleryCreativeType {
+function normalizeCreativeType(value: unknown, mediaType: GalleryItemSetting['type'], legacyCategory: unknown): GalleryCreativeType {
+  if (value === 'photoshoot') return 'photography';
   const accepted = new Set<GalleryCreativeType>(galleryCreativeTypeOptions.map((option) => option.value));
   if (typeof value === 'string' && accepted.has(value as GalleryCreativeType)) return value as GalleryCreativeType;
   if (mediaType === 'video') return 'video';
 
-  const categoryValue = String(category ?? '').trim().toLowerCase();
-  if (categoryValue.includes('photoshoot') || categoryValue.includes('photo session')) return 'photoshoot';
+  const categoryValue = String(legacyCategory ?? '').trim().toLowerCase();
+  if (categoryValue.includes('photoshoot') || categoryValue.includes('photo session')) return 'photography';
   if (categoryValue.includes('drawing') || categoryValue.includes('sketch')) return 'drawing';
   if (categoryValue.includes('painting')) return 'painting';
   if (categoryValue.includes('digital')) return 'digital-art';
@@ -258,18 +272,18 @@ export function socialVideoEmbedUrl(value: unknown) {
   }
 }
 
-function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescription: string): GalleryItemSetting[] {
+function normalizeItems(value: unknown, fallbackDescription: string): GalleryItemSetting[] {
   if (!Array.isArray(value)) return [];
 
   const normalized = value.slice(0, 250).map((entry, index) => {
     const raw = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry as Record<string, unknown> : {};
-    const type: GalleryItemSetting['type'] = raw.type === 'video' ? 'video' : 'image';
-    const creativeType = normalizeCreativeType(raw.creativeType, type, raw.category);
+    const rawType: GalleryItemSetting['type'] = raw.type === 'video' ? 'video' : 'image';
+    const creativeType = normalizeCreativeType(raw.creativeType, rawType, raw.category);
+    const type: GalleryItemSetting['type'] = creativeType === 'video' ? 'video' : 'image';
     const title = text(raw.title, `Gallery item ${index + 1}`, 160);
     const mediaUrl = type === 'video' ? socialVideoEmbedUrl(raw.mediaUrl ?? raw.url) : normalizeUrl(raw.mediaUrl ?? raw.url);
     const rawThumbnail = normalizeUrl(raw.thumbnailUrl ?? raw.thumbnail);
     const thumbnailUrl = type === 'image' ? (rawThumbnail || mediaUrl) : rawThumbnail;
-    const categoryFallback = creativeType === 'other' ? fallbackCategory : galleryCreativeTypeLabel(creativeType);
 
     return {
       id: safeId(raw.id, `gallery-item-${index + 1}`),
@@ -282,7 +296,6 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
       description: text(raw.description, fallbackDescription, 1600),
       story: optionalText(raw.story ?? raw.about, 12000),
       altText: text(raw.altText, title, 280),
-      category: text(raw.category, categoryFallback, 120),
       creativeType,
       tags: normalizeTags(raw.tags),
       type,
@@ -294,8 +307,30 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
       medium: optionalText(raw.medium, 240),
       dimensions: optionalText(raw.dimensions, 120),
       software: optionalText(raw.software, 240),
+      deviceType: optionalText(raw.deviceType ?? raw.device, 160),
       camera: optionalText(raw.camera, 240),
       lens: optionalText(raw.lens, 240),
+      filmStock: optionalText(raw.filmStock ?? raw.film, 200),
+      sensorFormat: optionalText(raw.sensorFormat ?? raw.format, 160),
+      focalLength: optionalText(raw.focalLength, 80),
+      aperture: optionalText(raw.aperture, 80),
+      shutterSpeed: optionalText(raw.shutterSpeed ?? raw.shutter, 80),
+      iso: optionalText(raw.iso, 80),
+      lighting: optionalText(raw.lighting, 240),
+      surface: optionalText(raw.surface ?? raw.support, 200),
+      materials: optionalText(raw.materials, 400),
+      technique: optionalText(raw.technique, 300),
+      resolution: optionalText(raw.resolution, 120),
+      videoCredits: optionalText(raw.videoCredits ?? raw.directionCredits ?? raw.director, 400),
+      cinematographyCredits: optionalText(raw.cinematographyCredits ?? raw.cameraCredits, 400),
+      editingCredits: optionalText(raw.editingCredits ?? raw.editor, 400),
+      audioCredits: optionalText(raw.audioCredits ?? raw.soundCredits, 400),
+      musicCredits: optionalText(raw.musicCredits, 400),
+      textCredits: optionalText(raw.textCredits ?? raw.scriptCredits ?? raw.writer, 400),
+      colorGradingCredits: optionalText(raw.colorGradingCredits ?? raw.colorCredits, 400),
+      motionGraphicsCredits: optionalText(raw.motionGraphicsCredits ?? raw.animationCredits, 400),
+      duration: optionalText(raw.duration, 80),
+      frameRate: optionalText(raw.frameRate ?? raw.fps, 80),
       copyrightHolder: optionalText(raw.copyrightHolder, 200),
       license: optionalText(raw.license, 240),
       seoTitle: optionalText(raw.seoTitle, 180),
@@ -318,7 +353,6 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
 
 export function normalizeGallerySettings(value: unknown): GallerySettings {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-  const galleryCategoryLabel = text(source.galleryCategoryLabel, defaultGallerySettings.galleryCategoryLabel, 80);
   const defaultImageDescription = text(source.defaultImageDescription, defaultGallerySettings.defaultImageDescription, 180);
   return {
     heroEyebrow: text(source.heroEyebrow, defaultGallerySettings.heroEyebrow, 40),
@@ -332,19 +366,16 @@ export function normalizeGallerySettings(value: unknown): GallerySettings {
     sectionEyebrow: text(source.sectionEyebrow, defaultGallerySettings.sectionEyebrow, 80),
     sectionTitle: text(source.sectionTitle, defaultGallerySettings.sectionTitle, 120),
     filterAll: text(source.filterAll, defaultGallerySettings.filterAll, 40),
-    filterPhotos: text(source.filterPhotos, defaultGallerySettings.filterPhotos, 40),
-    filterVideos: text(source.filterVideos, defaultGallerySettings.filterVideos, 40),
     collectionsLabel: text(source.collectionsLabel, defaultGallerySettings.collectionsLabel, 60),
     viewLabel: text(source.viewLabel, defaultGallerySettings.viewLabel, 40),
     loadMoreLabel: text(source.loadMoreLabel, defaultGallerySettings.loadMoreLabel, 60),
     emptyLabel: text(source.emptyLabel, defaultGallerySettings.emptyLabel, 180),
-    galleryCategoryLabel,
     defaultImageDescription,
     rowsViewTitle: text(source.rowsViewTitle, defaultGallerySettings.rowsViewTitle, 60),
     gridViewTitle: text(source.gridViewTitle, defaultGallerySettings.gridViewTitle, 60),
     infiniteViewTitle: text(source.infiniteViewTitle, defaultGallerySettings.infiniteViewTitle, 60),
     minimizeTitle: text(source.minimizeTitle, defaultGallerySettings.minimizeTitle, 60),
     maximizeTitle: text(source.maximizeTitle, defaultGallerySettings.maximizeTitle, 60),
-    items: normalizeItems(source.items, galleryCategoryLabel, defaultImageDescription),
+    items: normalizeItems(source.items, defaultImageDescription),
   };
 }

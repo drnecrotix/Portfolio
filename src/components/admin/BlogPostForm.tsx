@@ -167,7 +167,6 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                             </div>
                             <button type="button" onClick={() => setTranslationOpen((open) => !open)} className="rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:bg-white/[0.05]">{translationOpen ? 'Disable translation' : 'Add translation'}</button>
                         </div>
-
                         {translationOpen && (
                             <div className="mt-6 space-y-5">
                                 <label className="block text-xs text-white/45">Translated title<input name="translationTitle" value={translationTitle} onChange={(event) => setTranslationTitle(event.target.value)} className={inputClass} placeholder={secondaryLocale === 'bg' ? 'Заглавие на български' : 'English title'} /></label>
@@ -190,7 +189,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                         <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Publish</h3><span className="text-[10px] uppercase tracking-[0.18em] text-white/30">Post</span></div>
                         <div className="mt-4 space-y-4">
                             <label className="block text-xs text-white/45">Primary language<select name="primaryLocale" value={primaryLocale} onChange={(event) => setPrimaryLocale(event.target.value as BlogLocale)} className={selectClass}><option value="en">English (EN)</option><option value="bg">Bulgarian (BG)</option></select></label>
-                            <label className="block text-xs text-white/45">Status<select name="status" defaultValue={value.status ?? 'DRAFT'} className={selectClass}>{['DRAFT','REVIEW','PUBLISHED','ARCHIVED'].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+                            <label className="block text-xs text-white/45">Status<select name="status" defaultValue={value.status ?? 'PUBLISHED'} className={selectClass}>{['PUBLISHED','REVIEW','DRAFT','ARCHIVED'].map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
                             <label className="block text-xs text-white/45">Author<input name="authorName" required defaultValue={value.authorName ?? 'Dr Necrotix'} className={inputClass} /></label>
                             <label className="block text-xs text-white/45">Publish date<input name="publishedAt" type="datetime-local" defaultValue={dateValue(value.publishedAt)} className={inputClass} /></label>
                             <label className="block text-xs text-white/45">Schedule<input name="scheduledAt" type="datetime-local" defaultValue={dateValue(value.scheduledAt)} className={inputClass} /></label>

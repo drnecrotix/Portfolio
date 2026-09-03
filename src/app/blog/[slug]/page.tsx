@@ -122,9 +122,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     const availableLocales = getAvailablePostLocales(cmsPost);
     const currentLocale = locale === 'bg' ? 'bg' : 'en';
     const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
+    const featuredWatermark = {
+        ...watermark,
+        enabled: watermark.enabled && Boolean(content.featuredImage),
+        position: 'bottom-right' as const,
+    };
 
     return (
-        <ContentWatermarkScope settings={watermark}>
+        <ContentWatermarkScope settings={featuredWatermark} mode="first">
             <BlogArticleFrame
                 postId={cmsPost.id}
                 slug={cmsPost.slug}
