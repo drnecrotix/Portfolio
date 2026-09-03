@@ -9,7 +9,7 @@ import { getAllGalleryImages } from "@/app/actions/getGalleryImages";
 import MagneticEffect from "@/components/ui/MagneticEffect";
 import { InfiniteImageField } from "@/components/ui/infinite-image-field";
 import { GalleryLightbox } from "@/components/sections/gallery/GalleryLightbox";
-import type { GallerySettings } from '@/lib/gallery-settings';
+import { galleryItemHref, type GallerySettings } from '@/lib/gallery-settings';
 
 type FilterType = 'all' | 'image' | 'video';
 type ViewMode = 'rows' | 'grid' | 'infinite';
@@ -21,6 +21,7 @@ type GalleryItem = {
     thumbnail: string;
     url: string;
     description: string;
+    detailUrl?: string;
 };
 
 export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerMode?: boolean; content: GallerySettings }) {
@@ -38,10 +39,11 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
             id: item.id,
             title: item.title,
             type: item.type,
-            category: item.type === 'video' ? 'Video' : 'Photo',
+            category: item.category || (item.type === 'video' ? 'Video' : 'Photo'),
             thumbnail: item.type === 'video' ? (item.thumbnailUrl || item.mediaUrl) : item.mediaUrl,
             url: item.mediaUrl,
             description: item.description,
+            detailUrl: item.slug ? galleryItemHref(item.slug) : undefined,
         })), [content.items]);
 
     useEffect(() => {
