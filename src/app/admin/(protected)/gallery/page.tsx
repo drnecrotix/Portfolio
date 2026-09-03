@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { StatusToast } from '@/components/admin/StatusToast';
 import { GalleryItemsEditor } from '@/components/admin/GalleryItemsEditor';
-import { GalleryAdminTabs } from '@/components/admin/GalleryAdminTabs';
+import { GalleryAdminTabs, type GalleryAdminTabId } from '@/components/admin/GalleryAdminTabs';
 import { prisma } from '@/lib/prisma';
 import { galleryCreativeTypeLabel, normalizeGallerySettings } from '@/lib/gallery-settings';
 import { saveGallerySettings } from './actions';
@@ -12,8 +12,13 @@ const input = 'mt-2 w-full rounded-xl border border-foreground/10 bg-background 
 const area = `${input} min-h-28 resize-y`;
 const section = 'rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6';
 const label = 'text-sm text-muted-foreground';
+const galleryAdminTabs: GalleryAdminTabId[] = ['works', 'published', 'page', 'interface'];
 
-type SearchParams = Promise<{ saved?: string; error?: string }>;
+type SearchParams = Promise<{ saved?: string; error?: string; tab?: string }>;
+
+function galleryAdminTab(value?: string): GalleryAdminTabId {
+  return galleryAdminTabs.includes(value as GalleryAdminTabId) ? value as GalleryAdminTabId : 'works';
+}
 
 export default async function GalleryAdminPage({ searchParams }: { searchParams: SearchParams }) {
   const [record, params] = await Promise.all([
@@ -22,6 +27,7 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
   ]);
   const settings = normalizeGallerySettings(record?.galleryContent);
   const publishedItems = settings.items.filter((item) => item.isVisible && item.mediaUrl);
+  const initialTab = galleryAdminTab(params.tab);
 
   const published = (
     <section className={section}>
@@ -89,7 +95,8 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
 
       <form action={saveGallerySettings}>
         <GalleryAdminTabs
-          works={<section className={section}><GalleryItemsEditor initialItems={settings.items} /></section>}
+          initialTab={initialTab}
+          works={<section className={`${section} gallery-editor-shell`}><GalleryItemsEditor initialItems={settings.items} /></section>}
           published={published}
           page={pagePanel}
           interfacePanel={interfacePanel}
@@ -106,6 +113,78 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
           <button className="w-full rounded-xl bg-foreground px-5 py-3 text-sm font-semibold text-background sm:w-auto">Save Gallery</button>
         </div>
       </form>
+
+      <style>{`
+        .gallery-editor-shell label[class*="border-amber-400"] {
+          min-height: 58px;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          cursor: pointer;
+          padding: 0.75rem 1rem;
+          transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+        }
+        .gallery-editor-shell label[class*="border-amber-400"] > span {
+          min-width: 0;
+          flex: 1;
+        }
+        .gallery-editor-shell label[class*="border-amber-400"] > span > span {
+          display: none;
+        }
+        .gallery-editor-shell label[class*="border-amber-400"] strong {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.75rem;
+          line-height: 1rem;
+        }
+        .gallery-editor-shell label[class*="border-amber-400"] strong::after {
+          content: 'OFF';
+          border: 1px solid rgb(255 255 255 / 0.1);
+          border-radius: 9999px;
+          padding: 0.1rem 0.38rem;
+          font-size: 0.56rem;
+          line-height: 0.8rem;
+          letter-spacing: 0.12em;
+          color: rgb(161 161 170);
+        }
+        .gallery-editor-shell label[class*="border-amber-400"] > input[type="checkbox"] {
+          order: 2;
+          width: 2.75rem;
+          height: 1.5rem;
+          flex: 0 0 auto;
+          appearance: none;
+          margin: 0;
+          border: 1px solid rgb(255 255 255 / 0.12);
+          border-radius: 9999px;
+          background-color: rgb(255 255 255 / 0.07);
+          background-image: radial-gradient(circle at 0.72rem 50%, rgb(255 255 255) 0 0.43rem, transparent 0.46rem);
+          cursor: pointer;
+          box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.28);
+          transition: border-color 160ms ease, background-color 160ms ease, background-image 160ms ease, box-shadow 160ms ease;
+        }
+        .gallery-editor-shell label[class*="border-amber-400"] > input[type="checkbox"]:focus-visible {
+          outline: 2px solid rgb(251 191 36 / 0.55);
+          outline-offset: 2px;
+        }
+        .gallery-editor-shell label[class*="border-amber-400"]:has(> input[type="checkbox"]:checked) {
+          border-color: rgb(251 191 36 / 0.34);
+          background-color: rgb(251 191 36 / 0.07);
+          box-shadow: inset 0 0 0 1px rgb(251 191 36 / 0.04);
+        }
+        .gallery-editor-shell label[class*="border-amber-400"]:has(> input[type="checkbox"]:checked) strong::after {
+          content: 'ON';
+          border-color: rgb(251 191 36 / 0.3);
+          color: rgb(251 191 36);
+          background-color: rgb(251 191 36 / 0.08);
+        }
+        .gallery-editor-shell label[class*="border-amber-400"] > input[type="checkbox"]:checked {
+          border-color: rgb(251 191 36 / 0.42);
+          background-color: rgb(251 191 36 / 0.28);
+          background-image: radial-gradient(circle at 2rem 50%, rgb(255 255 255) 0 0.43rem, transparent 0.46rem);
+          box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.22), 0 0 0 1px rgb(251 191 36 / 0.05);
+        }
+      `}</style>
     </div>
   );
 }
