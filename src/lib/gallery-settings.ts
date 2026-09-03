@@ -10,6 +10,7 @@ export type GalleryCreativeType =
 export type GalleryItemSetting = {
   id: string;
   mediaUrl: string;
+  sourceUrl: string;
   thumbnailUrl: string;
   additionalImages: string[];
   socialImageUrl: string;
@@ -21,6 +22,7 @@ export type GalleryItemSetting = {
   creativeType: GalleryCreativeType;
   tags: string[];
   type: 'image' | 'video';
+  isNsfw: boolean;
   artist: string;
   photographer: string;
   model: string;
@@ -173,7 +175,7 @@ function normalizeTags(value: unknown) {
       ? value.split(',')
       : [];
   return [...new Set(source
-    .map((entry) => String(entry ?? '').trim().slice(0, 60))
+    .map((entry) => String(entry ?? '').trim().replace(/^#+/, '').slice(0, 60))
     .filter(Boolean))].slice(0, 30);
 }
 
@@ -203,14 +205,108 @@ export function galleryItemHref(slug: string) {
   return `/gallery/${encodeURIComponent(slug)}`;
 }
 
+export function galleryTagHref(tag: string) {
+  const normalized = String(tag ?? '').trim().replace(/^#+/, '').slice(0, 60);
+  return `/gallery/tag/${encodeURIComponent(normalized)}`;
+}
+
 export function galleryItemImages(item: GalleryItemSetting) {
   if (item.type !== 'image') return item.thumbnailUrl ? [item.thumbnailUrl] : [];
   return [...new Set([item.mediaUrl, ...item.additionalImages].filter(Boolean))];
 }
 
-export function socialVideoEmbedUrl(value: unknown) {
+export function isDirectVideoUrl(value: unknown) {
+  const normalized = normalizeUrl(value);
+  if (!normalized) return false;
+  if (normalized.startsWith('/')) return true;
+  try {
+    const url = new URL(normalized);
+    return /\.(?:mp4|webm|ogg|ogv|mov|m4v)$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
+export function socialVideoSourceUrl(value: unknown) {
   const normalized = normalizeUrl(value);
   if (!normalized || normalized.startsWith('/')) return normalized;
+
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    const parts = url.pathname.split('/').filter(Boolean);
+
+    if (host === 'youtu.be' && parts[0]) return `https://www.youtube.com/watch?v=${encodeURIComponent(parts[0])}`;
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const id = url.searchParams.get('v') || (['shorts', 'embed', 'live'].includes(parts[0] || '') ? parts[1] : '');
+      return id ? `https://www.youtube.com/watch?v=${encodeURIComponent(id)}` : normalized;
+    }
+
+    if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+      const id = [...parts].reverse().find((part) => /^\d+$/.test(part));
+      return id ? `https://vimeo.com/${id}` : normalized;
+    }
+
+    if (host === 'tiktok.com' || host === 'm.tiktok.com') {
+      return normalized;
+    }
+
+    if (host === 'instagram.com' || host === 'm.instagram.com') {
+      const kind = parts[0];
+      const shortcode = parts[1];
+      if (shortcode && ['p', 'reel', 'reels', 'tv'].includes(kind || '')) {
+        const canonicalKind = kind === 'reels' ? 'reel' : kind;
+        return `https://www.instagram.com/${canonicalKind}/${encodeURIComponent(shortcode)}/`;
+      }
+      return normalized;
+    }
+
+    if (host === 'facebook.com' || host === 'm.facebook.com') {
+      if (parts[0] === 'plugins' && parts[1] === 'video.php') {
+        const href = url.searchParams.get('href');
+        return normalizeUrl(href) || normalized;
+      }
+      return normalized;
+    }
+    if (host === 'fb.watch') return normalized;
+
+    if (host === 'x.com' || host === 'twitter.com' || host === 'mobile.twitter.com') {
+      const statusIndex = parts.indexOf('status');
+      const id = statusIndex >= 0 ? parts[statusIndex + 1] : '';
+      return id && /^\d+$/.test(id) ? `https://x.com/i/status/${id}` : normalized;
+    }
+    if (host === 'platform.twitter.com') {
+      const id = url.searchParams.get('id');
+      return id && /^\d+$/.test(id) ? `https://x.com/i/status/${id}` : normalized;
+    }
+
+    const isPinterest = /^([a-z0-9-]+\.)?pinterest\.[a-z.]+$/.test(host);
+    if (isPinterest) return normalized;
+    if (host === 'assets.pinterest.com') {
+      const id = url.searchParams.get('id');
+      return id && /^\d+$/.test(id) ? `https://www.pinterest.com/pin/${id}/` : normalized;
+    }
+
+    if (host === 'dailymotion.com' || host === 'dai.ly') {
+      const id = host === 'dai.ly'
+        ? parts[0]
+        : parts[0] === 'embed' && parts[1] === 'video'
+          ? parts[2]
+          : parts[0] === 'video'
+            ? parts[1]
+            : '';
+      return id ? `https://www.dailymotion.com/video/${encodeURIComponent(id.split('_')[0])}` : normalized;
+    }
+
+    return normalized;
+  } catch {
+    return normalized;
+  }
+}
+
+export function socialVideoEmbedUrl(value: unknown) {
+  const normalized = socialVideoSourceUrl(value);
+  if (!normalized || normalized.startsWith('/') || isDirectVideoUrl(normalized)) return normalized;
 
   try {
     const url = new URL(normalized);
@@ -231,7 +327,7 @@ export function socialVideoEmbedUrl(value: unknown) {
 
     if (host === 'tiktok.com' || host === 'm.tiktok.com') {
       const videoIndex = parts.indexOf('video');
-      const id = videoIndex >= 0 ? parts[videoIndex + 1] : '';
+      const id = videoIndex >= 0 ? parts[videoIndex + 1] : (parts[0] === 'player' && parts[1] === 'v1' ? parts[2] : '');
       return id && /^\d+$/.test(id) ? `https://www.tiktok.com/player/v1/${id}` : '';
     }
 
@@ -282,13 +378,25 @@ function normalizeItems(value: unknown, fallbackDescription: string): GalleryIte
     const creativeType = normalizeCreativeType(raw.creativeType, rawType, raw.category);
     const type: GalleryItemSetting['type'] = creativeType === 'video' ? 'video' : 'image';
     const title = text(raw.title, `Gallery item ${index + 1}`, 160);
-    const mediaUrl = type === 'video' ? socialVideoEmbedUrl(raw.mediaUrl ?? raw.url) : normalizeUrl(raw.mediaUrl ?? raw.url);
+    const rawMediaUrl = normalizeUrl(raw.mediaUrl ?? raw.url);
+    const explicitSourceUrl = normalizeUrl(raw.sourceUrl ?? raw.externalUrl);
+    const sourceUrl = type === 'video'
+      ? explicitSourceUrl && !isDirectVideoUrl(explicitSourceUrl)
+        ? socialVideoSourceUrl(explicitSourceUrl)
+        : !isDirectVideoUrl(rawMediaUrl)
+          ? socialVideoSourceUrl(rawMediaUrl)
+          : ''
+      : '';
+    const mediaUrl = type === 'video'
+      ? (isDirectVideoUrl(rawMediaUrl) ? rawMediaUrl : socialVideoEmbedUrl(sourceUrl || rawMediaUrl))
+      : rawMediaUrl;
     const rawThumbnail = normalizeUrl(raw.thumbnailUrl ?? raw.thumbnail);
     const thumbnailUrl = type === 'image' ? (rawThumbnail || mediaUrl) : rawThumbnail;
 
     return {
       id: safeId(raw.id, `gallery-item-${index + 1}`),
       mediaUrl,
+      sourceUrl,
       thumbnailUrl,
       additionalImages: type === 'image' ? normalizeUrlList(raw.additionalImages ?? raw.images) : [],
       socialImageUrl: normalizeUrl(raw.socialImageUrl ?? raw.ogImage),
@@ -300,6 +408,7 @@ function normalizeItems(value: unknown, fallbackDescription: string): GalleryIte
       creativeType,
       tags: normalizeTags(raw.tags),
       type,
+      isNsfw: raw.isNsfw === true || raw.nsfw === true,
       artist: optionalText(raw.artist, 160),
       photographer: optionalText(raw.photographer, 160),
       model: optionalText(raw.model, 240),

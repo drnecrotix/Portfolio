@@ -10,6 +10,8 @@ import {
   galleryCreativeTypeLabel,
   galleryItemHref,
   galleryItemImages,
+  galleryTagHref,
+  isDirectVideoUrl,
   normalizeGallerySettings,
   type GalleryItemSetting,
 } from '@/lib/gallery-settings';
@@ -18,6 +20,7 @@ import { getPublicSiteUrl } from '@/lib/social-metadata';
 export const dynamic = 'force-dynamic';
 const siteUrl = getPublicSiteUrl();
 const GALLERY_LIKE_COOKIE = 'necrotix_gallery_like_id';
+const NSFW_PREVIEW = '/nsfw-preview.svg';
 
 type WorkDetail = { label: string; value: string };
 
@@ -51,8 +54,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const canonical = `${siteUrl}${galleryItemHref(item.slug)}`;
   const title = item.seoTitle || `${item.title} - ${siteName} Gallery`;
   const description = descriptionFor(item);
-  const socialImage = item.socialImageUrl || (item.type === 'image' ? item.mediaUrl : item.thumbnailUrl);
+  const socialImage = item.isNsfw
+    ? NSFW_PREVIEW
+    : item.socialImageUrl || (item.type === 'image' ? item.mediaUrl : item.thumbnailUrl);
   const socialImageAbsolute = socialImage ? absoluteMediaUrl(socialImage) : '';
+  const socialAlt = item.isNsfw ? 'NSFW sensitive Gallery work' : item.altText || item.title;
 
   return {
     title,
@@ -65,7 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: canonical,
       title,
       description,
-      images: socialImageAbsolute ? [{ url: socialImageAbsolute, alt: item.altText || item.title }] : undefined,
+      images: socialImageAbsolute ? [{ url: socialImageAbsolute, alt: socialAlt }] : undefined,
     },
     twitter: {
       card: socialImageAbsolute ? 'summary_large_image' : 'summary',
@@ -195,6 +201,7 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
   const { item, siteName, updatedAt } = loaded;
   const canonical = `${siteUrl}${galleryItemHref(item.slug)}`;
   const images = galleryItemImages(item);
+  const schemaImages = item.isNsfw ? [NSFW_PREVIEW] : images;
   const creator = primaryCreator(item, siteName);
   const copyrightHolder = item.copyrightHolder || creator;
   const description = descriptionFor(item);
@@ -236,12 +243,12 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
       : Promise.resolve(null),
   ]);
 
-  const imageObjects = images.map((image, index) => ({
+  const imageObjects = schemaImages.map((image, index) => ({
     '@type': 'ImageObject',
     contentUrl: absoluteMediaUrl(image),
     url: absoluteMediaUrl(image),
-    name: index === 0 ? item.title : `${item.title} - ${index + 1}`,
-    caption: item.description || item.title,
+    name: item.isNsfw ? `${item.title} - NSFW preview` : index === 0 ? item.title : `${item.title} - ${index + 1}`,
+    caption: item.isNsfw ? 'Sensitive Gallery work preview' : item.description || item.title,
     representativeOfPage: index === 0,
     creator: creator ? { '@type': 'Person', name: creator } : undefined,
     copyrightNotice: copyrightHolder ? `© ${copyrightHolder}` : undefined,
@@ -289,6 +296,7 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
           <div>
             <div className="mb-4 flex flex-wrap gap-2">
               <span className="rounded-full border border-foreground/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{creativeType}</span>
+              {item.isNsfw && <span className="rounded-full border border-amber-400/25 bg-amber-400/[0.06] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-500">NSFW</span>}
               {images.length > 1 && <span className="rounded-full border border-foreground/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{images.length} images</span>}
             </div>
             <h1 className="max-w-5xl font-serif text-4xl leading-[0.98] tracking-tight sm:text-5xl lg:text-6xl">{item.title}</h1>
@@ -313,7 +321,11 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
         <section className="mt-5">
           {item.type === 'video' ? (
             <div className="mx-auto aspect-video w-full max-w-[1180px] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
-              <iframe src={item.mediaUrl} className="h-full w-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.title} />
+              {isDirectVideoUrl(item.mediaUrl) ? (
+                <video src={item.mediaUrl} poster={item.thumbnailUrl || undefined} controls playsInline preload="metadata" className="h-full w-full bg-black object-contain" />
+              ) : (
+                <iframe src={item.mediaUrl} className="h-full w-full" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" title={item.title} />
+              )}
             </div>
           ) : (
             <GalleryZoomViewer images={images} alt={item.altText || item.title} title={item.title} copyrightHolder={copyrightHolder} />
@@ -332,7 +344,7 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
             {item.tags.length > 0 && (
               <section className={item.story ? 'mt-10' : ''}>
                 <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"><Tag className="h-4 w-4" />Tags</div>
-                <div className="flex flex-wrap gap-2">{item.tags.map((tag) => <span key={tag} className="rounded-full border border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-xs text-foreground/70">{tag}</span>)}</div>
+                <div className="flex flex-wrap gap-2">{item.tags.map((tag) => <Link key={tag} href={galleryTagHref(tag)} className="rounded-full border border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-xs text-foreground/70 transition hover:border-foreground/20 hover:bg-foreground/[0.06] hover:text-foreground">#{tag}</Link>)}</div>
               </section>
             )}
           </div>

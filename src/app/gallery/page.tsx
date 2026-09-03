@@ -6,6 +6,7 @@ import { getPublicSiteUrl } from '@/lib/social-metadata';
 
 export const dynamic = 'force-dynamic';
 const siteUrl = getPublicSiteUrl();
+const NSFW_PREVIEW = '/nsfw-preview.svg';
 
 function absoluteMediaUrl(value: string) {
   if (!value) return '';
@@ -29,10 +30,10 @@ async function loadGallery() {
 export async function generateMetadata(): Promise<Metadata> {
   const { siteName, siteDescription, content } = await loadGallery();
   const firstImage = content.items
-    .filter((item) => item.isVisible && item.type === 'image')
+    .filter((item) => item.isVisible && item.type === 'image' && !item.isNsfw)
     .map((item) => item.socialImageUrl || item.mediaUrl)
     .find(Boolean);
-  const description = siteDescription || content.heroQuote || 'Creative work, photography, drawings, paintings and visual experiments.';
+  const description = siteDescription || content.heroQuote || 'Creative work, photography, traditional art, digital art and video.';
   const title = `Gallery - ${siteName}`;
   const canonical = `${siteUrl}/gallery`;
 
@@ -74,7 +75,7 @@ export default async function GalleryPage() {
         position: index + 1,
         url: `${siteUrl}${galleryItemHref(item.slug)}`,
         name: item.title,
-        image: galleryItemImages(item).map(absoluteMediaUrl),
+        image: (item.isNsfw ? [NSFW_PREVIEW] : galleryItemImages(item)).map(absoluteMediaUrl),
       })),
     },
   };

@@ -12,7 +12,7 @@ const GLSLHills = dynamic(() => import('@/components/ui/glsl-hills').then((mod) 
   ssr: false,
 });
 
-export function GalleryPageClient({ content }: { content: GallerySettings }) {
+export function GalleryPageClient({ content, allowLibraryFallback = true }: { content: GallerySettings; allowLibraryFallback?: boolean }) {
   const { isLowPowerMode } = usePerformance();
 
   return (
@@ -27,7 +27,7 @@ export function GalleryPageClient({ content }: { content: GallerySettings }) {
       <div className="relative z-10">
         <ManifestoHero isLowPowerMode={isLowPowerMode} content={content} />
         <ErrorBoundary fallback={<div className="container mx-auto py-20 text-center">Gallery Grid Unavailable</div>}>
-          <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} />
+          <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} allowLibraryFallback={allowLibraryFallback} />
         </ErrorBoundary>
       </div>
     </main>

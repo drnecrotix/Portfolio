@@ -4,15 +4,18 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Video, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { isDirectVideoUrl } from '@/lib/gallery-settings';
 
 export type GalleryLightboxItem = {
     id: string;
     title: string;
     type: 'image' | 'video';
     url: string;
+    thumbnail?: string;
     description: string;
+    isNsfw?: boolean;
     detailUrl?: string;
 };
 
@@ -107,15 +110,35 @@ export function GalleryLightbox({
                     </div>
 
                     <div className="relative min-h-0 overflow-hidden" onClick={(event) => event.stopPropagation()}>
-                        {item.type === 'video' ? (
+                        {item.isNsfw ? (
+                            <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-neutral-950 p-3 sm:p-6 lg:p-10">
+                                {item.thumbnail ? (
+                                    <div className="relative h-full w-full max-w-6xl overflow-hidden rounded-lg border border-white/10 bg-black">
+                                        <Image src={item.thumbnail} alt="NSFW preview" fill sizes="100vw" className="scale-110 object-contain blur-3xl" priority />
+                                    </div>
+                                ) : (
+                                    <div className="grid h-full w-full max-w-6xl place-items-center rounded-lg border border-white/10 bg-neutral-900"><Video className="h-12 w-12 text-white/25" /></div>
+                                )}
+                                <div className="absolute inset-0 grid place-items-center bg-black/30 text-center">
+                                    <div className="rounded-2xl border border-white/15 bg-black/70 px-6 py-5 shadow-2xl backdrop-blur-xl">
+                                        <div className="text-xl font-bold tracking-[0.24em]">NSFW</div>
+                                        <p className="mt-2 max-w-xs text-xs leading-5 text-white/55">Sensitive media stays hidden in Gallery preview. Open the full work to view the original media.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : item.type === 'video' ? (
                             <div className="flex h-full w-full items-center justify-center p-3 sm:p-6 lg:p-10">
-                                <iframe
-                                    src={`${item.url}${item.url.includes('?') ? '&' : '?'}autoplay=1&rel=0`}
-                                    className="h-full max-h-full w-full max-w-6xl rounded-lg border border-white/10 bg-black"
-                                    allow="autoplay; fullscreen; picture-in-picture"
-                                    allowFullScreen
-                                    title={item.title || 'Gallery video'}
-                                />
+                                {isDirectVideoUrl(item.url) ? (
+                                    <video src={item.url} controls autoPlay playsInline className="h-full max-h-full w-full max-w-6xl rounded-lg border border-white/10 bg-black object-contain" />
+                                ) : (
+                                    <iframe
+                                        src={`${item.url}${item.url.includes('?') ? '&' : '?'}autoplay=1&rel=0`}
+                                        className="h-full max-h-full w-full max-w-6xl rounded-lg border border-white/10 bg-black"
+                                        allow="autoplay; fullscreen; picture-in-picture"
+                                        allowFullScreen
+                                        title={item.title || 'Gallery video'}
+                                    />
+                                )}
                             </div>
                         ) : (
                             <div className="relative h-full w-full p-3 sm:p-6 lg:p-10">
@@ -136,7 +159,7 @@ export function GalleryLightbox({
                                     type="button"
                                     onClick={(event) => { event.stopPropagation(); onPrevious(); }}
                                     className="absolute left-3 top-1/2 z-20 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/65 backdrop-blur-md transition hover:bg-black/90 sm:left-6 sm:h-14 sm:w-14"
-                                    aria-label="Previous image"
+                                    aria-label="Previous work"
                                 >
                                     <ChevronLeft className="h-6 w-6" />
                                 </button>
@@ -144,7 +167,7 @@ export function GalleryLightbox({
                                     type="button"
                                     onClick={(event) => { event.stopPropagation(); onNext(); }}
                                     className="absolute right-3 top-1/2 z-20 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/65 backdrop-blur-md transition hover:bg-black/90 sm:right-6 sm:h-14 sm:w-14"
-                                    aria-label="Next image"
+                                    aria-label="Next work"
                                 >
                                     <ChevronRight className="h-6 w-6" />
                                 </button>

@@ -43,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (!seo.sitemapEnabled) return [];
 
     const galleryImages = gallery.items
-        .filter((item) => item.isVisible && item.isIndexable)
+        .filter((item) => item.isVisible && item.isIndexable && !item.isNsfw)
         .flatMap(galleryItemImages)
         .map((image) => absoluteMediaUrl(baseUrl, image))
         .filter(Boolean);
@@ -93,7 +93,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const galleryEntries: MetadataRoute.Sitemap = gallery.items
             .filter((item) => item.isVisible && item.isIndexable && item.slug)
             .map((item) => {
-                const images = galleryItemImages(item).map((image) => absoluteMediaUrl(baseUrl, image)).filter(Boolean);
+                const images = item.isNsfw ? [] : galleryItemImages(item).map((image) => absoluteMediaUrl(baseUrl, image)).filter(Boolean);
                 return {
                     url: `${baseUrl}${galleryItemHref(item.slug)}`,
                     lastModified: galleryUpdatedAt,
