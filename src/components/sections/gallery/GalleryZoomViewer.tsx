@@ -79,7 +79,7 @@ export function GalleryZoomViewer({
     <div className="mx-auto w-full max-w-[1180px] select-none" aria-label={`${title} image viewer`}>
       <div
         className={cn(
-          'relative h-[clamp(340px,62vh,680px)] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.22)]',
+          'relative h-[clamp(320px,62vh,680px)] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.22)] sm:h-[clamp(340px,62vh,680px)]',
           zoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in',
         )}
         onDoubleClick={() => zoom > 1 ? resetZoomPan() : setZoomLevel(2)}
@@ -121,23 +121,23 @@ export function GalleryZoomViewer({
           />
         </div>
 
-        <div className="absolute left-3 top-3 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-black/55 p-1 text-white shadow-lg backdrop-blur-md sm:left-4 sm:top-4">
+        <div className="absolute left-2.5 top-2.5 z-20 flex items-center gap-0.5 rounded-full border border-white/10 bg-black/60 p-1 text-white shadow-lg backdrop-blur-md sm:left-4 sm:top-4 sm:gap-1">
           <button type="button" onClick={() => setZoomLevel(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="rounded-full p-2 transition hover:bg-white/10 disabled:opacity-30" aria-label="Zoom out" title="Zoom out"><Minus className="h-4 w-4" /></button>
-          <button type="button" onClick={resetZoomPan} className="min-w-14 rounded-full px-2 py-2 font-mono text-[10px] tracking-wider transition hover:bg-white/10" aria-label="Reset zoom and position" title="Reset zoom and position">{Math.round(zoom * 100)}%</button>
+          <button type="button" onClick={resetZoomPan} className="hidden min-w-14 rounded-full px-2 py-2 font-mono text-[10px] tracking-wider transition hover:bg-white/10 sm:inline-flex sm:items-center sm:justify-center" aria-label="Reset zoom and position" title="Reset zoom and position">{Math.round(zoom * 100)}%</button>
           <button type="button" onClick={() => setZoomLevel(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="rounded-full p-2 transition hover:bg-white/10 disabled:opacity-30" aria-label="Zoom in" title="Zoom in"><Plus className="h-4 w-4" /></button>
           <button type="button" onClick={() => setRotation((value) => (value + 90) % 360)} className="rounded-full p-2 transition hover:bg-white/10" aria-label="Rotate image 90 degrees" title="Rotate image 90°"><RotateCw className="h-4 w-4" /></button>
         </div>
 
         {safeImages.length > 1 && (
           <>
-            <button type="button" onClick={() => selectImage(activeIndex - 1)} className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/10 bg-black/55 p-2.5 text-white backdrop-blur-md transition hover:bg-black/75" aria-label="Previous image"><ChevronLeft className="h-5 w-5" /></button>
-            <button type="button" onClick={() => selectImage(activeIndex + 1)} className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/10 bg-black/55 p-2.5 text-white backdrop-blur-md transition hover:bg-black/75" aria-label="Next image"><ChevronRight className="h-5 w-5" /></button>
-            <div className="absolute right-3 top-3 z-20 rounded-full border border-white/10 bg-black/55 px-3 py-2 font-mono text-[10px] tracking-widest text-white/80 backdrop-blur-md sm:right-4 sm:top-4">{activeIndex + 1} / {safeImages.length}</div>
+            <button type="button" onClick={() => selectImage(activeIndex - 1)} className="absolute left-2.5 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/10 bg-black/60 p-2 text-white backdrop-blur-md transition hover:bg-black/75 sm:left-3 sm:p-2.5" aria-label="Previous image"><ChevronLeft className="h-5 w-5" /></button>
+            <button type="button" onClick={() => selectImage(activeIndex + 1)} className="absolute right-2.5 top-1/2 z-20 -translate-y-1/2 rounded-full border border-white/10 bg-black/60 p-2 text-white backdrop-blur-md transition hover:bg-black/75 sm:right-3 sm:p-2.5" aria-label="Next image"><ChevronRight className="h-5 w-5" /></button>
+            <div className="absolute right-2.5 top-2.5 z-20 rounded-full border border-white/10 bg-black/60 px-2.5 py-2 font-mono text-[9px] tracking-widest text-white/80 backdrop-blur-md sm:right-4 sm:top-4 sm:px-3 sm:text-[10px]">{activeIndex + 1} / {safeImages.length}</div>
           </>
         )}
 
-        <div className="pointer-events-none absolute bottom-3 left-4 z-20 rounded-full bg-black/30 px-2.5 py-1.5 text-[9px] uppercase tracking-[0.14em] text-white/45 backdrop-blur-sm sm:bottom-4 sm:left-5">Double-click or use controls to zoom</div>
-        <div className="pointer-events-none absolute bottom-3 right-4 z-20 max-w-[55%] rounded-md bg-black/20 px-2 py-1 text-right text-[10px] font-medium tracking-[0.08em] text-white/35 shadow-sm backdrop-blur-[2px] sm:bottom-4 sm:right-5">© {watermark}</div>
+        <div className="pointer-events-none absolute bottom-4 left-5 z-20 hidden rounded-full bg-black/35 px-2.5 py-1.5 text-[9px] uppercase tracking-[0.14em] text-white/50 backdrop-blur-sm sm:block">Double-click or use controls to zoom</div>
+        <div className="pointer-events-none absolute bottom-2.5 right-2.5 z-20 max-w-[78%] rounded-lg border border-white/[0.06] bg-black/45 px-2.5 py-1.5 text-right font-sans text-[9px] font-medium leading-none tracking-[0.06em] text-white/55 shadow-sm backdrop-blur-sm sm:bottom-4 sm:right-5 sm:max-w-[55%] sm:text-[10px]">© {watermark}</div>
       </div>
 
       {safeImages.length > 1 && (
