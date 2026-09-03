@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Camera, Link2, Loader2, Palette, RefreshCw, Search, Video } from 'lucide-react';
+import { Link2, Loader2, Palette, RefreshCw, Search, Video } from 'lucide-react';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import {
   galleryCreativeTypeLabel,
@@ -21,11 +21,10 @@ function nextId() {
 }
 
 function normalizeItem(item: GalleryItemSetting): GalleryItemSetting {
-  const type = item.type === 'video' ? 'video' : 'image';
+  const type = item.creativeType === 'video' ? 'video' : 'image';
   return {
     ...item,
     type,
-    creativeType: type === 'video' ? 'video' : item.creativeType,
     thumbnailUrl: type === 'image' ? (item.thumbnailUrl || item.mediaUrl) : item.thumbnailUrl,
     additionalImages: Array.isArray(item.additionalImages) ? item.additionalImages : [],
     tags: Array.isArray(item.tags) ? item.tags : [],
@@ -37,6 +36,20 @@ function normalizeItem(item: GalleryItemSetting): GalleryItemSetting {
     shutterSpeed: item.shutterSpeed || '',
     iso: item.iso || '',
     lighting: item.lighting || '',
+    surface: item.surface || '',
+    materials: item.materials || '',
+    technique: item.technique || '',
+    resolution: item.resolution || '',
+    videoCredits: item.videoCredits || '',
+    cinematographyCredits: item.cinematographyCredits || '',
+    editingCredits: item.editingCredits || '',
+    audioCredits: item.audioCredits || '',
+    musicCredits: item.musicCredits || '',
+    textCredits: item.textCredits || '',
+    colorGradingCredits: item.colorGradingCredits || '',
+    motionGraphicsCredits: item.motionGraphicsCredits || '',
+    duration: item.duration || '',
+    frameRate: item.frameRate || '',
   };
 }
 
@@ -74,6 +87,20 @@ function emptyItem(order: number): GalleryItemSetting {
     shutterSpeed: '',
     iso: '',
     lighting: '',
+    surface: '',
+    materials: '',
+    technique: '',
+    resolution: '',
+    videoCredits: '',
+    cinematographyCredits: '',
+    editingCredits: '',
+    audioCredits: '',
+    musicCredits: '',
+    textCredits: '',
+    colorGradingCredits: '',
+    motionGraphicsCredits: '',
+    duration: '',
+    frameRate: '',
     copyrightHolder: '',
     license: '',
     seoTitle: '',
@@ -125,19 +152,17 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
     }));
   };
 
-  const setType = (index: number, type: GalleryItemSetting['type']) => {
-    setItems((current) => current.map((item, i) => {
-      if (i !== index) return item;
-      if (type === 'video') return { ...item, type, creativeType: 'video', additionalImages: [] };
-      return { ...item, type, creativeType: item.creativeType === 'video' ? 'photography' : item.creativeType, thumbnailUrl: item.mediaUrl || item.thumbnailUrl };
-    }));
-  };
-
   const setCreativeType = (index: number, creativeType: GalleryCreativeType) => {
     setItems((current) => current.map((item, i) => {
       if (i !== index) return item;
-      const nextType = creativeType === 'video' ? 'video' : item.type === 'video' ? 'image' : item.type;
-      return { ...item, creativeType, type: nextType };
+      const type: GalleryItemSetting['type'] = creativeType === 'video' ? 'video' : 'image';
+      return {
+        ...item,
+        creativeType,
+        type,
+        additionalImages: type === 'video' ? [] : item.additionalImages,
+        thumbnailUrl: type === 'image' ? (item.thumbnailUrl || (item.mediaUrl.startsWith('/') ? item.mediaUrl : '')) : item.thumbnailUrl,
+      };
     }));
   };
 
@@ -202,6 +227,123 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
     { id: 'seo', label: 'SEO' },
   ];
 
+  const field = (label: string, key: keyof GalleryItemSetting, placeholder = '', className = '') => (
+    <label className={`text-xs text-muted-foreground ${className}`}>
+      {label}
+      <input
+        value={String(selected?.[key] ?? '')}
+        onChange={(event) => update(selectedIndex, { [key]: event.target.value } as Partial<GalleryItemSetting>)}
+        placeholder={placeholder}
+        className={input}
+      />
+    </label>
+  );
+
+  const detailsFields = selected ? (() => {
+    switch (selected.creativeType) {
+      case 'photography':
+        return (
+          <>
+            {field('Photographer', 'photographer', 'Photographer name')}
+            {field('Model / subject', 'model', 'Person, product, place or subject')}
+            {field('Location', 'location')}
+            {field('Session / capture date', 'dateCreated')}
+            {field('Device type', 'deviceType', 'DSLR, mirrorless, smartphone, film camera...')}
+            {field('Camera / device', 'camera', 'Sony A7 IV, iPhone 17 Pro...')}
+            {field('Lens', 'lens', 'Sony FE 50mm F1.8...')}
+            {field('Film stock', 'filmStock', 'Kodak Portra 400...')}
+            {field('Sensor / format', 'sensorFormat', 'Full frame, APS-C, 35mm...')}
+            {field('Focal length', 'focalLength', '50 mm')}
+            {field('Aperture', 'aperture', 'f/1.8')}
+            {field('Shutter', 'shutterSpeed', '1/250 s')}
+            {field('ISO', 'iso', 'ISO 400')}
+            {field('Lighting', 'lighting', 'Natural light, softbox, flash...', 'sm:col-span-2')}
+          </>
+        );
+      case 'video':
+        return (
+          <>
+            {field('Video / direction credits', 'videoCredits', 'Director, creator, production...')}
+            {field('Camera / cinematography credits', 'cinematographyCredits', 'Camera operator, cinematographer...')}
+            {field('Editing credits', 'editingCredits', 'Editor / montage')}
+            {field('Audio / sound credits', 'audioCredits', 'Recording, mix, sound design...')}
+            {field('Music credits', 'musicCredits', 'Composer, artist, track...')}
+            {field('Text / script credits', 'textCredits', 'Writer, script, narration...')}
+            {field('Color grading credits', 'colorGradingCredits')}
+            {field('Motion graphics / animation', 'motionGraphicsCredits')}
+            {field('Location', 'location')}
+            {field('Release / creation date', 'dateCreated')}
+            {field('Duration', 'duration', '03:42')}
+            {field('Resolution', 'resolution', '4K, 3840×2160')}
+            {field('Frame rate', 'frameRate', '24 fps')}
+            {field('Editing / production software', 'software', 'DaVinci Resolve, Premiere Pro...', 'sm:col-span-2')}
+          </>
+        );
+      case 'painting':
+        return (
+          <>
+            {field('Artist', 'artist')}
+            {field('Created', 'dateCreated')}
+            {field('Medium', 'medium', 'Oil, acrylic, watercolor...')}
+            {field('Materials', 'materials', 'Pigments, ink, mixed materials...')}
+            {field('Technique', 'technique', 'Glazing, impasto, wet-on-wet...')}
+            {field('Surface / support', 'surface', 'Canvas, wood panel, paper...')}
+            {field('Dimensions', 'dimensions', '60 × 80 cm')}
+          </>
+        );
+      case 'drawing':
+        return (
+          <>
+            {field('Artist', 'artist')}
+            {field('Created', 'dateCreated')}
+            {field('Medium', 'medium', 'Graphite, charcoal, ink...')}
+            {field('Materials', 'materials', 'Pencil grades, markers, ink...')}
+            {field('Technique', 'technique', 'Hatching, stippling, line work...')}
+            {field('Surface / paper', 'surface', 'Bristol, sketch paper...')}
+            {field('Dimensions', 'dimensions', 'A4, 21 × 29.7 cm')}
+          </>
+        );
+      case 'digital-art':
+        return (
+          <>
+            {field('Artist', 'artist')}
+            {field('Created', 'dateCreated')}
+            {field('Software', 'software', 'Affinity, Photoshop, Procreate...')}
+            {field('Device / tablet', 'deviceType', 'XPPen, iPad, display tablet...')}
+            {field('Technique', 'technique', 'Digital painting, photobash, vector...')}
+            {field('Canvas dimensions', 'dimensions', '4000 × 6000 px')}
+            {field('Output resolution', 'resolution', '4K, 300 DPI...')}
+          </>
+        );
+      case 'mixed-media':
+        return (
+          <>
+            {field('Artist', 'artist')}
+            {field('Created', 'dateCreated')}
+            {field('Medium', 'medium', 'Traditional + digital, collage...')}
+            {field('Materials', 'materials')}
+            {field('Technique', 'technique')}
+            {field('Surface / support', 'surface')}
+            {field('Dimensions', 'dimensions')}
+            {field('Software', 'software', 'Optional digital tools')}
+          </>
+        );
+      default:
+        return (
+          <>
+            {field('Creator / artist', 'artist')}
+            {field('Created', 'dateCreated')}
+            {field('Location', 'location')}
+            {field('Medium', 'medium')}
+            {field('Materials', 'materials')}
+            {field('Technique', 'technique')}
+            {field('Dimensions', 'dimensions')}
+            {field('Software', 'software')}
+          </>
+        );
+    }
+  })() : null;
+
   return (
     <section>
       <input type="hidden" name="galleryItems" value={serialized} readOnly />
@@ -254,10 +396,7 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
               {editorTab === 'content' && (
                 <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
                   <div className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <label className="block text-xs text-muted-foreground">Media type<select value={selected.type} onChange={(event) => setType(selectedIndex, event.target.value === 'video' ? 'video' : 'image')} className={input}><option value="image">Image</option><option value="video">Video</option></select></label>
-                      <label className="block text-xs text-muted-foreground">Creative type<select value={selected.creativeType} onChange={(event) => setCreativeType(selectedIndex, event.target.value as GalleryCreativeType)} className={input}>{galleryCreativeTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-                    </div>
+                    <label className="block text-xs text-muted-foreground">Creative type<select value={selected.creativeType} onChange={(event) => setCreativeType(selectedIndex, event.target.value as GalleryCreativeType)} className={input}>{galleryCreativeTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span className="mt-1 block text-[10px] text-muted-foreground/60">The media kind and Work details are selected automatically from Creative Type.</span></label>
                     <MediaPicker value={selected.mediaUrl} onChange={(url) => update(selectedIndex, { mediaUrl: url, thumbnailUrl: selected.type === 'image' ? url : selected.thumbnailUrl })} label={selected.type === 'video' ? 'Video file from Media Library' : 'Cover / primary image'} initialKind={selected.type} lockKind />
                     {selected.type === 'video' && (
                       <>
@@ -280,36 +419,23 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
 
               {editorTab === 'details' && (
                 <div className="mt-5 space-y-5">
-                  <label className="block text-xs text-muted-foreground">Story / about this work<textarea rows={7} value={selected.story} onChange={(event) => update(selectedIndex, { story: event.target.value })} className={area} /></label>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    <label className="text-xs text-muted-foreground">Artist<input value={selected.artist} onChange={(event) => update(selectedIndex, { artist: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Photographer<input value={selected.photographer} onChange={(event) => update(selectedIndex, { photographer: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Model / subject<input value={selected.model} onChange={(event) => update(selectedIndex, { model: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Location<input value={selected.location} onChange={(event) => update(selectedIndex, { location: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Created / session date<input value={selected.dateCreated} onChange={(event) => update(selectedIndex, { dateCreated: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Medium<input value={selected.medium} onChange={(event) => update(selectedIndex, { medium: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Dimensions<input value={selected.dimensions} onChange={(event) => update(selectedIndex, { dimensions: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Software<input value={selected.software} onChange={(event) => update(selectedIndex, { software: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Device type<input value={selected.deviceType} onChange={(event) => update(selectedIndex, { deviceType: event.target.value })} placeholder="DSLR, mirrorless, smartphone, film camera..." className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Camera / device<input value={selected.camera} onChange={(event) => update(selectedIndex, { camera: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Lens<input value={selected.lens} onChange={(event) => update(selectedIndex, { lens: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Film stock<input value={selected.filmStock} onChange={(event) => update(selectedIndex, { filmStock: event.target.value })} placeholder="Kodak Portra 400..." className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Sensor / format<input value={selected.sensorFormat} onChange={(event) => update(selectedIndex, { sensorFormat: event.target.value })} placeholder="Full frame, APS-C, 35mm..." className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Focal length<input value={selected.focalLength} onChange={(event) => update(selectedIndex, { focalLength: event.target.value })} placeholder="50 mm" className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Aperture<input value={selected.aperture} onChange={(event) => update(selectedIndex, { aperture: event.target.value })} placeholder="f/1.8" className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Shutter<input value={selected.shutterSpeed} onChange={(event) => update(selectedIndex, { shutterSpeed: event.target.value })} placeholder="1/250 s" className={input} /></label>
-                    <label className="text-xs text-muted-foreground">ISO<input value={selected.iso} onChange={(event) => update(selectedIndex, { iso: event.target.value })} placeholder="ISO 400" className={input} /></label>
-                    <label className="text-xs text-muted-foreground sm:col-span-2">Lighting<input value={selected.lighting} onChange={(event) => update(selectedIndex, { lighting: event.target.value })} placeholder="Natural light, softbox, flash..." className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Copyright holder<input value={selected.copyrightHolder} onChange={(event) => update(selectedIndex, { copyrightHolder: event.target.value })} className={input} /></label>
-                    <label className="text-xs text-muted-foreground sm:col-span-2">License<input value={selected.license} onChange={(event) => update(selectedIndex, { license: event.target.value })} placeholder="All Rights Reserved" className={input} /></label>
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3">
+                    <div><p className="text-sm font-semibold">{galleryCreativeTypeLabel(selected.creativeType)} details</p><p className="mt-1 text-xs text-muted-foreground">Only fields relevant to this Creative Type are shown.</p></div>
+                    <span className="rounded-full border border-foreground/10 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Type-aware</span>
                   </div>
-                  <p className="rounded-xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3 text-xs leading-5 text-muted-foreground">All Work details fields are optional. Empty values are not rendered on the public work page.</p>
+                  <label className="block text-xs text-muted-foreground">Story / about this work<textarea rows={7} value={selected.story} onChange={(event) => update(selectedIndex, { story: event.target.value })} className={area} /></label>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{detailsFields}</div>
+                  <div className="grid gap-4 border-t border-foreground/10 pt-5 sm:grid-cols-2 xl:grid-cols-3">
+                    {field('Copyright holder', 'copyrightHolder')}
+                    {field('License', 'license', 'All Rights Reserved', 'sm:col-span-2')}
+                  </div>
+                  <p className="rounded-xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3 text-xs leading-5 text-muted-foreground">Work details are optional. Empty values are not rendered publicly. Changing Creative Type keeps previously entered metadata in the record, but only the relevant fields for the selected type are displayed.</p>
                 </div>
               )}
 
               {editorTab === 'series' && (
                 <div className="mt-5">
-                  {selected.type !== 'image' ? <p className="rounded-xl border border-foreground/10 p-5 text-sm text-muted-foreground">Series images are available for image works only.</p> : <div className="space-y-4"><p className="text-xs leading-5 text-muted-foreground">Use this for a complete photoshoot, artwork details or a visual series. The primary image remains the cover.</p>{selected.additionalImages.map((image, imageIndex) => <div key={`${selected.id}-series-${imageIndex}`} className="rounded-xl border border-foreground/10 p-3"><div className="mb-2 flex items-center justify-between"><span className="text-xs text-muted-foreground">Image {imageIndex + 2}</span><button type="button" onClick={() => removeSeriesImage(selectedIndex, imageIndex)} className="text-xs text-red-400">Remove</button></div><MediaPicker value={image} onChange={(url) => updateSeriesImage(selectedIndex, imageIndex, url)} label="Series image" initialKind="image" lockKind /></div>)}<button type="button" onClick={() => addSeriesImage(selectedIndex)} className="rounded-lg border border-foreground/10 px-3 py-2 text-xs hover:bg-foreground/[0.04]">+ Add image to series</button></div>}
+                  {selected.type !== 'image' ? <p className="rounded-xl border border-foreground/10 p-5 text-sm text-muted-foreground">Series images are available for image works only.</p> : <div className="space-y-4"><p className="text-xs leading-5 text-muted-foreground">Use this for a photography set, artwork details or a visual series. The primary image remains the cover.</p>{selected.additionalImages.map((image, imageIndex) => <div key={`${selected.id}-series-${imageIndex}`} className="rounded-xl border border-foreground/10 p-3"><div className="mb-2 flex items-center justify-between"><span className="text-xs text-muted-foreground">Image {imageIndex + 2}</span><button type="button" onClick={() => removeSeriesImage(selectedIndex, imageIndex)} className="text-xs text-red-400">Remove</button></div><MediaPicker value={image} onChange={(url) => updateSeriesImage(selectedIndex, imageIndex, url)} label="Series image" initialKind="image" lockKind /></div>)}<button type="button" onClick={() => addSeriesImage(selectedIndex)} className="rounded-lg border border-foreground/10 px-3 py-2 text-xs hover:bg-foreground/[0.04]">+ Add image to series</button></div>}
                 </div>
               )}
 
