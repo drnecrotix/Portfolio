@@ -13,6 +13,7 @@ const navGroups = [
     ['Content', [
         ['Homepage', '/admin/homepage'],
         ['Journey', '/admin/experience'],
+        ['Career Dossier', '/admin/resume'],
         ['Wiki', '/admin/wiki'],
         ['Projects', '/admin/projects'],
         ['Blog', '/admin/blog'],
