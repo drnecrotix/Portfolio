@@ -80,7 +80,7 @@ export function TagInput({
                     <div className="mb-2 flex flex-wrap gap-1.5">
                         {tags.map((tag) => (
                             <span key={tag} className="inline-flex items-center gap-1 rounded-md border border-foreground/10 bg-foreground/[0.06] px-2 py-1 text-[11px] text-foreground/80">
-                                <span>#{tag}</span>
+                                <span>{stripHash ? '#' : ''}{tag}</span>
                                 <button type="button" onClick={() => removeTag(tag)} className="rounded p-0.5 text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground" aria-label={`Remove ${tag}`}>
                                     <X className="h-3 w-3" />
                                 </button>
