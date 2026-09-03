@@ -67,12 +67,13 @@ export function GalleryZoomViewer({
 
   if (!safeImages.length) return null;
   const activeImage = safeImages[Math.min(activeIndex, safeImages.length - 1)];
+  const watermark = copyrightHolder?.trim() || 'NecrotixLab';
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] select-none" onContextMenu={(event) => event.preventDefault()}>
+    <div className="mx-auto w-full max-w-[1180px] select-none">
       <div
         className={cn(
-          'relative h-[clamp(360px,66vh,720px)] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.22)]',
+          'relative h-[clamp(340px,62vh,680px)] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.22)]',
           zoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in',
         )}
         onWheel={(event) => {
@@ -113,13 +114,10 @@ export function GalleryZoomViewer({
             fill
             priority={activeIndex === 0}
             draggable={false}
-            onDragStart={(event) => event.preventDefault()}
-            className="pointer-events-none object-contain [-webkit-user-drag:none] [-webkit-touch-callout:none]"
+            className="pointer-events-none object-contain [-webkit-user-drag:none]"
             sizes="(max-width: 768px) 100vw, 1180px"
           />
         </div>
-
-        <div className="pointer-events-none absolute inset-0 z-10" aria-hidden="true" />
 
         <div className="absolute left-3 top-3 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-black/55 p-1 text-white shadow-lg backdrop-blur-md sm:left-4 sm:top-4">
           <button type="button" onClick={() => setZoomLevel(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="rounded-full p-2 transition hover:bg-white/10 disabled:opacity-30" aria-label="Zoom out"><Minus className="h-4 w-4" /></button>
@@ -136,10 +134,8 @@ export function GalleryZoomViewer({
           </>
         )}
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 bg-gradient-to-t from-black/70 via-black/15 to-transparent px-4 pb-3 pt-14 text-[10px] uppercase tracking-[0.14em] text-white/55 sm:px-5 sm:pb-4">
-          <span>Protected preview · wheel / double-click to zoom</span>
-          {copyrightHolder ? <span className="text-right">© {copyrightHolder}</span> : <span>{title}</span>}
-        </div>
+        <div className="pointer-events-none absolute bottom-3 left-4 z-20 rounded-full bg-black/30 px-2.5 py-1.5 text-[9px] uppercase tracking-[0.14em] text-white/45 backdrop-blur-sm sm:bottom-4 sm:left-5">Wheel / double-click to zoom</div>
+        <div className="pointer-events-none absolute bottom-3 right-4 z-20 max-w-[55%] rounded-md bg-black/20 px-2 py-1 text-right text-[10px] font-medium tracking-[0.08em] text-white/35 shadow-sm backdrop-blur-[2px] sm:bottom-4 sm:right-5">© {watermark}</div>
       </div>
 
       {safeImages.length > 1 && (
@@ -149,7 +145,6 @@ export function GalleryZoomViewer({
               key={`${image}-${index}`}
               type="button"
               onClick={() => selectImage(index)}
-              onContextMenu={(event) => event.preventDefault()}
               className={cn('relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border bg-black transition sm:h-20 sm:w-28', activeIndex === index ? 'border-foreground/70 ring-1 ring-foreground/20' : 'border-foreground/10 opacity-60 hover:opacity-100')}
               aria-label={`View image ${index + 1}`}
             >
