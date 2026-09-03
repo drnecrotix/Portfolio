@@ -62,6 +62,8 @@ export async function saveGallerySettings(form: FormData) {
     });
     revalidatePath('/admin/gallery');
     revalidatePath('/gallery');
+    revalidatePath('/gallery/[slug]', 'page');
+    revalidatePath('/sitemap.xml');
   } catch (error) {
     done(error);
   }
