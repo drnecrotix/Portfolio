@@ -199,6 +199,25 @@ model NavigationItem {
   @@index([parentId, sortOrder])
 }
 
+model GalleryWorkStats {
+  slug      String            @id
+  viewCount Int               @default(0)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  likes     GalleryWorkLike[]
+}
+
+model GalleryWorkLike {
+  id        String           @id @default(cuid())
+  slug      String
+  stats     GalleryWorkStats @relation(fields: [slug], references: [slug], onDelete: Cascade)
+  visitorId String
+  createdAt DateTime         @default(now())
+
+  @@unique([slug, visitorId])
+  @@index([slug, createdAt])
+}
+
 model SiteSettings {
   id                    String   @id @default("default")
   siteName              String   @default("Dr Necrotix")

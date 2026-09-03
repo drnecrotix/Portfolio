@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Minus, Plus, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Point = { x: number; y: number };
@@ -29,16 +29,22 @@ export function GalleryZoomViewer({
   const safeImages = images.filter(Boolean);
   const [activeIndex, setActiveIndex] = useState(0);
   const [zoom, setZoom] = useState(MIN_ZOOM);
+  const [rotation, setRotation] = useState(0);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const dragOrigin = useRef<Point | null>(null);
   const pointerOrigin = useRef<Point | null>(null);
 
-  const resetView = useCallback(() => {
+  const resetZoomPan = useCallback(() => {
     setZoom(MIN_ZOOM);
     setOffset({ x: 0, y: 0 });
     dragOrigin.current = null;
     pointerOrigin.current = null;
   }, []);
+
+  const resetAll = useCallback(() => {
+    resetZoomPan();
+    setRotation(0);
+  }, [resetZoomPan]);
 
   const setZoomLevel = useCallback((nextZoom: number) => {
     const next = clampZoom(nextZoom);
@@ -50,20 +56,20 @@ export function GalleryZoomViewer({
     if (!safeImages.length) return;
     const next = (index + safeImages.length) % safeImages.length;
     setActiveIndex(next);
-    resetView();
-  }, [resetView, safeImages.length]);
+    resetAll();
+  }, [resetAll, safeImages.length]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft' && safeImages.length > 1) selectImage(activeIndex - 1);
       if (event.key === 'ArrowRight' && safeImages.length > 1) selectImage(activeIndex + 1);
-      if (event.key === 'Escape') resetView();
+      if (event.key === 'Escape') resetAll();
       if (event.key === '+' || event.key === '=') setZoomLevel(zoom + ZOOM_STEP);
       if (event.key === '-') setZoomLevel(zoom - ZOOM_STEP);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeIndex, resetView, safeImages.length, selectImage, setZoomLevel, zoom]);
+  }, [activeIndex, resetAll, safeImages.length, selectImage, setZoomLevel, zoom]);
 
   if (!safeImages.length) return null;
   const activeImage = safeImages[Math.min(activeIndex, safeImages.length - 1)];
@@ -76,11 +82,7 @@ export function GalleryZoomViewer({
           'relative h-[clamp(340px,62vh,680px)] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.22)]',
           zoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in',
         )}
-        onWheel={(event) => {
-          event.preventDefault();
-          setZoomLevel(zoom + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
-        }}
-        onDoubleClick={() => setZoomLevel(zoom > 1 ? MIN_ZOOM : 2)}
+        onDoubleClick={() => zoom > 1 ? resetZoomPan() : setZoomLevel(2)}
         onPointerDown={(event) => {
           if (zoom <= 1) return;
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -106,7 +108,7 @@ export function GalleryZoomViewer({
       >
         <div
           className="absolute inset-0 transition-transform duration-150 ease-out will-change-transform"
-          style={{ transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})` }}
+          style={{ transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotation}deg) scale(${zoom})` }}
         >
           <Image
             src={activeImage}
@@ -120,10 +122,10 @@ export function GalleryZoomViewer({
         </div>
 
         <div className="absolute left-3 top-3 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-black/55 p-1 text-white shadow-lg backdrop-blur-md sm:left-4 sm:top-4">
-          <button type="button" onClick={() => setZoomLevel(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="rounded-full p-2 transition hover:bg-white/10 disabled:opacity-30" aria-label="Zoom out"><Minus className="h-4 w-4" /></button>
-          <button type="button" onClick={resetView} className="min-w-14 rounded-full px-2 py-2 font-mono text-[10px] tracking-wider transition hover:bg-white/10" aria-label="Reset zoom">{Math.round(zoom * 100)}%</button>
-          <button type="button" onClick={() => setZoomLevel(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="rounded-full p-2 transition hover:bg-white/10 disabled:opacity-30" aria-label="Zoom in"><Plus className="h-4 w-4" /></button>
-          <button type="button" onClick={resetView} className="rounded-full p-2 transition hover:bg-white/10" aria-label="Reset view"><RotateCcw className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setZoomLevel(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM} className="rounded-full p-2 transition hover:bg-white/10 disabled:opacity-30" aria-label="Zoom out" title="Zoom out"><Minus className="h-4 w-4" /></button>
+          <button type="button" onClick={resetZoomPan} className="min-w-14 rounded-full px-2 py-2 font-mono text-[10px] tracking-wider transition hover:bg-white/10" aria-label="Reset zoom and position" title="Reset zoom and position">{Math.round(zoom * 100)}%</button>
+          <button type="button" onClick={() => setZoomLevel(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM} className="rounded-full p-2 transition hover:bg-white/10 disabled:opacity-30" aria-label="Zoom in" title="Zoom in"><Plus className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setRotation((value) => (value + 90) % 360)} className="rounded-full p-2 transition hover:bg-white/10" aria-label="Rotate image 90 degrees" title="Rotate image 90°"><RotateCw className="h-4 w-4" /></button>
         </div>
 
         {safeImages.length > 1 && (
@@ -134,7 +136,7 @@ export function GalleryZoomViewer({
           </>
         )}
 
-        <div className="pointer-events-none absolute bottom-3 left-4 z-20 rounded-full bg-black/30 px-2.5 py-1.5 text-[9px] uppercase tracking-[0.14em] text-white/45 backdrop-blur-sm sm:bottom-4 sm:left-5">Wheel / double-click to zoom</div>
+        <div className="pointer-events-none absolute bottom-3 left-4 z-20 rounded-full bg-black/30 px-2.5 py-1.5 text-[9px] uppercase tracking-[0.14em] text-white/45 backdrop-blur-sm sm:bottom-4 sm:left-5">Double-click or use controls to zoom</div>
         <div className="pointer-events-none absolute bottom-3 right-4 z-20 max-w-[55%] rounded-md bg-black/20 px-2 py-1 text-right text-[10px] font-medium tracking-[0.08em] text-white/35 shadow-sm backdrop-blur-[2px] sm:bottom-4 sm:right-5">© {watermark}</div>
       </div>
 

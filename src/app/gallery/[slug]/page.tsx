@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { ArrowLeft, MapPin, Palette, Tag } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { GalleryZoomViewer } from '@/components/sections/gallery/GalleryZoomViewer';
+import { GalleryWorkEngagement } from '@/components/sections/gallery/GalleryWorkEngagement';
 import {
   galleryCreativeTypeLabel,
   galleryItemHref,
@@ -15,6 +17,7 @@ import { getPublicSiteUrl } from '@/lib/social-metadata';
 
 export const dynamic = 'force-dynamic';
 const siteUrl = getPublicSiteUrl();
+const GALLERY_LIKE_COOKIE = 'necrotix_gallery_like_id';
 
 function absoluteMediaUrl(value: string) {
   if (!value) return '';
@@ -99,6 +102,22 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
       : 'Photograph'
     : 'CreativeWork';
 
+  const cookieStore = await cookies();
+  const visitorId = cookieStore.get(GALLERY_LIKE_COOKIE)?.value || '';
+  const validVisitorId = /^[a-zA-Z0-9-]{16,64}$/.test(visitorId) ? visitorId : '';
+  const [engagement, existingLike] = await Promise.all([
+    prisma.galleryWorkStats.findUnique({
+      where: { slug: item.slug },
+      select: { viewCount: true, _count: { select: { likes: true } } },
+    }).catch(() => null),
+    validVisitorId
+      ? prisma.galleryWorkLike.findUnique({
+          where: { slug_visitorId: { slug: item.slug, visitorId: validVisitorId } },
+          select: { id: true },
+        }).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+
   const imageObjects = images.map((image, index) => ({
     '@type': 'ImageObject',
     contentUrl: absoluteMediaUrl(image),
@@ -159,7 +178,16 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
           </div>
         </header>
 
-        <section className="mt-6">
+        <GalleryWorkEngagement
+          slug={item.slug}
+          title={item.title}
+          description={description}
+          initialLikeCount={engagement?._count.likes ?? 0}
+          initialViewCount={engagement?.viewCount ?? 0}
+          initiallyLiked={Boolean(existingLike)}
+        />
+
+        <section className="mt-5">
           {item.type === 'video' ? (
             <div className="mx-auto aspect-video w-full max-w-[1180px] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
               <iframe
