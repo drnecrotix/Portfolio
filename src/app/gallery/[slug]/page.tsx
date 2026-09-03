@@ -19,6 +19,8 @@ export const dynamic = 'force-dynamic';
 const siteUrl = getPublicSiteUrl();
 const GALLERY_LIKE_COOKIE = 'necrotix_gallery_like_id';
 
+type WorkDetail = { label: string; value: string };
+
 function absoluteMediaUrl(value: string) {
   if (!value) return '';
   if (value.startsWith('/')) return `${siteUrl}${value}`;
@@ -74,7 +76,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({ label, value }: WorkDetail) {
   if (!value) return null;
   return (
     <div className="grid gap-1 border-b border-foreground/10 py-3 sm:grid-cols-[150px_1fr] sm:gap-6">
@@ -82,6 +84,103 @@ function MetaRow({ label, value }: { label: string; value: string }) {
       <dd className="text-sm leading-6 text-foreground/80">{value}</dd>
     </div>
   );
+}
+
+function typeSpecificDetails(item: GalleryItemSetting): WorkDetail[] {
+  switch (item.creativeType) {
+    case 'photography':
+      return [
+        { label: 'Photographer', value: item.photographer },
+        { label: 'Model / Subject', value: item.model },
+        { label: 'Location', value: item.location },
+        { label: 'Captured', value: item.dateCreated },
+        { label: 'Device Type', value: item.deviceType },
+        { label: 'Camera / Device', value: item.camera },
+        { label: 'Lens', value: item.lens },
+        { label: 'Film Stock', value: item.filmStock },
+        { label: 'Sensor / Format', value: item.sensorFormat },
+        { label: 'Focal Length', value: item.focalLength },
+        { label: 'Aperture', value: item.aperture },
+        { label: 'Shutter', value: item.shutterSpeed },
+        { label: 'ISO', value: item.iso },
+        { label: 'Lighting', value: item.lighting },
+      ];
+    case 'video':
+      return [
+        { label: 'Video / Direction', value: item.videoCredits },
+        { label: 'Cinematography', value: item.cinematographyCredits },
+        { label: 'Editing', value: item.editingCredits },
+        { label: 'Audio / Sound', value: item.audioCredits },
+        { label: 'Music', value: item.musicCredits },
+        { label: 'Text / Script', value: item.textCredits },
+        { label: 'Color Grading', value: item.colorGradingCredits },
+        { label: 'Motion Graphics', value: item.motionGraphicsCredits },
+        { label: 'Location', value: item.location },
+        { label: 'Created / Released', value: item.dateCreated },
+        { label: 'Duration', value: item.duration },
+        { label: 'Resolution', value: item.resolution },
+        { label: 'Frame Rate', value: item.frameRate },
+        { label: 'Production Software', value: item.software },
+      ];
+    case 'painting':
+      return [
+        { label: 'Artist', value: item.artist },
+        { label: 'Created', value: item.dateCreated },
+        { label: 'Medium', value: item.medium },
+        { label: 'Materials', value: item.materials },
+        { label: 'Technique', value: item.technique },
+        { label: 'Surface / Support', value: item.surface },
+        { label: 'Dimensions', value: item.dimensions },
+      ];
+    case 'drawing':
+      return [
+        { label: 'Artist', value: item.artist },
+        { label: 'Created', value: item.dateCreated },
+        { label: 'Medium', value: item.medium },
+        { label: 'Materials', value: item.materials },
+        { label: 'Technique', value: item.technique },
+        { label: 'Surface / Paper', value: item.surface },
+        { label: 'Dimensions', value: item.dimensions },
+      ];
+    case 'digital-art':
+      return [
+        { label: 'Artist', value: item.artist },
+        { label: 'Created', value: item.dateCreated },
+        { label: 'Software', value: item.software },
+        { label: 'Device / Tablet', value: item.deviceType },
+        { label: 'Technique', value: item.technique },
+        { label: 'Canvas Dimensions', value: item.dimensions },
+        { label: 'Output Resolution', value: item.resolution },
+      ];
+    case 'mixed-media':
+      return [
+        { label: 'Artist', value: item.artist },
+        { label: 'Created', value: item.dateCreated },
+        { label: 'Medium', value: item.medium },
+        { label: 'Materials', value: item.materials },
+        { label: 'Technique', value: item.technique },
+        { label: 'Surface / Support', value: item.surface },
+        { label: 'Dimensions', value: item.dimensions },
+        { label: 'Software', value: item.software },
+      ];
+    default:
+      return [
+        { label: 'Creator / Artist', value: item.artist },
+        { label: 'Created', value: item.dateCreated },
+        { label: 'Location', value: item.location },
+        { label: 'Medium', value: item.medium },
+        { label: 'Materials', value: item.materials },
+        { label: 'Technique', value: item.technique },
+        { label: 'Dimensions', value: item.dimensions },
+        { label: 'Software', value: item.software },
+      ];
+  }
+}
+
+function primaryCreator(item: GalleryItemSetting, siteName: string) {
+  if (item.creativeType === 'photography') return item.photographer || item.artist || siteName;
+  if (item.creativeType === 'video') return item.videoCredits || item.artist || siteName;
+  return item.artist || item.photographer || siteName;
 }
 
 function schemaProperty(name: string, value: string) {
@@ -96,15 +195,30 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
   const { item, siteName, updatedAt } = loaded;
   const canonical = `${siteUrl}${galleryItemHref(item.slug)}`;
   const images = galleryItemImages(item);
-  const creator = item.artist || item.photographer || siteName;
+  const creator = primaryCreator(item, siteName);
   const copyrightHolder = item.copyrightHolder || creator;
   const description = descriptionFor(item);
   const creativeType = galleryCreativeTypeLabel(item.creativeType);
+  const detailRows = typeSpecificDetails(item);
+  const publicDetails = [
+    { label: 'Creative Type', value: creativeType },
+    ...detailRows,
+    { label: 'Copyright', value: item.copyrightHolder ? `© ${item.copyrightHolder}` : '' },
+    { label: 'License', value: item.license },
+  ];
   const schemaType = item.type === 'image'
     ? ['drawing', 'painting', 'digital-art', 'mixed-media'].includes(item.creativeType)
       ? 'VisualArtwork'
       : 'Photograph'
     : 'CreativeWork';
+
+  const headlineCredit = item.creativeType === 'photography' && item.photographer
+    ? `Photography: ${item.photographer}`
+    : item.creativeType === 'video' && item.videoCredits
+      ? `Video: ${item.videoCredits}`
+      : item.artist
+        ? `Artist: ${item.artist}`
+        : '';
 
   const cookieStore = await cookies();
   const visitorId = cookieStore.get(GALLERY_LIKE_COOKIE)?.value || '';
@@ -136,18 +250,7 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
 
   const additionalProperty = [
     schemaProperty('Creative Type', creativeType),
-    schemaProperty('Device Type', item.deviceType),
-    schemaProperty('Camera', item.camera),
-    schemaProperty('Lens', item.lens),
-    schemaProperty('Film Stock', item.filmStock),
-    schemaProperty('Sensor / Format', item.sensorFormat),
-    schemaProperty('Focal Length', item.focalLength),
-    schemaProperty('Aperture', item.aperture),
-    schemaProperty('Shutter Speed', item.shutterSpeed),
-    schemaProperty('ISO', item.iso),
-    schemaProperty('Lighting', item.lighting),
-    schemaProperty('Software', item.software),
-    schemaProperty('Dimensions', item.dimensions),
+    ...detailRows.map((detail) => schemaProperty(detail.label, detail.value)),
   ].filter(Boolean);
 
   const workSchema = {
@@ -160,10 +263,10 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
     image: imageObjects.length ? imageObjects : undefined,
     creator: creator ? { '@type': 'Person', name: creator } : undefined,
     author: creator ? { '@type': 'Person', name: creator } : undefined,
-    contributor: item.model ? { '@type': 'Person', name: item.model } : undefined,
+    contributor: item.creativeType === 'photography' && item.model ? { '@type': 'Person', name: item.model } : undefined,
     dateCreated: item.dateCreated || undefined,
     dateModified: updatedAt.toISOString(),
-    artMedium: item.medium || item.software || undefined,
+    artMedium: ['drawing', 'painting', 'digital-art', 'mixed-media'].includes(item.creativeType) ? (item.medium || item.software || undefined) : undefined,
     genre: creativeType,
     keywords: item.tags.length ? item.tags.join(', ') : undefined,
     locationCreated: item.location ? { '@type': 'Place', name: item.location } : undefined,
@@ -192,7 +295,7 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
             {item.description && <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">{item.description}</p>}
           </div>
           <div className="space-y-2 text-sm text-muted-foreground lg:text-right">
-            {(item.artist || item.photographer) && <p>{item.photographer ? `Photography: ${item.photographer}` : `Artist: ${item.artist}`}</p>}
+            {headlineCredit && <p>{headlineCredit}</p>}
             {item.location && <p className="inline-flex items-center gap-2 lg:justify-end"><MapPin className="h-4 w-4" />{item.location}</p>}
             {item.dateCreated && <p>{item.dateCreated}</p>}
           </div>
@@ -236,29 +339,9 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
 
           <aside className="h-fit rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-5">
             <h2 className="font-serif text-2xl">Work details</h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">Only available metadata is shown.</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">Details are tailored to {creativeType} and empty fields stay hidden.</p>
             <dl className="mt-4">
-              <MetaRow label="Creative Type" value={creativeType} />
-              <MetaRow label="Artist" value={item.artist} />
-              <MetaRow label="Photographer" value={item.photographer} />
-              <MetaRow label="Model / Subject" value={item.model} />
-              <MetaRow label="Location" value={item.location} />
-              <MetaRow label="Created" value={item.dateCreated} />
-              <MetaRow label="Medium" value={item.medium} />
-              <MetaRow label="Dimensions" value={item.dimensions} />
-              <MetaRow label="Software" value={item.software} />
-              <MetaRow label="Device Type" value={item.deviceType} />
-              <MetaRow label="Camera / Device" value={item.camera} />
-              <MetaRow label="Lens" value={item.lens} />
-              <MetaRow label="Film Stock" value={item.filmStock} />
-              <MetaRow label="Sensor / Format" value={item.sensorFormat} />
-              <MetaRow label="Focal Length" value={item.focalLength} />
-              <MetaRow label="Aperture" value={item.aperture} />
-              <MetaRow label="Shutter" value={item.shutterSpeed} />
-              <MetaRow label="ISO" value={item.iso} />
-              <MetaRow label="Lighting" value={item.lighting} />
-              <MetaRow label="Copyright" value={item.copyrightHolder ? `© ${item.copyrightHolder}` : ''} />
-              <MetaRow label="License" value={item.license} />
+              {publicDetails.map((detail) => <MetaRow key={detail.label} label={detail.label} value={detail.value} />)}
             </dl>
           </aside>
         </div>
