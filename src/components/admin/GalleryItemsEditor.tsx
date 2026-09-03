@@ -213,10 +213,14 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
     setThumbnailStates((current) => ({ ...current, [id]: 'loading' }));
     try {
       const response = await fetch('/api/gallery-thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: trimmed }) });
-      const data = await response.json().catch(() => ({})) as { thumbnailUrl?: string };
-      if (response.ok && data.thumbnailUrl) {
-        updateById(id, { thumbnailUrl: data.thumbnailUrl });
-        setThumbnailStates((current) => ({ ...current, [id]: 'found' }));
+      const data = await response.json().catch(() => ({})) as { thumbnailUrl?: string; sourceUrl?: string; embedUrl?: string };
+      if (response.ok) {
+        updateById(id, {
+          sourceUrl: data.sourceUrl || trimmed,
+          mediaUrl: data.embedUrl || data.sourceUrl || trimmed,
+          thumbnailUrl: data.thumbnailUrl || '',
+        });
+        setThumbnailStates((current) => ({ ...current, [id]: data.thumbnailUrl ? 'found' : 'missing' }));
       } else {
         updateById(id, { thumbnailUrl: '' });
         setThumbnailStates((current) => ({ ...current, [id]: 'missing' }));
