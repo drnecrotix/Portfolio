@@ -63,12 +63,6 @@ export function CareerDossierPage({ identity, wiki, experience, resume }: { iden
     const displayName = wiki.title || identity.name;
     const roleLine = current[0]?.position || roles[0]?.position || 'Creative technologist & independent builder';
     const selectedRoles = roles.slice(0, 5);
-    const signals = [
-        { label: 'Public roles', value: String(roles.length).padStart(2, '0') },
-        { label: 'Education', value: String(education.length).padStart(2, '0') },
-        { label: 'Capabilities', value: String(skills.length).padStart(2, '0') },
-        { label: 'Active now', value: String(current.length).padStart(2, '0') },
-    ];
 
     return (
         <main className="min-h-screen bg-background pb-28 pt-28 text-foreground sm:pt-36">
@@ -97,8 +91,6 @@ export function CareerDossierPage({ identity, wiki, experience, resume }: { iden
                     </div>
                 </div>
             </header>
-
-            <section className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10"><div className="grid border-b border-foreground/10 sm:grid-cols-2 lg:grid-cols-4">{signals.map((item) => <div key={item.label} className="border-foreground/10 py-6 sm:border-l sm:px-5 sm:first:border-l-0 lg:px-6"><div className="font-mono text-3xl font-black tracking-[-0.05em]">{item.value}</div><div className="mt-1 font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{item.label}</div></div>)}</div></section>
 
             <div className="mx-auto mt-10 grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[190px_minmax(0,1fr)_290px] lg:px-10">
                 <aside className="hidden lg:block"><div className="sticky top-28 space-y-7"><nav className="border-l border-foreground/10 pl-4"><p className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Dossier</p><a href="#profile" className="block py-1.5 text-xs font-semibold text-foreground">Profile</a><a href="#experience" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">Experience</a><a href="#education" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">Education</a><a href="#capabilities" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">Capabilities</a>{resume.showDocumentCard ? <a href="#document" className="block py-1.5 text-xs text-muted-foreground transition hover:text-foreground">CV document</a> : null}</nav><div className="border-l border-foreground/10 pl-4"><p className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Explore</p><Link href="/journey" className="flex items-center gap-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"><Briefcase className="size-3.5" /> Full Journey</Link><Link href="/projects" className="flex items-center gap-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"><Folder className="size-3.5" /> Projects</Link><Link href="/wiki" className="flex items-center gap-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"><BookOpen className="size-3.5" /> Personal Wiki</Link><Link href="/lab" className="flex items-center gap-2 py-1.5 text-xs text-muted-foreground transition hover:text-foreground"><Wrench className="size-3.5" /> The Lab</Link></div></div></aside>
