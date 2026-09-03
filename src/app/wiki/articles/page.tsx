@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { BookOpen, HelpCircle, LibraryBig } from 'lucide-react';
+import { BookOpen, Briefcase, HelpCircle, LibraryBig } from 'lucide-react';
 import { WikiArticleIndex, type WikiIndexItem } from '@/components/wiki/WikiArticleIndex';
 import { prisma } from '@/lib/prisma';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
@@ -44,10 +44,11 @@ export default async function WikiArticlesPage() {
                 <header className="border-b border-foreground/10 pb-10">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><LibraryBig className="size-4" /> Necrotix Wiki</div>
-                        <div className="grid grid-cols-3 gap-2 sm:flex">
+                        <div className="grid grid-cols-2 gap-2 sm:flex">
                             <Link href="/wiki" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.035] px-3 py-2 text-xs font-semibold text-foreground/75 transition hover:border-sky-400/25 hover:bg-sky-500/[0.06]"><BookOpen className="size-3.5" /><span className="hidden sm:inline">Main article</span><span className="sm:hidden">Main</span></Link>
                             <Link href="/wiki/articles" aria-current="page" className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400/35 bg-sky-500/[0.1] px-3 py-2 text-xs font-semibold text-sky-600 dark:text-sky-300"><LibraryBig className="size-3.5" /><span className="hidden sm:inline">All articles</span><span className="sm:hidden">Articles</span></Link>
                             <Link href="/wiki/faq" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.035] px-3 py-2 text-xs font-semibold text-foreground/75 transition hover:border-sky-400/25 hover:bg-sky-500/[0.06]"><HelpCircle className="size-3.5" /> FAQ</Link>
+                            <Link href="/resume" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.035] px-3 py-2 text-xs font-semibold text-foreground/75 transition hover:border-violet-400/30 hover:bg-violet-500/[0.06]"><Briefcase className="size-3.5" /><span className="hidden sm:inline">Career Dossier</span><span className="sm:hidden">Dossier</span></Link>
                         </div>
                     </div>
                     <h1 className="mt-5 text-4xl font-black tracking-[-0.045em] sm:text-6xl">Article index</h1>
