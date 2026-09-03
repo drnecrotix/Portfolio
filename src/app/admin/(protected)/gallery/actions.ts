@@ -39,8 +39,6 @@ export async function saveGallerySettings(form: FormData) {
       sectionEyebrow: value(form, 'sectionEyebrow', 80),
       sectionTitle: value(form, 'sectionTitle', 120),
       filterAll: value(form, 'filterAll', 40),
-      filterPhotos: value(form, 'filterPhotos', 40),
-      filterVideos: value(form, 'filterVideos', 40),
       collectionsLabel: value(form, 'collectionsLabel', 60),
       viewLabel: value(form, 'viewLabel', 40),
       loadMoreLabel: value(form, 'loadMoreLabel', 60),
