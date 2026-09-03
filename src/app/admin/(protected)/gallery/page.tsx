@@ -95,7 +95,6 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
           interfacePanel={interfacePanel}
         />
 
-        <input type="hidden" name="galleryCategoryLabel" value={settings.galleryCategoryLabel} readOnly />
         <input type="hidden" name="defaultImageDescription" value={settings.defaultImageDescription} readOnly />
         <input type="hidden" name="rowsViewTitle" value={settings.rowsViewTitle} readOnly />
         <input type="hidden" name="gridViewTitle" value={settings.gridViewTitle} readOnly />
