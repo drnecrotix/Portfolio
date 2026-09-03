@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Eye, Images, SlidersHorizontal, Type } from 'lucide-react';
+import { Eye, Image as ImageIcon, SlidersHorizontal, Type } from 'lucide-react';
 
 const tabs = [
-  { id: 'works', label: 'Works', icon: Images },
+  { id: 'works', label: 'Works', icon: ImageIcon },
   { id: 'published', label: 'Published', icon: Eye },
   { id: 'page', label: 'Page', icon: Type },
   { id: 'interface', label: 'Interface', icon: SlidersHorizontal },
