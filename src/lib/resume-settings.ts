@@ -7,6 +7,7 @@ export type ResumeSettings = {
     downloadPdfUrl: string;
     webViewLabel: string;
     downloadLabel: string;
+    downloadFileName: string;
     documentTitle: string;
     documentDescription: string;
 };
@@ -18,6 +19,7 @@ export const defaultResumeSettings: ResumeSettings = {
     downloadPdfUrl: '/resume.pdf',
     webViewLabel: 'Web View',
     downloadLabel: 'Download CV',
+    downloadFileName: 'Nikola-Stoyanov-CV.pdf',
     documentTitle: 'Formal CV',
     documentDescription: 'A compact PDF companion for applications, offline review and traditional CV workflows.',
 };
@@ -48,6 +50,12 @@ function pdfUrl(value: unknown, fallback: string) {
     }
 }
 
+function pdfFileName(value: unknown, fallback: string) {
+    const raw = String(value ?? '').trim().replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120);
+    if (!raw) return fallback;
+    return raw.toLowerCase().endsWith('.pdf') ? raw : `${raw}.pdf`;
+}
+
 export function normalizeResumeSettings(value: unknown): ResumeSettings {
     const source = record(value);
     return {
@@ -57,6 +65,7 @@ export function normalizeResumeSettings(value: unknown): ResumeSettings {
         downloadPdfUrl: pdfUrl(source.downloadPdfUrl, defaultResumeSettings.downloadPdfUrl),
         webViewLabel: text(source.webViewLabel, defaultResumeSettings.webViewLabel, 60),
         downloadLabel: text(source.downloadLabel, defaultResumeSettings.downloadLabel, 60),
+        downloadFileName: pdfFileName(source.downloadFileName, defaultResumeSettings.downloadFileName),
         documentTitle: text(source.documentTitle, defaultResumeSettings.documentTitle, 120),
         documentDescription: text(source.documentDescription, defaultResumeSettings.documentDescription, 500),
     };
