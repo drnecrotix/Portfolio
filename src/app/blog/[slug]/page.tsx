@@ -5,7 +5,9 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComments';
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
+import { ContentWatermarkScope } from '@/components/ui/ContentWatermarkScope';
 import { getAvailablePostLocales, getLocalizedPostFields } from '@/lib/cms-posts';
+import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from '@/lib/content-watermark';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
 import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
@@ -70,7 +72,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     const now = new Date();
     const [cookieStore, locale] = await Promise.all([cookies(), getLocale()]);
     const visitorId = cookieStore.get(likeCookieName)?.value || '__none__';
-    const [cmsPost, related] = await prisma.$transaction([
+    const [cmsPost, related, watermarkPage] = await prisma.$transaction([
         prisma.post.findUnique({
             where: { slug },
             include: {
@@ -90,6 +92,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             include: { categoryRef: { select: { name: true } } },
             orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
             take: 2,
+        }),
+        prisma.page.findUnique({
+            where: { slug: CONTENT_WATERMARK_CONFIG_SLUG },
+            select: { content: true },
         }),
     ]);
 
@@ -115,28 +121,31 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     const comments: PublicBlogComment[] = cmsPost.comments.map((comment) => ({ ...comment, createdAt: comment.createdAt.toISOString() }));
     const availableLocales = getAvailablePostLocales(cmsPost);
     const currentLocale = locale === 'bg' ? 'bg' : 'en';
+    const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
 
     return (
-        <BlogArticleFrame
-            postId={cmsPost.id}
-            slug={cmsPost.slug}
-            postType={cmsPost.type}
-            initialLikeCount={cmsPost._count.likes}
-            initialViewCount={cmsPost.viewCount}
-            initiallyLiked={cmsPost.likes.length > 0}
-            title={localized.title}
-            excerpt={localized.excerpt}
-            initialContent={content}
-            featuredImage={content.featuredImage || null}
-            typeLabel={typeLabel}
-            categoryLabel={categoryLabel}
-            author={cmsPost.authorName}
-            publishedAt={publishedAt}
-            tags={cmsPost.tags}
-            relatedPosts={relatedPosts}
-            currentLocale={currentLocale}
-            availableLocales={availableLocales}
-            comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
-        />
+        <ContentWatermarkScope settings={watermark}>
+            <BlogArticleFrame
+                postId={cmsPost.id}
+                slug={cmsPost.slug}
+                postType={cmsPost.type}
+                initialLikeCount={cmsPost._count.likes}
+                initialViewCount={cmsPost.viewCount}
+                initiallyLiked={cmsPost.likes.length > 0}
+                title={localized.title}
+                excerpt={localized.excerpt}
+                initialContent={content}
+                featuredImage={content.featuredImage || null}
+                typeLabel={typeLabel}
+                categoryLabel={categoryLabel}
+                author={cmsPost.authorName}
+                publishedAt={publishedAt}
+                tags={cmsPost.tags}
+                relatedPosts={relatedPosts}
+                currentLocale={currentLocale}
+                availableLocales={availableLocales}
+                comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
+            />
+        </ContentWatermarkScope>
     );
 }
