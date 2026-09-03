@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, Link2, Loader2, Palette, RefreshCw, Search, Video } from 'lucide-react';
+import { Camera, Link2, Loader2, Palette, RefreshCw, Search, Video } from 'lucide-react';
 import { MediaPicker } from '@/components/admin/MediaPicker';
 import {
   galleryCreativeTypeLabel,
