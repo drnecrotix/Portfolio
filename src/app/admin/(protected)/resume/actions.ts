@@ -46,6 +46,7 @@ export async function saveResumeSettings(form: FormData): Promise<ResumeSettings
             downloadPdfUrl,
             webViewLabel: value(form, 'webViewLabel', 60),
             downloadLabel: value(form, 'downloadLabel', 60),
+            downloadFileName: value(form, 'downloadFileName', 120),
             documentTitle: value(form, 'documentTitle', 120),
             documentDescription: value(form, 'documentDescription', 500),
         });
@@ -59,6 +60,8 @@ export async function saveResumeSettings(form: FormData): Promise<ResumeSettings
 
         revalidatePath('/admin/resume');
         revalidatePath('/resume');
+        revalidatePath('/resume/view');
+        revalidatePath('/api/resume/view');
         revalidatePath('/api/resume/download');
         return { ok: true, message: 'Career Dossier settings saved.', savedAt: saved.updatedAt.toISOString() };
     } catch (error) {
