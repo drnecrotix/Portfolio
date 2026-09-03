@@ -1,6 +1,5 @@
 export type GalleryCreativeType =
   | 'photography'
-  | 'photoshoot'
   | 'drawing'
   | 'painting'
   | 'digital-art'
@@ -40,6 +39,20 @@ export type GalleryItemSetting = {
   shutterSpeed: string;
   iso: string;
   lighting: string;
+  surface: string;
+  materials: string;
+  technique: string;
+  resolution: string;
+  videoCredits: string;
+  cinematographyCredits: string;
+  editingCredits: string;
+  audioCredits: string;
+  musicCredits: string;
+  textCredits: string;
+  colorGradingCredits: string;
+  motionGraphicsCredits: string;
+  duration: string;
+  frameRate: string;
   copyrightHolder: string;
   license: string;
   seoTitle: string;
@@ -77,7 +90,6 @@ export type GallerySettings = {
 
 export const galleryCreativeTypeOptions: Array<{ value: GalleryCreativeType; label: string }> = [
   { value: 'photography', label: 'Photography' },
-  { value: 'photoshoot', label: 'Photoshoot' },
   { value: 'drawing', label: 'Drawing' },
   { value: 'painting', label: 'Painting' },
   { value: 'digital-art', label: 'Digital Art' },
@@ -170,12 +182,13 @@ function normalizeTags(value: unknown) {
 }
 
 function normalizeCreativeType(value: unknown, mediaType: GalleryItemSetting['type'], legacyCategory: unknown): GalleryCreativeType {
+  if (value === 'photoshoot') return 'photography';
   const accepted = new Set<GalleryCreativeType>(galleryCreativeTypeOptions.map((option) => option.value));
   if (typeof value === 'string' && accepted.has(value as GalleryCreativeType)) return value as GalleryCreativeType;
   if (mediaType === 'video') return 'video';
 
   const categoryValue = String(legacyCategory ?? '').trim().toLowerCase();
-  if (categoryValue.includes('photoshoot') || categoryValue.includes('photo session')) return 'photoshoot';
+  if (categoryValue.includes('photoshoot') || categoryValue.includes('photo session')) return 'photography';
   if (categoryValue.includes('drawing') || categoryValue.includes('sketch')) return 'drawing';
   if (categoryValue.includes('painting')) return 'painting';
   if (categoryValue.includes('digital')) return 'digital-art';
@@ -266,8 +279,9 @@ function normalizeItems(value: unknown, fallbackDescription: string): GalleryIte
 
   const normalized = value.slice(0, 250).map((entry, index) => {
     const raw = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry as Record<string, unknown> : {};
-    const type: GalleryItemSetting['type'] = raw.type === 'video' ? 'video' : 'image';
-    const creativeType = normalizeCreativeType(raw.creativeType, type, raw.category);
+    const rawType: GalleryItemSetting['type'] = raw.type === 'video' ? 'video' : 'image';
+    const creativeType = normalizeCreativeType(raw.creativeType, rawType, raw.category);
+    const type: GalleryItemSetting['type'] = creativeType === 'video' ? 'video' : 'image';
     const title = text(raw.title, `Gallery item ${index + 1}`, 160);
     const mediaUrl = type === 'video' ? socialVideoEmbedUrl(raw.mediaUrl ?? raw.url) : normalizeUrl(raw.mediaUrl ?? raw.url);
     const rawThumbnail = normalizeUrl(raw.thumbnailUrl ?? raw.thumbnail);
@@ -305,6 +319,20 @@ function normalizeItems(value: unknown, fallbackDescription: string): GalleryIte
       shutterSpeed: optionalText(raw.shutterSpeed ?? raw.shutter, 80),
       iso: optionalText(raw.iso, 80),
       lighting: optionalText(raw.lighting, 240),
+      surface: optionalText(raw.surface ?? raw.support, 200),
+      materials: optionalText(raw.materials, 400),
+      technique: optionalText(raw.technique, 300),
+      resolution: optionalText(raw.resolution, 120),
+      videoCredits: optionalText(raw.videoCredits ?? raw.directionCredits ?? raw.director, 400),
+      cinematographyCredits: optionalText(raw.cinematographyCredits ?? raw.cameraCredits, 400),
+      editingCredits: optionalText(raw.editingCredits ?? raw.editor, 400),
+      audioCredits: optionalText(raw.audioCredits ?? raw.soundCredits, 400),
+      musicCredits: optionalText(raw.musicCredits, 400),
+      textCredits: optionalText(raw.textCredits ?? raw.scriptCredits ?? raw.writer, 400),
+      colorGradingCredits: optionalText(raw.colorGradingCredits ?? raw.colorCredits, 400),
+      motionGraphicsCredits: optionalText(raw.motionGraphicsCredits ?? raw.animationCredits, 400),
+      duration: optionalText(raw.duration, 80),
+      frameRate: optionalText(raw.frameRate ?? raw.fps, 80),
       copyrightHolder: optionalText(raw.copyrightHolder, 200),
       license: optionalText(raw.license, 240),
       seoTitle: optionalText(raw.seoTitle, 180),
