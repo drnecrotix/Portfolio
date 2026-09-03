@@ -78,7 +78,6 @@ export type GallerySettings = {
   viewLabel: string;
   loadMoreLabel: string;
   emptyLabel: string;
-  galleryCategoryLabel: string;
   defaultImageDescription: string;
   rowsViewTitle: string;
   gridViewTitle: string;
@@ -114,7 +113,6 @@ export const defaultGallerySettings: GallerySettings = {
   viewLabel: 'View',
   loadMoreLabel: 'Load More',
   emptyLabel: 'No items found matching this creative type.',
-  galleryCategoryLabel: 'Gallery',
   defaultImageDescription: 'Gallery Image',
   rowsViewTitle: 'Rows View',
   gridViewTitle: 'Grid View',
@@ -355,7 +353,6 @@ function normalizeItems(value: unknown, fallbackDescription: string): GalleryIte
 
 export function normalizeGallerySettings(value: unknown): GallerySettings {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-  const galleryCategoryLabel = text(source.galleryCategoryLabel, defaultGallerySettings.galleryCategoryLabel, 80);
   const defaultImageDescription = text(source.defaultImageDescription, defaultGallerySettings.defaultImageDescription, 180);
   return {
     heroEyebrow: text(source.heroEyebrow, defaultGallerySettings.heroEyebrow, 40),
@@ -373,7 +370,6 @@ export function normalizeGallerySettings(value: unknown): GallerySettings {
     viewLabel: text(source.viewLabel, defaultGallerySettings.viewLabel, 40),
     loadMoreLabel: text(source.loadMoreLabel, defaultGallerySettings.loadMoreLabel, 60),
     emptyLabel: text(source.emptyLabel, defaultGallerySettings.emptyLabel, 180),
-    galleryCategoryLabel,
     defaultImageDescription,
     rowsViewTitle: text(source.rowsViewTitle, defaultGallerySettings.rowsViewTitle, 60),
     gridViewTitle: text(source.gridViewTitle, defaultGallerySettings.gridViewTitle, 60),
