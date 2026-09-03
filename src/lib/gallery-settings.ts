@@ -89,10 +89,8 @@ export type GallerySettings = {
 
 export const galleryCreativeTypeOptions: Array<{ value: GalleryCreativeType; label: string }> = [
   { value: 'photography', label: 'Photography' },
-  { value: 'drawing', label: 'Drawing' },
-  { value: 'painting', label: 'Painting' },
+  { value: 'painting', label: 'Traditional Art' },
   { value: 'digital-art', label: 'Digital Art' },
-  { value: 'mixed-media', label: 'Mixed Media' },
   { value: 'video', label: 'Video' },
   { value: 'other', label: 'Other' },
 ];
@@ -181,16 +179,19 @@ function normalizeTags(value: unknown) {
 
 function normalizeCreativeType(value: unknown, mediaType: GalleryItemSetting['type'], legacyCategory: unknown): GalleryCreativeType {
   if (value === 'photoshoot') return 'photography';
+  if (value === 'drawing' || value === 'mixed-media') return 'painting';
   const accepted = new Set<GalleryCreativeType>(galleryCreativeTypeOptions.map((option) => option.value));
   if (typeof value === 'string' && accepted.has(value as GalleryCreativeType)) return value as GalleryCreativeType;
   if (mediaType === 'video') return 'video';
 
   const categoryValue = String(legacyCategory ?? '').trim().toLowerCase();
   if (categoryValue.includes('photoshoot') || categoryValue.includes('photo session')) return 'photography';
-  if (categoryValue.includes('drawing') || categoryValue.includes('sketch')) return 'drawing';
+  if (categoryValue.includes('drawing') || categoryValue.includes('sketch')) return 'painting';
   if (categoryValue.includes('painting')) return 'painting';
   if (categoryValue.includes('digital')) return 'digital-art';
-  if (categoryValue.includes('mixed')) return 'mixed-media';
+  if (categoryValue.includes('mixed')) return 'painting';
+  if (categoryValue.includes('video')) return 'video';
+  if (categoryValue.includes('other')) return 'other';
   return 'photography';
 }
 
