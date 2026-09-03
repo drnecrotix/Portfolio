@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { Plus, X } from 'lucide-react';
 
 type Props = {
@@ -36,11 +36,6 @@ export function TagInput({
     const [internalTags, setInternalTags] = useState(() => Array.from(new Set(initialTags.map(normalize).filter(Boolean))).slice(0, maxTags));
     const [draft, setDraft] = useState('');
     const tags = controlled ? value.map(normalize).filter(Boolean).slice(0, maxTags) : internalTags;
-
-    useEffect(() => {
-        if (!controlled) return;
-        setDraft('');
-    }, [controlled, value]);
 
     const commit = (next: string[]) => {
         const normalized = Array.from(new Set(next.map(normalize).filter(Boolean))).slice(0, maxTags);
