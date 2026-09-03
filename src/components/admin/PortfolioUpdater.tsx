@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { checkForPortfolioUpdate, installPortfolioUpdate } from '@/app/admin/(protected)/actions';
+import { installPortfolioUpdate } from '@/app/admin/(protected)/actions';
 
 export type PortfolioUpdateStatus = {
     state?: string;
@@ -49,6 +49,15 @@ function rejectedActionMessage(error: unknown, fallback: string) {
     return fallback;
 }
 
+async function requestUpdateCheck() {
+    const response = await fetch(`/api/admin/update-check?_=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) throw new Error(`Update check returned HTTP ${response.status}.`);
+    return await response.json() as CheckResult;
+}
+
 export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVersion: string; initialStatus: PortfolioUpdateStatus | null }) {
     const [status, setStatus] = useState<PortfolioUpdateStatus | null>(initialStatus);
     const [checkResult, setCheckResult] = useState<CheckResult | null>(null);
@@ -80,14 +89,18 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
 
     const checkWithRetry = useCallback(async (): Promise<CheckResult> => {
         let lastError: unknown;
+        let lastResult: CheckResult | null = null;
         for (let attempt = 0; attempt < 2; attempt += 1) {
             try {
-                return await checkForPortfolioUpdate() as CheckResult;
+                const result = await requestUpdateCheck();
+                if (result.state !== 'error') return result;
+                lastResult = result;
             } catch (error) {
                 lastError = error;
-                if (attempt === 0) await wait(650);
             }
+            if (attempt === 0) await wait(650);
         }
+        if (lastResult) return lastResult;
         return {
             ok: false,
             state: 'error',
