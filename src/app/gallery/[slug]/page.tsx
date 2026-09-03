@@ -79,9 +79,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 function MetaRow({ label, value }: WorkDetail) {
   if (!value) return null;
   return (
-    <div className="grid gap-1 border-b border-foreground/10 py-3 sm:grid-cols-[150px_1fr] sm:gap-6">
-      <dt className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{label}</dt>
-      <dd className="text-sm leading-6 text-foreground/80">{value}</dd>
+    <div className="grid grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] items-baseline gap-4 border-b border-foreground/10 py-3.5 last:border-b-0 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] sm:gap-5">
+      <dt className="min-w-0 font-sans text-[10px] font-medium uppercase leading-5 tracking-[0.2em] text-muted-foreground sm:text-[11px]">{label}</dt>
+      <dd className="min-w-0 break-words text-left font-sans text-[13px] font-medium leading-5 text-foreground/90 sm:text-sm sm:leading-6">{value}</dd>
     </div>
   );
 }
@@ -320,7 +320,7 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
           )}
         </section>
 
-        <div className="mx-auto mt-12 grid max-w-[1180px] gap-10 lg:grid-cols-[minmax(0,1fr)_390px]">
+        <div className="mx-auto mt-12 grid max-w-[1180px] gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
           <div>
             {item.story && (
               <section>
@@ -337,10 +337,12 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
             )}
           </div>
 
-          <aside className="h-fit rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-5">
-            <h2 className="font-serif text-2xl">Work details</h2>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">Details are tailored to {creativeType} and empty fields stay hidden.</p>
-            <dl className="mt-4">
+          <aside className="h-fit overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-foreground/[0.018] shadow-[0_12px_36px_rgba(0,0,0,0.05)]">
+            <div className="border-b border-foreground/10 px-5 py-4 sm:px-6 sm:py-5">
+              <h2 className="font-sans text-lg font-semibold leading-none tracking-[-0.02em] text-foreground sm:text-xl">Work details</h2>
+              <p className="mt-2 max-w-sm font-sans text-[11px] leading-5 text-muted-foreground">Details tailored to {creativeType}. Empty fields remain hidden.</p>
+            </div>
+            <dl className="px-5 pb-1 sm:px-6">
               {publicDetails.map((detail) => <MetaRow key={detail.label} label={detail.label} value={detail.value} />)}
             </dl>
           </aside>
