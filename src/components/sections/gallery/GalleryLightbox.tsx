@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export type GalleryLightboxItem = {
@@ -12,6 +13,7 @@ export type GalleryLightboxItem = {
     type: 'image' | 'video';
     url: string;
     description: string;
+    detailUrl?: string;
 };
 
 export function GalleryLightbox({
@@ -153,6 +155,11 @@ export function GalleryLightbox({
                     <div className="relative z-20 border-t border-white/10 bg-black/90 px-5 py-4 text-center backdrop-blur-xl sm:px-8 sm:py-5" onClick={(event) => event.stopPropagation()}>
                         <h3 className="font-serif text-xl sm:text-2xl">{item.title}</h3>
                         {item.description && <p className="mx-auto mt-1.5 max-w-3xl text-sm leading-relaxed text-white/55">{item.description}</p>}
+                        {item.detailUrl && (
+                            <Link href={item.detailUrl} className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-2 text-xs font-medium text-white/75 transition hover:bg-white/10 hover:text-white">
+                                View full work <ArrowUpRight className="h-3.5 w-3.5" />
+                            </Link>
+                        )}
                     </div>
                 </motion.div>
             )}
