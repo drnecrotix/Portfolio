@@ -186,7 +186,11 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                 )}
                             </div>
                             {uploadMessage && <p className="mb-3 max-w-full break-all text-xs leading-relaxed text-emerald-300">{uploadMessage}</p>}
-                            <div className="grid max-h-80 min-w-0 grid-cols-2 gap-3 overflow-y-auto md:grid-cols-3">
+                            <div
+                                data-lenis-prevent
+                                onWheel={(event) => event.stopPropagation()}
+                                className="grid max-h-80 min-w-0 grid-cols-2 gap-3 overflow-y-auto overscroll-contain pr-1 md:grid-cols-3"
+                            >
                                 {filtered.map((asset) => (
                                     <button key={asset.id} type="button" onClick={() => choose(asset.url)} className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] text-left hover:border-white/30">
                                         {asset.mimeType.startsWith('image/') ? (

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link2, Loader2, Palette, RefreshCw, Search, Video } from 'lucide-react';
 import { MediaPicker } from '@/components/admin/MediaPicker';
+import { TagInput } from '@/components/admin/TagInput';
 import {
   galleryCreativeTypeLabel,
   galleryCreativeTypeOptions,
@@ -18,14 +19,6 @@ type EditorTab = 'content' | 'details' | 'series' | 'seo';
 
 function nextId() {
   return `gallery-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function parseTags(value: string) {
-  return Array.from(new Set(value
-    .split(',')
-    .map((tag) => tag.trim().replace(/^#+/, '').slice(0, 60))
-    .filter(Boolean)))
-    .slice(0, 30);
 }
 
 function normalizeItem(item: GalleryItemSetting): GalleryItemSetting {
@@ -362,7 +355,7 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
             <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title, type or tag…" className="w-full rounded-xl border border-foreground/10 bg-background py-2.5 pl-9 pr-3 text-xs outline-none" />
           </label>
-          <div className="mt-3 max-h-[560px] space-y-1 overflow-y-auto pr-1">
+          <div data-lenis-prevent onWheel={(event) => event.stopPropagation()} className="mt-3 max-h-[560px] space-y-1 overflow-y-auto overscroll-contain pr-1">
             {visibleItems.map((item) => {
               const active = item.id === selected?.id;
               return (
@@ -403,7 +396,16 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
                 <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
                   <div className="space-y-4">
                     <label className="block text-xs text-muted-foreground">Creative type<select value={selected.creativeType} onChange={(event) => setCreativeType(selectedIndex, event.target.value as GalleryCreativeType)} className={input}>{galleryCreativeTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><span className="mt-1 block text-[10px] text-muted-foreground/60">The media kind and Work details are selected automatically from Creative Type.</span></label>
-                    <label className="flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-400/[0.04] px-4 py-3 text-xs text-muted-foreground"><input type="checkbox" checked={selected.isNsfw} onChange={(event) => update(selectedIndex, { isNsfw: event.target.checked })} className="mt-0.5" /><span><strong className="block font-semibold text-foreground/85">NSFW preview</strong><span className="mt-1 block leading-5">Blur the real Gallery thumbnail and show an NSFW overlay. The full media remains available from View full work.</span></span></label>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={selected.isNsfw}
+                      onClick={() => update(selectedIndex, { isNsfw: !selected.isNsfw })}
+                      className={`flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition ${selected.isNsfw ? 'border-amber-400/35 bg-amber-400/[0.08]' : 'border-foreground/10 bg-foreground/[0.02] hover:bg-foreground/[0.04]'}`}
+                    >
+                      <span className="min-w-0"><span className="block text-xs font-semibold text-foreground/85">NSFW preview</span><span className="mt-0.5 block text-[10px] text-muted-foreground">Blur preview until View full work.</span></span>
+                      <span className="flex shrink-0 items-center gap-2"><span className={`text-[10px] font-semibold ${selected.isNsfw ? 'text-amber-500' : 'text-muted-foreground'}`}>{selected.isNsfw ? 'ON' : 'OFF'}</span><span className={`relative h-6 w-11 rounded-full transition ${selected.isNsfw ? 'bg-amber-400' : 'bg-foreground/15'}`}><span className={`absolute top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${selected.isNsfw ? 'translate-x-6' : 'translate-x-1'}`} /></span></span>
+                    </button>
                     <MediaPicker value={selected.mediaUrl} onChange={(url) => update(selectedIndex, { mediaUrl: url, sourceUrl: '', thumbnailUrl: selected.type === 'image' ? url : selected.thumbnailUrl })} label={selected.type === 'video' ? 'Video file from Media Library' : 'Cover / primary image'} initialKind={selected.type} lockKind />
                     {selected.type === 'video' && (
                       <>
@@ -420,7 +422,15 @@ export function GalleryItemsEditor({ initialItems }: { initialItems: GalleryItem
                     <label className="text-xs text-muted-foreground">Slug<input value={selected.slug} onChange={(event) => update(selectedIndex, { slug: gallerySlug(event.target.value, selected.id) })} className={input} /><span className="mt-1 block text-[10px] text-muted-foreground/60">/gallery/{selected.slug || 'work'}</span></label>
                     <label className="text-xs text-muted-foreground">Short description<textarea rows={5} value={selected.description} onChange={(event) => update(selectedIndex, { description: event.target.value })} className={area} /></label>
                     <label className="text-xs text-muted-foreground">Alt text<input value={selected.altText} onChange={(event) => update(selectedIndex, { altText: event.target.value })} placeholder="Describe the image naturally" className={input} /></label>
-                    <label className="text-xs text-muted-foreground">Tags<input value={selected.tags.join(', ')} onChange={(event) => update(selectedIndex, { tags: parseTags(event.target.value) })} placeholder="portrait, night, cinematic" className={input} /><span className="mt-1 block text-[10px] leading-4 text-muted-foreground/60">Comma-separated. Leading # is removed automatically. Public tags link to filtered Gallery views.</span></label>
+                    <TagInput
+                      value={selected.tags}
+                      onChange={(tags) => update(selectedIndex, { tags })}
+                      label="Tags"
+                      maxTags={30}
+                      maxLength={60}
+                      stripHash
+                      helperText="Comma or Enter adds a tag. Leading # is removed automatically. Public tags open filtered Gallery views."
+                    />
                   </div>
                 </div>
               )}

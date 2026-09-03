@@ -53,5 +53,5 @@ export async function generateMetadata({ params }: { params: Promise<{ tag: stri
 export default async function GalleryTagPage({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params;
   const { content } = await loadTaggedGallery(tag);
-  return <GalleryPageClient content={content} allowLibraryFallback={false} />;
+  return <GalleryPageClient content={content} />;
 }

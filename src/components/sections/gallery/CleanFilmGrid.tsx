@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, ImageIcon, LayoutGrid, ListFilter, Maximize2, Play, Sparkles, StretchHorizontal, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getAllGalleryImages } from '@/app/actions/getGalleryImages';
 import { InfiniteImageField } from '@/components/ui/infinite-image-field';
 import { GalleryLightbox } from '@/components/sections/gallery/GalleryLightbox';
 import {
@@ -30,8 +29,8 @@ type GalleryItem = {
     detailUrl?: string;
 };
 
-type GridVariant = 'small' | 'wide' | 'tall' | 'large';
-const editorialPattern: GridVariant[] = ['large', 'tall', 'small', 'small', 'wide', 'small', 'tall', 'wide', 'small', 'large', 'small', 'wide'];
+type GridVariant = 'standard' | 'wide' | 'feature';
+const editorialPattern: GridVariant[] = ['feature', 'standard', 'wide', 'standard', 'standard', 'wide', 'standard', 'standard', 'feature', 'standard', 'wide', 'standard'];
 
 function gridVariant(index: number, item: GalleryItem): GridVariant {
     if (item.type === 'video' && index % 5 === 2) return 'wide';
@@ -39,15 +38,14 @@ function gridVariant(index: number, item: GalleryItem): GridVariant {
 }
 
 function gridSpan(variant: GridVariant) {
-    if (variant === 'large') return 'col-span-2 row-span-2';
+    if (variant === 'feature') return 'col-span-2 row-span-2';
     if (variant === 'wide') return 'col-span-2 row-span-1';
-    if (variant === 'tall') return 'col-span-1 row-span-2';
     return 'col-span-1 row-span-1';
 }
 
 function gridSizes(variant: GridVariant) {
-    if (variant === 'large' || variant === 'wide') return '(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw';
-    return '(max-width: 767px) 50vw, (max-width: 1279px) 25vw, 17vw';
+    if (variant === 'feature' || variant === 'wide') return '(max-width: 767px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 40vw, 33vw';
+    return '(max-width: 767px) 50vw, (max-width: 1023px) 25vw, (max-width: 1279px) 20vw, 17vw';
 }
 
 function GalleryPreview({ item, sizes, className }: { item: GalleryItem; sizes: string; className?: string }) {
@@ -79,15 +77,14 @@ function GalleryPreview({ item, sizes, className }: { item: GalleryItem; sizes: 
     );
 }
 
-export default function CleanFilmGrid({ isLowPowerMode, content, allowLibraryFallback = true }: { isLowPowerMode?: boolean; content: GallerySettings; allowLibraryFallback?: boolean }) {
+export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerMode?: boolean; content: GallerySettings }) {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterType>('all');
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [visibleCount, setVisibleCount] = useState(18);
-    const [fallbackItems, setFallbackItems] = useState<GalleryItem[]>([]);
     const scrollContainerRef = useRef<Record<string, HTMLDivElement | null>>({});
 
-    const configuredItems = useMemo<GalleryItem[]>(() => content.items
+    const galleryItems = useMemo<GalleryItem[]>(() => content.items
         .filter((item) => item.isVisible && item.mediaUrl)
         .sort((a, b) => a.order - b.order)
         .map((item) => ({
@@ -102,28 +99,6 @@ export default function CleanFilmGrid({ isLowPowerMode, content, allowLibraryFal
             detailUrl: item.slug ? galleryItemHref(item.slug) : undefined,
         })), [content.items]);
 
-    useEffect(() => {
-        if (!allowLibraryFallback || configuredItems.length) return;
-        let cancelled = false;
-        getAllGalleryImages()
-            .then((images) => {
-                if (cancelled) return;
-                setFallbackItems(images.map((img, index) => ({
-                    id: `gallery-${index}`,
-                    title: img.filename.split('.')[0].replace(/-/g, ' '),
-                    type: 'image' as const,
-                    creativeType: 'photography' as const,
-                    thumbnail: img.src,
-                    url: img.src,
-                    description: content.defaultImageDescription,
-                    isNsfw: false,
-                })));
-            })
-            .catch((error) => console.error('Failed to load gallery images', error));
-        return () => { cancelled = true; };
-    }, [allowLibraryFallback, configuredItems, content.defaultImageDescription]);
-
-    const galleryItems = configuredItems.length ? configuredItems : allowLibraryFallback ? fallbackItems : [];
     const availableTypes = useMemo(() => galleryCreativeTypeOptions.filter((option) => galleryItems.some((item) => item.creativeType === option.value)), [galleryItems]);
     const filteredItems = useMemo(() => galleryItems.filter((item) => filter === 'all' || item.creativeType === filter), [filter, galleryItems]);
 
@@ -228,7 +203,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content, allowLibraryFal
 
                     {viewMode === 'grid' && (
                         <div className="space-y-10">
-                            <div className="grid auto-rows-[132px] grid-flow-row-dense grid-cols-2 gap-2 sm:auto-rows-[150px] sm:gap-3 md:grid-cols-4 md:auto-rows-[158px] lg:auto-rows-[168px] xl:grid-cols-6 xl:auto-rows-[176px]">
+                            <div className="grid auto-rows-[132px] grid-flow-row-dense grid-cols-2 gap-2 sm:auto-rows-[150px] sm:gap-3 md:grid-cols-4 md:auto-rows-[158px] lg:grid-cols-5 lg:auto-rows-[166px] 2xl:grid-cols-6 2xl:auto-rows-[176px]">
                                 {visibleItems.map((item, index) => {
                                     const variant = gridVariant(index, item);
                                     return (
