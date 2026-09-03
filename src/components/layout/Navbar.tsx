@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Globe, Menu, X } from 'lucide-react';
+import { LibraryBig, Menu, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import CardNav, { type DropdownStyle } from '@/components/ui/CardNav';
@@ -46,11 +46,6 @@ function Clock() {
     return <span className="font-mono text-xl font-black tracking-widest text-gradient transition-all duration-300 hover:tracking-[0.2em] md:text-2xl">{time}</span>;
 }
 
-function readLocaleCookie() {
-    if (typeof document === 'undefined') return 'en';
-    return document.cookie.split('; ').find((row) => row.startsWith('locale='))?.split('=')[1] || 'en';
-}
-
 export function Navbar() {
     const pathname = usePathname();
     const { resolvedTheme } = useTheme();
@@ -61,7 +56,6 @@ export function Navbar() {
     const [isVisible, setIsVisible] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const [lastScrollY, setLastScrollY] = useState(0);
-    const [locale, setLocale] = useState(readLocaleCookie);
 
     useEffect(() => {
         fetch('/api/navigation', { cache: 'no-store' })
@@ -98,13 +92,6 @@ export function Navbar() {
 
     const home = topLevel.find((item) => item.href === '/' && !item.isDropdown) ?? fallbackItems[0];
     const desktopTopLevel = topLevel.filter((item) => item.id !== home.id);
-
-    const toggleLocale = useCallback(() => {
-        const next = locale === 'en' ? 'id' : 'en';
-        document.cookie = `locale=${next};path=/;max-age=31536000`;
-        setLocale(next);
-        window.location.reload();
-    }, [locale]);
 
     const renderLink = (item: NavigationItem, mobile = false) => {
         const external = item.isExternal || /^https?:\/\//.test(item.href);
@@ -161,7 +148,19 @@ export function Navbar() {
                         </div>
 
                         <div className="flex items-center gap-2 md:gap-3">
-                            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={toggleLocale} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5" aria-label="Toggle language"><Globe className="h-4 w-4" /></motion.button>
+                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                <Link
+                                    href="/wiki/articles"
+                                    className={cn(
+                                        'flex rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5',
+                                        pathname === '/wiki/articles' || pathname.startsWith('/wiki/') ? 'text-sky-500 dark:text-sky-300' : 'text-foreground',
+                                    )}
+                                    aria-label="Open Wiki index"
+                                    title="Wiki index"
+                                >
+                                    <LibraryBig className="h-4 w-4" />
+                                </Link>
+                            </motion.div>
                             <AnimatedThemeToggler />
                             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsMenuOpen((value) => !value)} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5 lg:hidden" aria-label="Toggle menu">
                                 <AnimatePresence mode="wait" initial={false}>
