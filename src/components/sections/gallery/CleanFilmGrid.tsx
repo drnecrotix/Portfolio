@@ -26,6 +26,7 @@ type GalleryItem = {
     thumbnail: string;
     url: string;
     description: string;
+    isNsfw: boolean;
     detailUrl?: string;
 };
 
@@ -49,6 +50,35 @@ function gridSizes(variant: GridVariant) {
     return '(max-width: 767px) 50vw, (max-width: 1279px) 25vw, 17vw';
 }
 
+function GalleryPreview({ item, sizes, className }: { item: GalleryItem; sizes: string; className?: string }) {
+    return (
+        <>
+            {item.thumbnail ? (
+                <Image
+                    src={item.thumbnail}
+                    alt={item.title}
+                    fill
+                    sizes={sizes}
+                    loading="lazy"
+                    className={cn('object-cover', className, item.isNsfw && 'scale-110 blur-2xl')}
+                />
+            ) : (
+                <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-950 text-white/60">
+                    <div className="flex flex-col items-center gap-2"><Video className="h-7 w-7" /><span className="font-mono text-[9px] uppercase tracking-[0.18em]">Video preview</span></div>
+                </div>
+            )}
+            {item.isNsfw && (
+                <div className="absolute inset-0 z-[5] grid place-items-center bg-black/20 text-center backdrop-saturate-50">
+                    <div className="rounded-xl border border-white/20 bg-black/55 px-4 py-3 text-white shadow-xl backdrop-blur-md">
+                        <div className="text-sm font-bold tracking-[0.22em]">NSFW</div>
+                        <div className="mt-1 text-[9px] uppercase tracking-[0.14em] text-white/65">Sensitive preview</div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
 export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerMode?: boolean; content: GallerySettings }) {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterType>('all');
@@ -65,9 +95,10 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
             title: item.title,
             type: item.type,
             creativeType: item.creativeType,
-            thumbnail: item.type === 'video' ? (item.thumbnailUrl || item.mediaUrl) : item.mediaUrl,
+            thumbnail: item.type === 'video' ? item.thumbnailUrl : (item.thumbnailUrl || item.mediaUrl),
             url: item.mediaUrl,
             description: item.description,
+            isNsfw: item.isNsfw,
             detailUrl: item.slug ? galleryItemHref(item.slug) : undefined,
         })), [content.items]);
 
@@ -85,6 +116,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                     thumbnail: img.src,
                     url: img.src,
                     description: content.defaultImageDescription,
+                    isNsfw: false,
                 })));
             })
             .catch((error) => console.error('Failed to load gallery images', error));
@@ -106,6 +138,8 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
 
     const groupedTypes = useMemo(() => galleryCreativeTypeOptions.map((option) => option.value).filter((type) => groupedItems[type]?.length), [groupedItems]);
     const visibleItems = useMemo(() => viewMode === 'rows' ? [] : filteredItems.slice(0, visibleCount), [filteredItems, visibleCount, viewMode]);
+    const infiniteImages = useMemo(() => filteredItems.filter((item) => item.type === 'image' && !item.isNsfw).map((item) => item.thumbnail || item.url), [filteredItems]);
+    const infiniteHidesNsfw = filteredItems.some((item) => item.type === 'image' && item.isNsfw);
     const currentIndex = filteredItems.findIndex((item) => item.id === selectedId);
     const currentItem = currentIndex >= 0 ? filteredItems[currentIndex] : null;
 
@@ -181,7 +215,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                                 {(groupedItems[type] || []).map((item, index) => (
                                     <motion.div key={item.id} initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.45, delay: isLowPowerMode ? 0 : index * 0.06 }} className="group/card relative aspect-video w-[78vw] flex-none cursor-pointer snap-center sm:w-[340px] md:w-[380px]" onClick={() => openLightbox(item.id)}>
                                         <div className="relative h-full w-full overflow-hidden rounded-xl bg-muted">
-                                            <Image src={item.thumbnail || item.url} alt={item.title} fill sizes="(max-width: 768px) 78vw, 380px" loading="lazy" className={cn('object-cover transition-transform duration-700', !isLowPowerMode && 'group-hover/card:scale-105')} />
+                                            <GalleryPreview item={item} sizes="(max-width: 768px) 78vw, 380px" className={cn('transition-transform duration-700', !isLowPowerMode && !item.isNsfw && 'group-hover/card:scale-105')} />
                                             <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded bg-black/50 px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-white backdrop-blur-sm">{item.type === 'video' ? <Video className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}<span>{galleryCreativeTypeLabel(item.creativeType)}</span></div>
                                             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent opacity-70" />
                                         </div>
@@ -199,11 +233,11 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                                     const variant = gridVariant(index, item);
                                     return (
                                         <motion.button key={item.id} type="button" initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-8%' }} transition={{ duration: 0.35, delay: isLowPowerMode ? 0 : Math.min(index, 10) * 0.035 }} onClick={() => openLightbox(item.id)} className={cn('group relative overflow-hidden rounded-xl bg-muted text-left', gridSpan(variant))}>
-                                            <Image src={item.thumbnail || item.url} alt={item.title} fill sizes={gridSizes(variant)} loading="lazy" className="object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
+                                            <GalleryPreview item={item} sizes={gridSizes(variant)} className="transition-transform duration-700 group-hover:scale-[1.03]" />
                                             <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                                            <div className="absolute left-3 top-3 rounded-full bg-black/45 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-white/80 backdrop-blur-sm">{galleryCreativeTypeLabel(item.creativeType)}</div>
-                                            <div className="absolute bottom-3 left-3 right-3"><p className="line-clamp-2 text-sm font-medium text-white sm:text-base">{item.title}</p></div>
-                                            <span className="absolute right-3 top-3 hidden rounded-full bg-black/45 p-2 text-white group-hover:block">{item.type === 'video' ? <Play className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}</span>
+                                            <div className="absolute left-3 top-3 z-10 rounded-full bg-black/45 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-white/80 backdrop-blur-sm">{galleryCreativeTypeLabel(item.creativeType)}</div>
+                                            <div className="absolute bottom-3 left-3 right-3 z-10"><p className="line-clamp-2 text-sm font-medium text-white sm:text-base">{item.title}</p></div>
+                                            <span className="absolute right-3 top-3 z-10 hidden rounded-full bg-black/45 p-2 text-white group-hover:block">{item.type === 'video' ? <Play className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}</span>
                                         </motion.button>
                                     );
                                 })}
@@ -213,8 +247,9 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                     )}
 
                     {viewMode === 'infinite' && (
-                        <div className="h-[72vh] min-h-[520px] overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
-                            <InfiniteImageField images={filteredItems.filter((item) => item.type === 'image').map((item) => item.thumbnail || item.url)} imageWidth={220} imageHeight={300} gap={24} borderRadius={14} />
+                        <div className="relative h-[72vh] min-h-[520px] overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
+                            <InfiniteImageField images={infiniteImages} imageWidth={220} imageHeight={300} gap={24} borderRadius={14} />
+                            {infiniteHidesNsfw && <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/70 px-4 py-2 text-center text-[10px] text-white/70 backdrop-blur-md">NSFW works are hidden in Infinite Preview. Use Grid or Rows for blurred previews.</div>}
                         </div>
                     )}
 
