@@ -19,7 +19,6 @@ export type GalleryItemSetting = {
   description: string;
   story: string;
   altText: string;
-  category: string;
   creativeType: GalleryCreativeType;
   tags: string[];
   type: 'image' | 'video';
@@ -31,8 +30,16 @@ export type GalleryItemSetting = {
   medium: string;
   dimensions: string;
   software: string;
+  deviceType: string;
   camera: string;
   lens: string;
+  filmStock: string;
+  sensorFormat: string;
+  focalLength: string;
+  aperture: string;
+  shutterSpeed: string;
+  iso: string;
+  lighting: string;
   copyrightHolder: string;
   license: string;
   seoTitle: string;
@@ -54,8 +61,6 @@ export type GallerySettings = {
   sectionEyebrow: string;
   sectionTitle: string;
   filterAll: string;
-  filterPhotos: string;
-  filterVideos: string;
   collectionsLabel: string;
   viewLabel: string;
   loadMoreLabel: string;
@@ -93,12 +98,10 @@ export const defaultGallerySettings: GallerySettings = {
   sectionEyebrow: 'Exhibition Space',
   sectionTitle: 'Selected Works',
   filterAll: 'All',
-  filterPhotos: 'Photos',
-  filterVideos: 'Videos',
-  collectionsLabel: 'Collections',
+  collectionsLabel: 'Creative Types',
   viewLabel: 'View',
   loadMoreLabel: 'Load More',
-  emptyLabel: 'No items found matching filter.',
+  emptyLabel: 'No items found matching this creative type.',
   galleryCategoryLabel: 'Gallery',
   defaultImageDescription: 'Gallery Image',
   rowsViewTitle: 'Rows View',
@@ -166,12 +169,12 @@ function normalizeTags(value: unknown) {
     .filter(Boolean))].slice(0, 30);
 }
 
-function normalizeCreativeType(value: unknown, mediaType: GalleryItemSetting['type'], category: unknown): GalleryCreativeType {
+function normalizeCreativeType(value: unknown, mediaType: GalleryItemSetting['type'], legacyCategory: unknown): GalleryCreativeType {
   const accepted = new Set<GalleryCreativeType>(galleryCreativeTypeOptions.map((option) => option.value));
   if (typeof value === 'string' && accepted.has(value as GalleryCreativeType)) return value as GalleryCreativeType;
   if (mediaType === 'video') return 'video';
 
-  const categoryValue = String(category ?? '').trim().toLowerCase();
+  const categoryValue = String(legacyCategory ?? '').trim().toLowerCase();
   if (categoryValue.includes('photoshoot') || categoryValue.includes('photo session')) return 'photoshoot';
   if (categoryValue.includes('drawing') || categoryValue.includes('sketch')) return 'drawing';
   if (categoryValue.includes('painting')) return 'painting';
@@ -258,7 +261,7 @@ export function socialVideoEmbedUrl(value: unknown) {
   }
 }
 
-function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescription: string): GalleryItemSetting[] {
+function normalizeItems(value: unknown, fallbackDescription: string): GalleryItemSetting[] {
   if (!Array.isArray(value)) return [];
 
   const normalized = value.slice(0, 250).map((entry, index) => {
@@ -269,7 +272,6 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
     const mediaUrl = type === 'video' ? socialVideoEmbedUrl(raw.mediaUrl ?? raw.url) : normalizeUrl(raw.mediaUrl ?? raw.url);
     const rawThumbnail = normalizeUrl(raw.thumbnailUrl ?? raw.thumbnail);
     const thumbnailUrl = type === 'image' ? (rawThumbnail || mediaUrl) : rawThumbnail;
-    const categoryFallback = creativeType === 'other' ? fallbackCategory : galleryCreativeTypeLabel(creativeType);
 
     return {
       id: safeId(raw.id, `gallery-item-${index + 1}`),
@@ -282,7 +284,6 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
       description: text(raw.description, fallbackDescription, 1600),
       story: optionalText(raw.story ?? raw.about, 12000),
       altText: text(raw.altText, title, 280),
-      category: text(raw.category, categoryFallback, 120),
       creativeType,
       tags: normalizeTags(raw.tags),
       type,
@@ -294,8 +295,16 @@ function normalizeItems(value: unknown, fallbackCategory: string, fallbackDescri
       medium: optionalText(raw.medium, 240),
       dimensions: optionalText(raw.dimensions, 120),
       software: optionalText(raw.software, 240),
+      deviceType: optionalText(raw.deviceType ?? raw.device, 160),
       camera: optionalText(raw.camera, 240),
       lens: optionalText(raw.lens, 240),
+      filmStock: optionalText(raw.filmStock ?? raw.film, 200),
+      sensorFormat: optionalText(raw.sensorFormat ?? raw.format, 160),
+      focalLength: optionalText(raw.focalLength, 80),
+      aperture: optionalText(raw.aperture, 80),
+      shutterSpeed: optionalText(raw.shutterSpeed ?? raw.shutter, 80),
+      iso: optionalText(raw.iso, 80),
+      lighting: optionalText(raw.lighting, 240),
       copyrightHolder: optionalText(raw.copyrightHolder, 200),
       license: optionalText(raw.license, 240),
       seoTitle: optionalText(raw.seoTitle, 180),
@@ -332,8 +341,6 @@ export function normalizeGallerySettings(value: unknown): GallerySettings {
     sectionEyebrow: text(source.sectionEyebrow, defaultGallerySettings.sectionEyebrow, 80),
     sectionTitle: text(source.sectionTitle, defaultGallerySettings.sectionTitle, 120),
     filterAll: text(source.filterAll, defaultGallerySettings.filterAll, 40),
-    filterPhotos: text(source.filterPhotos, defaultGallerySettings.filterPhotos, 40),
-    filterVideos: text(source.filterVideos, defaultGallerySettings.filterVideos, 40),
     collectionsLabel: text(source.collectionsLabel, defaultGallerySettings.collectionsLabel, 60),
     viewLabel: text(source.viewLabel, defaultGallerySettings.viewLabel, 40),
     loadMoreLabel: text(source.loadMoreLabel, defaultGallerySettings.loadMoreLabel, 60),
@@ -345,6 +352,6 @@ export function normalizeGallerySettings(value: unknown): GallerySettings {
     infiniteViewTitle: text(source.infiniteViewTitle, defaultGallerySettings.infiniteViewTitle, 60),
     minimizeTitle: text(source.minimizeTitle, defaultGallerySettings.minimizeTitle, 60),
     maximizeTitle: text(source.maximizeTitle, defaultGallerySettings.maximizeTitle, 60),
-    items: normalizeItems(source.items, galleryCategoryLabel, defaultImageDescription),
+    items: normalizeItems(source.items, defaultImageDescription),
   };
 }
