@@ -84,6 +84,10 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function schemaProperty(name: string, value: string) {
+  return value ? { '@type': 'PropertyValue', name, value } : null;
+}
+
 export default async function GalleryWorkPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const loaded = await loadItem(slug);
@@ -130,6 +134,22 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
     creditText: creator || undefined,
   }));
 
+  const additionalProperty = [
+    schemaProperty('Creative Type', creativeType),
+    schemaProperty('Device Type', item.deviceType),
+    schemaProperty('Camera', item.camera),
+    schemaProperty('Lens', item.lens),
+    schemaProperty('Film Stock', item.filmStock),
+    schemaProperty('Sensor / Format', item.sensorFormat),
+    schemaProperty('Focal Length', item.focalLength),
+    schemaProperty('Aperture', item.aperture),
+    schemaProperty('Shutter Speed', item.shutterSpeed),
+    schemaProperty('ISO', item.iso),
+    schemaProperty('Lighting', item.lighting),
+    schemaProperty('Software', item.software),
+    schemaProperty('Dimensions', item.dimensions),
+  ].filter(Boolean);
+
   const workSchema = {
     '@context': 'https://schema.org',
     '@type': schemaType,
@@ -144,11 +164,12 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
     dateCreated: item.dateCreated || undefined,
     dateModified: updatedAt.toISOString(),
     artMedium: item.medium || item.software || undefined,
-    genre: item.category || creativeType,
+    genre: creativeType,
     keywords: item.tags.length ? item.tags.join(', ') : undefined,
     locationCreated: item.location ? { '@type': 'Place', name: item.location } : undefined,
     copyrightHolder: copyrightHolder ? { '@type': 'Person', name: copyrightHolder } : undefined,
     license: item.license || undefined,
+    additionalProperty: additionalProperty.length ? additionalProperty : undefined,
   };
 
   return (
@@ -165,7 +186,6 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
           <div>
             <div className="mb-4 flex flex-wrap gap-2">
               <span className="rounded-full border border-foreground/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{creativeType}</span>
-              {item.category && item.category !== creativeType && <span className="rounded-full border border-foreground/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{item.category}</span>}
               {images.length > 1 && <span className="rounded-full border border-foreground/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{images.length} images</span>}
             </div>
             <h1 className="max-w-5xl font-serif text-4xl leading-[0.98] tracking-tight sm:text-5xl lg:text-6xl">{item.title}</h1>
@@ -190,63 +210,53 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
         <section className="mt-5">
           {item.type === 'video' ? (
             <div className="mx-auto aspect-video w-full max-w-[1180px] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
-              <iframe
-                src={item.mediaUrl}
-                className="h-full w-full"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-                title={item.title}
-              />
+              <iframe src={item.mediaUrl} className="h-full w-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.title} />
             </div>
           ) : (
-            <GalleryZoomViewer
-              images={images}
-              alt={item.altText || item.title}
-              title={item.title}
-              copyrightHolder={copyrightHolder}
-            />
+            <GalleryZoomViewer images={images} alt={item.altText || item.title} title={item.title} copyrightHolder={copyrightHolder} />
           )}
         </section>
 
-        <div className="mx-auto mt-12 grid max-w-[1180px] gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="mx-auto mt-12 grid max-w-[1180px] gap-10 lg:grid-cols-[minmax(0,1fr)_390px]">
           <div>
             {item.story && (
               <section>
-                <div className="mb-4 flex items-center gap-3">
-                  <Palette className="h-5 w-5 text-muted-foreground" />
-                  <h2 className="font-serif text-2xl sm:text-3xl">About this work</h2>
-                </div>
-                <div className="max-w-3xl space-y-5 text-sm leading-7 text-foreground/75 sm:text-base sm:leading-8">
-                  {item.story.split(/\n{2,}/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
-                </div>
+                <div className="mb-4 flex items-center gap-3"><Palette className="h-5 w-5 text-muted-foreground" /><h2 className="font-serif text-2xl sm:text-3xl">About this work</h2></div>
+                <div className="max-w-3xl space-y-5 text-sm leading-7 text-foreground/75 sm:text-base sm:leading-8">{item.story.split(/\n{2,}/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
               </section>
             )}
 
             {item.tags.length > 0 && (
               <section className={item.story ? 'mt-10' : ''}>
                 <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"><Tag className="h-4 w-4" />Tags</div>
-                <div className="flex flex-wrap gap-2">
-                  {item.tags.map((tag) => <span key={tag} className="rounded-full border border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-xs text-foreground/70">{tag}</span>)}
-                </div>
+                <div className="flex flex-wrap gap-2">{item.tags.map((tag) => <span key={tag} className="rounded-full border border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-xs text-foreground/70">{tag}</span>)}</div>
               </section>
             )}
           </div>
 
           <aside className="h-fit rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-5">
             <h2 className="font-serif text-2xl">Work details</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">Only available metadata is shown.</p>
             <dl className="mt-4">
-              <MetaRow label="Type" value={creativeType} />
-              <MetaRow label="Category" value={item.category} />
+              <MetaRow label="Creative Type" value={creativeType} />
               <MetaRow label="Artist" value={item.artist} />
               <MetaRow label="Photographer" value={item.photographer} />
-              <MetaRow label="Model" value={item.model} />
+              <MetaRow label="Model / Subject" value={item.model} />
               <MetaRow label="Location" value={item.location} />
               <MetaRow label="Created" value={item.dateCreated} />
               <MetaRow label="Medium" value={item.medium} />
               <MetaRow label="Dimensions" value={item.dimensions} />
               <MetaRow label="Software" value={item.software} />
-              <MetaRow label="Camera" value={item.camera} />
+              <MetaRow label="Device Type" value={item.deviceType} />
+              <MetaRow label="Camera / Device" value={item.camera} />
               <MetaRow label="Lens" value={item.lens} />
+              <MetaRow label="Film Stock" value={item.filmStock} />
+              <MetaRow label="Sensor / Format" value={item.sensorFormat} />
+              <MetaRow label="Focal Length" value={item.focalLength} />
+              <MetaRow label="Aperture" value={item.aperture} />
+              <MetaRow label="Shutter" value={item.shutterSpeed} />
+              <MetaRow label="ISO" value={item.iso} />
+              <MetaRow label="Lighting" value={item.lighting} />
               <MetaRow label="Copyright" value={item.copyrightHolder ? `© ${item.copyrightHolder}` : ''} />
               <MetaRow label="License" value={item.license} />
             </dl>
