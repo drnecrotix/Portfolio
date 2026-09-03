@@ -103,10 +103,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content, allowLibraryFal
         })), [content.items]);
 
     useEffect(() => {
-        if (!allowLibraryFallback || configuredItems.length) {
-            setFallbackItems([]);
-            return;
-        }
+        if (!allowLibraryFallback || configuredItems.length) return;
         let cancelled = false;
         getAllGalleryImages()
             .then((images) => {
@@ -126,7 +123,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content, allowLibraryFal
         return () => { cancelled = true; };
     }, [allowLibraryFallback, configuredItems, content.defaultImageDescription]);
 
-    const galleryItems = configuredItems.length ? configuredItems : fallbackItems;
+    const galleryItems = configuredItems.length ? configuredItems : allowLibraryFallback ? fallbackItems : [];
     const availableTypes = useMemo(() => galleryCreativeTypeOptions.filter((option) => galleryItems.some((item) => item.creativeType === option.value)), [galleryItems]);
     const filteredItems = useMemo(() => galleryItems.filter((item) => filter === 'all' || item.creativeType === filter), [filter, galleryItems]);
 
