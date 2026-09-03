@@ -79,7 +79,7 @@ function GalleryPreview({ item, sizes, className }: { item: GalleryItem; sizes: 
     );
 }
 
-export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerMode?: boolean; content: GallerySettings }) {
+export default function CleanFilmGrid({ isLowPowerMode, content, allowLibraryFallback = true }: { isLowPowerMode?: boolean; content: GallerySettings; allowLibraryFallback?: boolean }) {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [filter, setFilter] = useState<FilterType>('all');
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -103,7 +103,10 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
         })), [content.items]);
 
     useEffect(() => {
-        if (configuredItems.length) return;
+        if (!allowLibraryFallback || configuredItems.length) {
+            setFallbackItems([]);
+            return;
+        }
         let cancelled = false;
         getAllGalleryImages()
             .then((images) => {
@@ -121,7 +124,7 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
             })
             .catch((error) => console.error('Failed to load gallery images', error));
         return () => { cancelled = true; };
-    }, [configuredItems, content.defaultImageDescription]);
+    }, [allowLibraryFallback, configuredItems, content.defaultImageDescription]);
 
     const galleryItems = configuredItems.length ? configuredItems : fallbackItems;
     const availableTypes = useMemo(() => galleryCreativeTypeOptions.filter((option) => galleryItems.some((item) => item.creativeType === option.value)), [galleryItems]);
