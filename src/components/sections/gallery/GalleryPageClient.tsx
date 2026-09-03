@@ -12,7 +12,7 @@ const GLSLHills = dynamic(() => import('@/components/ui/glsl-hills').then((mod) 
   ssr: false,
 });
 
-export function GalleryPageClient({ content, allowLibraryFallback = true }: { content: GallerySettings; allowLibraryFallback?: boolean }) {
+export function GalleryPageClient({ content, allowLibraryFallback = false }: { content: GallerySettings; allowLibraryFallback?: boolean }) {
   const { isLowPowerMode } = usePerformance();
 
   return (

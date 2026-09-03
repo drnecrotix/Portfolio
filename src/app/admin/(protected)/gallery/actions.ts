@@ -6,12 +6,15 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { defaultGallerySettings, normalizeGallerySettings } from '@/lib/gallery-settings';
 
+const galleryAdminTabs = new Set(['works', 'published', 'page', 'interface']);
+
 async function requireEditor() {
   const session = await auth();
   if (!session?.user || !['OWNER', 'ADMIN', 'EDITOR'].includes(session.user.role)) throw new Error('Insufficient permissions');
 }
 
-function value(form: FormData, key: keyof typeof defaultGallerySettings, max = 700) {
+function value(form: FormData, key: keyof typeof defaultGallerySettings, fallback: string, max = 700) {
+  if (!form.has(String(key))) return fallback;
   return String(form.get(String(key)) ?? '').trim().slice(0, max);
 }
 
@@ -19,37 +22,51 @@ function parseJson(value: FormDataEntryValue | null, fallback: unknown) {
   try { return JSON.parse(String(value ?? '')) as unknown; } catch { return fallback; }
 }
 
-function done(error?: unknown): never {
-  const query = error ? `error=${encodeURIComponent(error instanceof Error ? error.message : 'Gallery settings could not be saved.')}` : 'saved=1';
-  redirect(`/admin/gallery?${query}`);
+function adminTab(value: FormDataEntryValue | null) {
+  const tab = String(value ?? '').trim();
+  return galleryAdminTabs.has(tab) ? tab : 'works';
+}
+
+function done(tab: string, error?: unknown): never {
+  const query = new URLSearchParams({ tab });
+  if (error) query.set('error', error instanceof Error ? error.message : 'Gallery settings could not be saved.');
+  else query.set('saved', '1');
+  redirect(`/admin/gallery?${query.toString()}`);
 }
 
 export async function saveGallerySettings(form: FormData) {
+  const tab = adminTab(form.get('adminTab'));
   try {
     await requireEditor();
+    const existing = await prisma.siteSettings.findUnique({
+      where: { id: 'default' },
+      select: { galleryContent: true },
+    }).catch(() => null);
+    const current = normalizeGallerySettings(existing?.galleryContent);
+
     const galleryContent = normalizeGallerySettings({
-      heroEyebrow: value(form, 'heroEyebrow', 40),
-      heroTitlePrefix: value(form, 'heroTitlePrefix', 60),
-      heroTitleMain: value(form, 'heroTitleMain', 80),
-      heroBridge: value(form, 'heroBridge', 120),
-      heroSecondTitle: value(form, 'heroSecondTitle', 80),
-      heroSecondAccent: value(form, 'heroSecondAccent', 80),
-      heroQuote: value(form, 'heroQuote', 700),
-      scrollPrompt: value(form, 'scrollPrompt', 60),
-      sectionEyebrow: value(form, 'sectionEyebrow', 80),
-      sectionTitle: value(form, 'sectionTitle', 120),
-      filterAll: value(form, 'filterAll', 40),
-      collectionsLabel: value(form, 'collectionsLabel', 60),
-      viewLabel: value(form, 'viewLabel', 40),
-      loadMoreLabel: value(form, 'loadMoreLabel', 60),
-      emptyLabel: value(form, 'emptyLabel', 180),
-      defaultImageDescription: value(form, 'defaultImageDescription', 180),
-      rowsViewTitle: value(form, 'rowsViewTitle', 60),
-      gridViewTitle: value(form, 'gridViewTitle', 60),
-      infiniteViewTitle: value(form, 'infiniteViewTitle', 60),
-      minimizeTitle: value(form, 'minimizeTitle', 60),
-      maximizeTitle: value(form, 'maximizeTitle', 60),
-      items: parseJson(form.get('galleryItems'), []),
+      heroEyebrow: value(form, 'heroEyebrow', current.heroEyebrow, 40),
+      heroTitlePrefix: value(form, 'heroTitlePrefix', current.heroTitlePrefix, 60),
+      heroTitleMain: value(form, 'heroTitleMain', current.heroTitleMain, 80),
+      heroBridge: value(form, 'heroBridge', current.heroBridge, 120),
+      heroSecondTitle: value(form, 'heroSecondTitle', current.heroSecondTitle, 80),
+      heroSecondAccent: value(form, 'heroSecondAccent', current.heroSecondAccent, 80),
+      heroQuote: value(form, 'heroQuote', current.heroQuote, 700),
+      scrollPrompt: value(form, 'scrollPrompt', current.scrollPrompt, 60),
+      sectionEyebrow: value(form, 'sectionEyebrow', current.sectionEyebrow, 80),
+      sectionTitle: value(form, 'sectionTitle', current.sectionTitle, 120),
+      filterAll: value(form, 'filterAll', current.filterAll, 40),
+      collectionsLabel: value(form, 'collectionsLabel', current.collectionsLabel, 60),
+      viewLabel: value(form, 'viewLabel', current.viewLabel, 40),
+      loadMoreLabel: value(form, 'loadMoreLabel', current.loadMoreLabel, 60),
+      emptyLabel: value(form, 'emptyLabel', current.emptyLabel, 180),
+      defaultImageDescription: value(form, 'defaultImageDescription', current.defaultImageDescription, 180),
+      rowsViewTitle: value(form, 'rowsViewTitle', current.rowsViewTitle, 60),
+      gridViewTitle: value(form, 'gridViewTitle', current.gridViewTitle, 60),
+      infiniteViewTitle: value(form, 'infiniteViewTitle', current.infiniteViewTitle, 60),
+      minimizeTitle: value(form, 'minimizeTitle', current.minimizeTitle, 60),
+      maximizeTitle: value(form, 'maximizeTitle', current.maximizeTitle, 60),
+      items: form.has('galleryItems') ? parseJson(form.get('galleryItems'), current.items) : current.items,
     });
 
     await prisma.siteSettings.upsert({
@@ -63,7 +80,7 @@ export async function saveGallerySettings(form: FormData) {
     revalidatePath('/gallery/tag/[tag]', 'page');
     revalidatePath('/sitemap.xml');
   } catch (error) {
-    done(error);
+    done(tab, error);
   }
-  done();
+  done(tab);
 }
