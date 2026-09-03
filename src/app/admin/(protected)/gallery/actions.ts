@@ -6,6 +6,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { defaultGallerySettings, normalizeGallerySettings } from '@/lib/gallery-settings';
 
+const galleryAdminTabs = new Set(['works', 'published', 'page', 'interface']);
+
 async function requireEditor() {
   const session = await auth();
   if (!session?.user || !['OWNER', 'ADMIN', 'EDITOR'].includes(session.user.role)) throw new Error('Insufficient permissions');
@@ -19,12 +21,20 @@ function parseJson(value: FormDataEntryValue | null, fallback: unknown) {
   try { return JSON.parse(String(value ?? '')) as unknown; } catch { return fallback; }
 }
 
-function done(error?: unknown): never {
-  const query = error ? `error=${encodeURIComponent(error instanceof Error ? error.message : 'Gallery settings could not be saved.')}` : 'saved=1';
-  redirect(`/admin/gallery?${query}`);
+function adminTab(value: FormDataEntryValue | null) {
+  const tab = String(value ?? '').trim();
+  return galleryAdminTabs.has(tab) ? tab : 'works';
+}
+
+function done(tab: string, error?: unknown): never {
+  const query = new URLSearchParams({ tab });
+  if (error) query.set('error', error instanceof Error ? error.message : 'Gallery settings could not be saved.');
+  else query.set('saved', '1');
+  redirect(`/admin/gallery?${query.toString()}`);
 }
 
 export async function saveGallerySettings(form: FormData) {
+  const tab = adminTab(form.get('adminTab'));
   try {
     await requireEditor();
     const galleryContent = normalizeGallerySettings({
@@ -63,7 +73,7 @@ export async function saveGallerySettings(form: FormData) {
     revalidatePath('/gallery/tag/[tag]', 'page');
     revalidatePath('/sitemap.xml');
   } catch (error) {
-    done(error);
+    done(tab, error);
   }
-  done();
+  done(tab);
 }
