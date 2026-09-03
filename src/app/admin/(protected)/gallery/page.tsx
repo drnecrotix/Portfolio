@@ -12,6 +12,7 @@ const input = 'mt-2 w-full rounded-xl border border-foreground/10 bg-background 
 const area = `${input} min-h-28 resize-y`;
 const section = 'rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6';
 const label = 'text-sm text-muted-foreground';
+const helper = 'mt-1.5 block text-[10px] leading-4 text-muted-foreground/60';
 const galleryAdminTabs: GalleryAdminTabId[] = ['works', 'published', 'page', 'interface'];
 
 type SearchParams = Promise<{ saved?: string; error?: string; tab?: string }>;
@@ -28,6 +29,7 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
   const settings = normalizeGallerySettings(record?.galleryContent);
   const publishedItems = settings.items.filter((item) => item.isVisible && item.mediaUrl);
   const initialTab = galleryAdminTab(params.tab);
+  const sliderViewTitle = settings.infiniteViewTitle === 'Infinite Preview' ? 'Slider View' : settings.infiniteViewTitle;
 
   const published = (
     <section className={section}>
@@ -72,13 +74,18 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
 
   const interfacePanel = (
     <section className={section}>
-      <div className="border-b border-foreground/10 pb-4"><h3 className="text-lg font-semibold">Gallery interface</h3><p className="mt-1 text-xs text-muted-foreground">Labels used by the Creative Type filter and viewing controls.</p></div>
+      <div className="border-b border-foreground/10 pb-4">
+        <h3 className="text-lg font-semibold">Gallery interface</h3>
+        <p className="mt-1 text-xs text-muted-foreground">Only labels that are actually visible or used as control tooltips on the public Gallery.</p>
+      </div>
       <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        <label className={label}>All types<input name="filterAll" defaultValue={settings.filterAll} className={input} /></label>
-        <label className={label}>Creative Types label<input name="collectionsLabel" defaultValue={settings.collectionsLabel} className={input} /></label>
-        <label className={label}>View<input name="viewLabel" defaultValue={settings.viewLabel} className={input} /></label>
-        <label className={label}>Load more<input name="loadMoreLabel" defaultValue={settings.loadMoreLabel} className={input} /></label>
-        <label className={`${label} md:col-span-2 lg:col-span-2`}>Empty state<input name="emptyLabel" defaultValue={settings.emptyLabel} className={input} /></label>
+        <label className={label}>All filter label<input name="filterAll" defaultValue={settings.filterAll} className={input} /><span className={helper}>Text on the filter that shows every Creative Type.</span></label>
+        <label className={label}>Rows sidebar heading<input name="collectionsLabel" defaultValue={settings.collectionsLabel} className={input} /><span className={helper}>Heading above the Creative Type list in Rows view.</span></label>
+        <label className={label}>Grid load more button<input name="loadMoreLabel" defaultValue={settings.loadMoreLabel} className={input} /><span className={helper}>Button shown when the Grid contains more works than the initial batch.</span></label>
+        <label className={`${label} md:col-span-2 lg:col-span-3`}>No results message<input name="emptyLabel" defaultValue={settings.emptyLabel} className={input} /><span className={helper}>Shown when the selected Creative Type has no matching public works.</span></label>
+        <label className={label}>Rows view tooltip<input name="rowsViewTitle" defaultValue={settings.rowsViewTitle} className={input} /><span className={helper}>Accessible title for the Rows view button.</span></label>
+        <label className={label}>Grid view tooltip<input name="gridViewTitle" defaultValue={settings.gridViewTitle} className={input} /><span className={helper}>Accessible title for the Grid view button.</span></label>
+        <label className={label}>Slider view tooltip<input name="infiniteViewTitle" defaultValue={sliderViewTitle} className={input} /><span className={helper}>Accessible title for the Slider view button that replaces Infinite Preview.</span></label>
       </div>
     </section>
   );
@@ -103,11 +110,6 @@ export default async function GalleryAdminPage({ searchParams }: { searchParams:
         />
 
         <input type="hidden" name="defaultImageDescription" value={settings.defaultImageDescription} readOnly />
-        <input type="hidden" name="rowsViewTitle" value={settings.rowsViewTitle} readOnly />
-        <input type="hidden" name="gridViewTitle" value={settings.gridViewTitle} readOnly />
-        <input type="hidden" name="infiniteViewTitle" value={settings.infiniteViewTitle} readOnly />
-        <input type="hidden" name="minimizeTitle" value={settings.minimizeTitle} readOnly />
-        <input type="hidden" name="maximizeTitle" value={settings.maximizeTitle} readOnly />
 
         <div className="sticky bottom-3 z-20 mt-5 flex justify-end rounded-2xl border border-foreground/10 bg-background/90 p-3 shadow-2xl backdrop-blur-xl sm:bottom-5">
           <button className="w-full rounded-xl bg-foreground px-5 py-3 text-sm font-semibold text-background sm:w-auto">Save Gallery</button>
