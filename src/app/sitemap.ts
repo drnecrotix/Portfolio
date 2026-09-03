@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
+import { galleryItemHref, galleryItemImages, normalizeGallerySettings } from '@/lib/gallery-settings';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 import { defaultPersonalWikiContent, normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
 import { normalizeWikiArticleContent, WIKI_ARTICLE_PREFIX } from '@/lib/wiki-articles';
@@ -7,9 +8,17 @@ import { defaultWikiFaqContent, normalizeWikiFaqContent, WIKI_FAQ_CONFIG_SLUG } 
 
 export const revalidate = 3600;
 
+function absoluteMediaUrl(baseUrl: string, value: string) {
+    if (!value) return '';
+    if (value.startsWith('/')) return `${baseUrl}${value}`;
+    return value;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
     let seo = defaultSeoDefaults;
+    let gallery = normalizeGallerySettings(null);
+    let galleryUpdatedAt: Date | undefined;
     let wikiEnabled = defaultPersonalWikiContent.enabled;
     let faqEnabled = defaultWikiFaqContent.enabled;
     let faqIndexable = defaultWikiFaqContent.indexable;
@@ -21,6 +30,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             prisma.page.findUnique({ where: { slug: WIKI_FAQ_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
         ]);
         seo = normalizeSeoDefaults(settings?.seoDefaults);
+        gallery = normalizeGallerySettings(settings?.galleryContent);
+        galleryUpdatedAt = settings?.updatedAt;
         wikiEnabled = normalizePersonalWikiContent(wikiPage?.content).enabled;
         const faq = normalizeWikiFaqContent(faqPage?.content);
         faqEnabled = faq.enabled;
@@ -31,11 +42,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (!seo.sitemapEnabled) return [];
 
+    const galleryImages = gallery.items
+        .filter((item) => item.isVisible && item.isIndexable)
+        .flatMap(galleryItemImages)
+        .map((image) => absoluteMediaUrl(baseUrl, image))
+        .filter(Boolean);
+
     const staticEntries: MetadataRoute.Sitemap = [
         { url: baseUrl, changeFrequency: 'weekly', priority: 1 },
         ...(seo.sitemapIncludeBlog ? [{ url: `${baseUrl}/blog`, changeFrequency: 'daily' as const, priority: 0.9 }] : []),
         ...(seo.sitemapIncludeProjects ? [{ url: `${baseUrl}/projects`, changeFrequency: 'weekly' as const, priority: 0.9 }] : []),
-        { url: `${baseUrl}/gallery`, changeFrequency: 'weekly', priority: 0.7 },
+        { url: `${baseUrl}/gallery`, lastModified: galleryUpdatedAt, changeFrequency: 'weekly', priority: 0.8, images: galleryImages.length ? galleryImages : undefined },
         { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/lab`, changeFrequency: 'monthly', priority: 0.7 },
         ...(wikiEnabled ? [
@@ -73,8 +90,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             return { url: `${baseUrl}/wiki/${content.slug}`, lastModified: article.updatedAt, changeFrequency: 'monthly' as const, priority: 0.7 };
         }).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
+        const galleryEntries: MetadataRoute.Sitemap = gallery.items
+            .filter((item) => item.isVisible && item.isIndexable && item.slug)
+            .map((item) => {
+                const images = galleryItemImages(item).map((image) => absoluteMediaUrl(baseUrl, image)).filter(Boolean);
+                return {
+                    url: `${baseUrl}${galleryItemHref(item.slug)}`,
+                    lastModified: galleryUpdatedAt,
+                    changeFrequency: 'monthly' as const,
+                    priority: 0.75,
+                    images: images.length ? images : undefined,
+                };
+            });
+
         return [
             ...staticEntries,
+            ...galleryEntries,
             ...wikiEntries,
             ...projects.map((project) => ({ url: `${baseUrl}/projects/${project.slug}`, lastModified: project.updatedAt, changeFrequency: 'monthly' as const, priority: 0.8 })),
             ...posts.map((post) => ({ url: `${baseUrl}/blog/${post.slug}`, lastModified: post.updatedAt, changeFrequency: 'monthly' as const, priority: 0.8 })),
