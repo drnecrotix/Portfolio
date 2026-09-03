@@ -40,18 +40,18 @@ export function GalleryZoomViewer({
     pointerOrigin.current = null;
   }, []);
 
+  const setZoomLevel = useCallback((nextZoom: number) => {
+    const next = clampZoom(nextZoom);
+    setZoom(next);
+    if (next === MIN_ZOOM) setOffset({ x: 0, y: 0 });
+  }, []);
+
   const selectImage = useCallback((index: number) => {
     if (!safeImages.length) return;
     const next = (index + safeImages.length) % safeImages.length;
     setActiveIndex(next);
     resetView();
   }, [resetView, safeImages.length]);
-
-  const setZoomLevel = (nextZoom: number) => {
-    const next = clampZoom(nextZoom);
-    setZoom(next);
-    if (next === MIN_ZOOM) setOffset({ x: 0, y: 0 });
-  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -63,14 +63,14 @@ export function GalleryZoomViewer({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeIndex, resetView, safeImages.length, selectImage, zoom]);
+  }, [activeIndex, resetView, safeImages.length, selectImage, setZoomLevel, zoom]);
 
   if (!safeImages.length) return null;
   const activeImage = safeImages[Math.min(activeIndex, safeImages.length - 1)];
   const watermark = copyrightHolder?.trim() || 'NecrotixLab';
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] select-none">
+    <div className="mx-auto w-full max-w-[1180px] select-none" aria-label={`${title} image viewer`}>
       <div
         className={cn(
           'relative h-[clamp(340px,62vh,680px)] overflow-hidden rounded-[1.25rem] border border-foreground/10 bg-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.22)]',
