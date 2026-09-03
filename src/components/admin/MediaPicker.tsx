@@ -12,6 +12,7 @@ type MediaAsset = {
 
 type MediaKind = 'all' | 'image' | 'video' | 'file';
 type PickerTab = 'library' | 'upload';
+type FileFilter = 'all' | 'pdf';
 
 type Props = {
     value?: string;
@@ -20,6 +21,7 @@ type Props = {
     label?: string;
     initialKind?: MediaKind;
     lockKind?: boolean;
+    fileFilter?: FileFilter;
 };
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif';
@@ -29,18 +31,23 @@ const PDF_ACCEPT = 'application/pdf,.pdf';
 const FILE_ACCEPT = `${PDF_ACCEPT},${ZIP_ACCEPT}`;
 const MEDIA_LIBRARY_EVENT = 'portfolio:media-library-updated';
 
-function acceptsForKind(kind: MediaKind) {
+function acceptsForKind(kind: MediaKind, fileFilter: FileFilter) {
+    const fileAccept = fileFilter === 'pdf' ? PDF_ACCEPT : FILE_ACCEPT;
     if (kind === 'image') return IMAGE_ACCEPT;
     if (kind === 'video') return VIDEO_ACCEPT;
-    if (kind === 'file') return FILE_ACCEPT;
-    return `${IMAGE_ACCEPT},${VIDEO_ACCEPT},${FILE_ACCEPT}`;
+    if (kind === 'file') return fileAccept;
+    return `${IMAGE_ACCEPT},${VIDEO_ACCEPT},${fileAccept}`;
+}
+
+function isPdf(asset: Pick<MediaAsset, 'fileName' | 'mimeType'>) {
+    return asset.mimeType === 'application/pdf' || asset.fileName.toLowerCase().endsWith('.pdf');
 }
 
 function fileBadge(fileName: string, mimeType = '') {
     return mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'FILE';
 }
 
-export function MediaPicker({ value = '', onChange, inputName, label = 'Media', initialKind = 'all', lockKind = false }: Props) {
+export function MediaPicker({ value = '', onChange, inputName, label = 'Media', initialKind = 'all', lockKind = false, fileFilter = 'all' }: Props) {
     const [assets, setAssets] = useState<MediaAsset[]>([]);
     const [internalSelected, setInternalSelected] = useState(value);
     const [open, setOpen] = useState(false);
@@ -84,17 +91,19 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
         return assets.filter((asset) => {
             const isImage = asset.mimeType.startsWith('image/');
             const isVideo = asset.mimeType.startsWith('video/');
+            const isFile = !isImage && !isVideo;
             const typeMatch = activeKind === 'all'
                 || (activeKind === 'image' && isImage)
                 || (activeKind === 'video' && isVideo)
-                || (activeKind === 'file' && !isImage && !isVideo);
+                || (activeKind === 'file' && isFile);
+            const filterMatch = !(fileFilter === 'pdf' && activeKind === 'file') || isPdf(asset);
             const queryMatch = !q
                 || asset.fileName.toLowerCase().includes(q)
                 || asset.altText?.toLowerCase().includes(q)
                 || asset.mimeType.toLowerCase().includes(q);
-            return typeMatch && queryMatch;
+            return typeMatch && filterMatch && queryMatch;
         });
-    }, [activeKind, assets, query]);
+    }, [activeKind, assets, fileFilter, query]);
 
     const setSelection = (url: string) => {
         if (!onChange) setInternalSelected(url);
@@ -109,6 +118,10 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
     const clear = () => setSelection('');
 
     const uploadFile = async (file: File) => {
+        if (fileFilter === 'pdf' && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+            setUploadError('Only PDF documents can be uploaded here.');
+            return;
+        }
         setUploading(true);
         setUploadError('');
         setUploadMessage('');
@@ -119,6 +132,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Upload failed.');
             const asset = data as MediaAsset;
+            if (fileFilter === 'pdf' && !isPdf(asset)) throw new Error('Uploaded asset is not a PDF document.');
             setAssets((current) => [asset, ...current.filter((item) => item.id !== asset.id)]);
             window.dispatchEvent(new CustomEvent<MediaAsset>(MEDIA_LIBRARY_EVENT, { detail: asset }));
             setSelection(asset.url);
@@ -166,15 +180,15 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
 
                     {tab === 'upload' ? (
                         <div className="min-w-0 py-4">
-                            <input ref={fileInputRef} type="file" accept={acceptsForKind(activeKind)} disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file); }} className="block w-full min-w-0 cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30" />
-                            <p className="mt-3 text-[11px] leading-relaxed text-white/30">Allowed: images, videos, PDF documents and ZIP archives. Maximum file size: 10 MB.</p>
+                            <input ref={fileInputRef} type="file" accept={acceptsForKind(activeKind, fileFilter)} disabled={uploading} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadFile(file); }} className="block w-full min-w-0 cursor-pointer rounded-xl border border-dashed border-white/15 bg-white/[0.025] p-5 text-xs text-white/55 file:mr-4 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-semibold file:text-black hover:border-white/30" />
+                            <p className="mt-3 text-[11px] leading-relaxed text-white/30">{fileFilter === 'pdf' ? 'Allowed: PDF documents only.' : 'Allowed: images, videos, PDF documents and ZIP archives.'} Maximum file size: 10 MB.</p>
                             {uploading && <p className="mt-3 break-words text-xs text-sky-300">Uploading and adding to library…</p>}
                             {uploadError && <p className="mt-3 max-w-full break-words text-xs text-red-300">{uploadError}</p>}
                         </div>
                     ) : (
                         <>
                             <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row">
-                                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search media..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
+                                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={fileFilter === 'pdf' ? 'Search PDF documents...' : 'Search media...'} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-white/25 focus:border-white/30" />
                                 {!lockKind && (
                                     <div className="flex flex-wrap gap-2">
                                         {(['all', 'image', 'video', 'file'] as const).map((mediaKind) => (
