@@ -60,9 +60,11 @@ export async function saveGallerySettings(form: FormData) {
     const interfaceFields = tab === 'interface' ? {
       filterAll: value(form, 'filterAll', current.filterAll, 40),
       collectionsLabel: value(form, 'collectionsLabel', current.collectionsLabel, 60),
-      viewLabel: value(form, 'viewLabel', current.viewLabel, 40),
       loadMoreLabel: value(form, 'loadMoreLabel', current.loadMoreLabel, 60),
       emptyLabel: value(form, 'emptyLabel', current.emptyLabel, 180),
+      rowsViewTitle: value(form, 'rowsViewTitle', current.rowsViewTitle, 60),
+      gridViewTitle: value(form, 'gridViewTitle', current.gridViewTitle, 60),
+      infiniteViewTitle: value(form, 'infiniteViewTitle', current.infiniteViewTitle, 60),
     } : {};
 
     const galleryContent = normalizeGallerySettings({
