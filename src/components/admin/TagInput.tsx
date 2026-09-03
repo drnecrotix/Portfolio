@@ -4,29 +4,53 @@ import { useState, type KeyboardEvent } from 'react';
 import { Plus, X } from 'lucide-react';
 
 type Props = {
-    name: string;
+    name?: string;
     initialTags?: string[];
+    value?: string[];
+    onChange?: (tags: string[]) => void;
     label?: string;
+    helperText?: string;
+    maxTags?: number;
+    maxLength?: number;
+    stripHash?: boolean;
 };
 
-function normalizeTag(value: string) {
-    return value.trim().replace(/\s+/g, ' ').slice(0, 80);
+function normalizeTag(value: string, maxLength: number, stripHash: boolean) {
+    const normalized = value.trim().replace(/\s+/g, ' ');
+    return (stripHash ? normalized.replace(/^#+/, '') : normalized).slice(0, maxLength);
 }
 
-export function TagInput({ name, initialTags = [], label = 'Tags' }: Props) {
-    const [tags, setTags] = useState(() => Array.from(new Set(initialTags.map(normalizeTag).filter(Boolean))));
+export function TagInput({
+    name,
+    initialTags = [],
+    value,
+    onChange,
+    label = 'Tags',
+    helperText = 'Separate concepts into individual tags. Existing tags can be removed with ×.',
+    maxTags = 50,
+    maxLength = 80,
+    stripHash = false,
+}: Props) {
+    const controlled = Array.isArray(value);
+    const normalize = (tag: string) => normalizeTag(tag, maxLength, stripHash);
+    const [internalTags, setInternalTags] = useState(() => Array.from(new Set(initialTags.map(normalize).filter(Boolean))).slice(0, maxTags));
     const [draft, setDraft] = useState('');
+    const tags = controlled ? value.map(normalize).filter(Boolean).slice(0, maxTags) : internalTags;
+
+    const commit = (next: string[]) => {
+        const normalized = Array.from(new Set(next.map(normalize).filter(Boolean))).slice(0, maxTags);
+        if (!controlled) setInternalTags(normalized);
+        onChange?.(normalized);
+    };
 
     const addDraft = () => {
-        const parts = draft.split(',').map(normalizeTag).filter(Boolean);
+        const parts = draft.split(',').map(normalize).filter(Boolean);
         if (parts.length === 0) return;
-        setTags((current) => Array.from(new Set([...current, ...parts])));
+        commit([...tags, ...parts]);
         setDraft('');
     };
 
-    const removeTag = (tag: string) => {
-        setTags((current) => current.filter((item) => item !== tag));
-    };
+    const removeTag = (tag: string) => commit(tags.filter((item) => item !== tag));
 
     const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter' || event.key === ',') {
@@ -35,24 +59,24 @@ export function TagInput({ name, initialTags = [], label = 'Tags' }: Props) {
             return;
         }
         if (event.key === 'Backspace' && !draft && tags.length > 0) {
-            setTags((current) => current.slice(0, -1));
+            commit(tags.slice(0, -1));
         }
     };
 
     return (
         <div>
             <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="text-xs text-white/45">{label}</span>
-                <span className="text-[10px] text-white/25">Press Enter or comma</span>
+                <span className="text-xs text-muted-foreground">{label}</span>
+                <span className="text-[10px] text-muted-foreground/60">Enter or comma · {tags.length}/{maxTags}</span>
             </div>
-            <input type="hidden" name={name} value={tags.join(', ')} />
-            <div className="rounded-xl border border-white/10 bg-white/[0.035] p-2 transition focus-within:border-white/30 focus-within:bg-white/[0.05]">
+            {name && <input type="hidden" name={name} value={tags.join(', ')} />}
+            <div className="rounded-xl border border-foreground/10 bg-background p-2 transition focus-within:border-foreground/30 focus-within:ring-2 focus-within:ring-foreground/5">
                 {tags.length > 0 && (
                     <div className="mb-2 flex flex-wrap gap-1.5">
                         {tags.map((tag) => (
-                            <span key={tag} className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.07] px-2 py-1 text-[11px] text-white/75">
-                                <span>{tag}</span>
-                                <button type="button" onClick={() => removeTag(tag)} className="rounded p-0.5 text-white/35 transition hover:bg-white/10 hover:text-white" aria-label={`Remove ${tag}`}>
+                            <span key={tag} className="inline-flex items-center gap-1 rounded-md border border-foreground/10 bg-foreground/[0.06] px-2 py-1 text-[11px] text-foreground/80">
+                                <span>{stripHash ? '#' : ''}{tag}</span>
+                                <button type="button" onClick={() => removeTag(tag)} className="rounded p-0.5 text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground" aria-label={`Remove ${tag}`}>
                                     <X className="h-3 w-3" />
                                 </button>
                             </span>
@@ -66,14 +90,14 @@ export function TagInput({ name, initialTags = [], label = 'Tags' }: Props) {
                         onKeyDown={handleKeyDown}
                         onBlur={() => { if (draft.trim()) addDraft(); }}
                         placeholder="Add tag"
-                        className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-sm text-white outline-none placeholder:text-white/25"
+                        className="min-w-0 flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground/50"
                     />
-                    <button type="button" onClick={addDraft} disabled={!draft.trim()} className="inline-flex h-8 items-center gap-1 rounded-lg border border-white/10 px-2.5 text-[11px] font-medium text-white/60 transition hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+                    <button type="button" onClick={addDraft} disabled={!draft.trim() || tags.length >= maxTags} className="inline-flex h-8 items-center gap-1 rounded-lg border border-foreground/10 px-2.5 text-[11px] font-medium text-muted-foreground transition hover:bg-foreground/[0.06] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30">
                         <Plus className="h-3.5 w-3.5" /> Add
                     </button>
                 </div>
             </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-white/25">Separate concepts into individual tags. Existing tags can be removed with ×.</p>
+            <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground/60">{helperText}</p>
         </div>
     );
 }
