@@ -63,7 +63,6 @@ export const defaultFooterSettings: FooterSettings = {
     ],
     aboutLabel: 'About',
     aboutLinks: [
-        { label: 'Achievements', href: '/achievements' },
         { label: 'Lab', href: '/lab' },
         { label: 'Journey', href: '/journey' },
         { label: 'Projects', href: '/projects' },
@@ -103,6 +102,10 @@ function normalizeInternalLink(item: FooterLinkSetting): FooterLinkSetting {
     return item;
 }
 
+function removeRetiredLinks(items: FooterLinkSetting[]) {
+    return items.filter((item) => item.href !== '/achievements');
+}
+
 function ensureLegalOverviewLink(items: FooterLinkSetting[]) {
     return items.some((item) => item.href === legalOverviewLink.href)
         ? items
@@ -134,8 +137,8 @@ export function normalizeFooterSettings(value: unknown): FooterSettings {
         instagramUrl: typeof source.instagramUrl === 'string' ? source.instagramUrl.trim().slice(0, 2048) : defaultFooterSettings.instagramUrl,
         workspaceUrl: text(source.workspaceUrl, defaultFooterSettings.workspaceUrl, 2048),
         marquee: marquee.length ? marquee : defaultFooterSettings.marquee,
-        quickLinks: ensureLegalOverviewLink(links(source.quickLinks, defaultFooterSettings.quickLinks, 6).map(normalizeInternalLink)),
+        quickLinks: ensureLegalOverviewLink(removeRetiredLinks(links(source.quickLinks, defaultFooterSettings.quickLinks, 6).map(normalizeInternalLink))),
         aboutLabel: text(source.aboutLabel, defaultFooterSettings.aboutLabel, 80),
-        aboutLinks: links(source.aboutLinks, defaultFooterSettings.aboutLinks, 8).map(normalizeInternalLink),
+        aboutLinks: removeRetiredLinks(links(source.aboutLinks, defaultFooterSettings.aboutLinks, 8).map(normalizeInternalLink)),
     };
 }
