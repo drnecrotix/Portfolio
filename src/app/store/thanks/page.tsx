@@ -6,17 +6,23 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Order | Necrotix Lab', robots: { index: false, follow: false } };
 
+async function getActiveCheckoutSession(session: string) {
+    if (!/^[A-Za-z0-9_-]{20,80}$/.test(session)) return null;
+    return prisma.storeCheckoutSession.findFirst({
+        where: {
+            token: session,
+            expiresAt: { gt: new Date() },
+        },
+        include: { product: { include: { files: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] } } } },
+    });
+}
+
 export default async function StoreThanksPage({ searchParams }: { searchParams: Promise<{ session?: string }> }) {
     const { session: rawSession } = await searchParams;
     const session = String(rawSession ?? '').trim();
-    const checkout = /^[A-Za-z0-9_-]{20,80}$/.test(session)
-        ? await prisma.storeCheckoutSession.findUnique({
-            where: { token: session },
-            include: { product: { include: { files: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] } } } },
-        })
-        : null;
+    const checkout = await getActiveCheckoutSession(session);
 
-    if (!checkout || checkout.expiresAt.getTime() <= Date.now()) {
+    if (!checkout) {
         return (
             <main className="min-h-screen bg-background px-6 pb-24 pt-36 text-foreground">
                 <div className="mx-auto max-w-2xl rounded-3xl border border-foreground/10 bg-foreground/[0.025] p-8 text-center sm:p-12">
