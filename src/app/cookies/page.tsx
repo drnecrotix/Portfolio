@@ -59,8 +59,9 @@ export default function CookiesPage() {
             </section>
 
             <section>
-                <h2>3. Essential and functional storage</h2>
+                <h2>3. Essential, functional and aggregate measurement storage</h2>
                 <p className="mt-4">Storage that is strictly necessary to provide a feature explicitly requested by you, authenticate authorised administrators, remember a security choice or maintain essential site operation may be used without a separate advertising-style consent banner. Functional identifiers such as Like cookies are created only when the corresponding interactive feature is used.</p>
+                <p className="mt-3">NecrotixLab also runs limited first-party A/B tests to compare interface variants. The experiment variant is assigned for each homepage request and is not stored in cookies, local storage or session storage. The server stores only aggregate counters such as exposures, project opens and section visibility; it does not create an experiment visitor profile.</p>
                 <p className="mt-3">The current application code does not intentionally set first-party advertising or cross-site behavioural advertising cookies.</p>
             </section>
 
