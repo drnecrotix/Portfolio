@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { GalleryPageClient } from '@/components/sections/gallery/GalleryPageClient';
 import { prisma } from '@/lib/prisma';
+import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from '@/lib/content-watermark';
 import { galleryItemHref, galleryItemImages, normalizeGallerySettings } from '@/lib/gallery-settings';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
 
@@ -59,7 +60,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function GalleryPage() {
-  const { siteName, content } = await loadGallery();
+  const [{ siteName, content }, watermarkPage] = await Promise.all([
+    loadGallery(),
+    prisma.page.findUnique({ where: { slug: CONTENT_WATERMARK_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
+  ]);
+  const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
   const visibleItems = content.items.filter((item) => item.isVisible && item.mediaUrl);
   const indexableItems = visibleItems.filter((item) => item.isIndexable && item.slug);
   const gallerySchema = {
@@ -83,7 +88,7 @@ export default async function GalleryPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(gallerySchema).replace(/</g, '\\u003c') }} />
-      <GalleryPageClient content={content} />
+      <GalleryPageClient content={content} watermark={watermark} />
     </>
   );
 }
