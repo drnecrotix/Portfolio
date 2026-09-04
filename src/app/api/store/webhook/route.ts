@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
         if (eventName === 'order_refunded') {
             const existing = await prisma.storeOrder.findUnique({ where: { providerOrderId } });
-            if (existing) {
+            if (existing && existing.provider === 'lemonsqueezy') {
                 await prisma.$transaction([
                     prisma.storeOrder.update({ where: { id: existing.id }, data: { status: 'REFUNDED' } }),
                     prisma.storeDownloadGrant.updateMany({ where: { orderId: existing.id }, data: { revokedAt: new Date() } }),
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
             prisma.storeProduct.findUnique({ where: { id: productId } }),
             prisma.storeCheckoutSession.findUnique({ where: { token: sessionToken } }),
         ]);
-        if (!product || !checkoutSession || checkoutSession.productId !== product.id) {
+        if (!product || product.paymentProvider !== 'LEMON_SQUEEZY' || !checkoutSession || checkoutSession.productId !== product.id) {
             throw new Error('Store checkout session could not be matched.');
         }
 
@@ -76,6 +76,7 @@ export async function POST(request: Request) {
             const order = await tx.storeOrder.upsert({
                 where: { providerOrderId },
                 create: {
+                    provider: 'lemonsqueezy',
                     providerOrderId,
                     email,
                     customerName: text(attributes.user_name) || null,
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
                     paidAt: now,
                 },
                 update: {
+                    provider: 'lemonsqueezy',
                     email,
                     customerName: text(attributes.user_name) || null,
                     currency: text(attributes.currency) || product.currency,
