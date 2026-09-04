@@ -67,6 +67,39 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Require release version for app changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          changed="$(git diff --diff-filter=ACMR --name-only "$BASE_SHA" "$HEAD_SHA")"
+          releasable="$(printf '%s\n' "$changed" | grep -E '^(src/|prisma/|scripts/|public/|next\.config\.|middleware\.|package\.json$)' || true)"
+          if [ -z "$releasable" ]; then
+            echo "No deployed application files changed; version bump is not required."
+            exit 0
+          fi
+
+          base_version="$(git show "$BASE_SHA:package.json" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).version||''))")"
+          head_version="$(node -p "require('./package.json').version")"
+
+          echo "Base version: $base_version"
+          echo "Head version: $head_version"
+          echo "Release-relevant files:"
+          echo "$releasable"
+
+          if [ -z "$head_version" ] || [ "$head_version" = "$base_version" ]; then
+            echo "::error::Application files changed without a package.json version bump. Admin > Portfolio Updates detects releases by version, so increment the version before merge."
+            exit 1
+          fi
+
+          release_file="docs/releases/v${head_version}.md"
+          if [ ! -f "$release_file" ]; then
+            echo "::error::Missing release notes: $release_file"
+            exit 1
+          fi
+          echo "Release version guard passed with $release_file."
       - uses: actions/setup-node@v4
         with:
           node-version: 22
