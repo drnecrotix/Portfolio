@@ -52,6 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { url: baseUrl, changeFrequency: 'weekly', priority: 1 },
         ...(seo.sitemapIncludeBlog ? [{ url: `${baseUrl}/blog`, changeFrequency: 'daily' as const, priority: 0.9 }] : []),
         ...(seo.sitemapIncludeProjects ? [{ url: `${baseUrl}/projects`, changeFrequency: 'weekly' as const, priority: 0.9 }] : []),
+        { url: `${baseUrl}/store`, changeFrequency: 'weekly', priority: 0.9 },
         { url: `${baseUrl}/gallery`, lastModified: galleryUpdatedAt, changeFrequency: 'weekly', priority: 0.8, images: galleryImages.length ? galleryImages : undefined },
         { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/lab`, changeFrequency: 'monthly', priority: 0.7 },
@@ -73,7 +74,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     try {
         const now = new Date();
-        const [projects, posts, pages, wikiArticles] = await Promise.all([
+        const [projects, posts, pages, wikiArticles, storeProducts] = await Promise.all([
             seo.sitemapIncludeProjects
                 ? prisma.project.findMany({ where: { status: { in: ['ONGOING', 'COMPLETED'] } }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
@@ -86,6 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             wikiEnabled
                 ? prisma.page.findMany({ where: { status: 'PUBLISHED', slug: { startsWith: WIKI_ARTICLE_PREFIX } }, select: { content: true, updatedAt: true } })
                 : Promise.resolve([]),
+            prisma.storeProduct.findMany({ where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] }, select: { slug: true, updatedAt: true } }),
         ]);
 
         const wikiEntries: MetadataRoute.Sitemap = wikiArticles.map((article) => {
@@ -113,6 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             ...wikiEntries,
             ...projects.map((project) => ({ url: `${baseUrl}/projects/${project.slug}`, lastModified: project.updatedAt, changeFrequency: 'monthly' as const, priority: 0.8 })),
             ...posts.map((post) => ({ url: `${baseUrl}/blog/${post.slug}`, lastModified: post.updatedAt, changeFrequency: 'monthly' as const, priority: 0.8 })),
+            ...storeProducts.map((product) => ({ url: `${baseUrl}/store/${product.slug}`, lastModified: product.updatedAt, changeFrequency: 'monthly' as const, priority: 0.85 })),
             ...pages.map((page) => ({ url: `${baseUrl}/pages/${page.slug}`, lastModified: page.updatedAt, changeFrequency: 'monthly' as const, priority: 0.6 })),
         ];
     } catch {
