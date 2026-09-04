@@ -36,18 +36,18 @@ export default async function StorePage() {
     }));
 
     return (
-        <main className="min-h-screen bg-background px-5 pb-28 pt-32 text-foreground sm:px-7 md:px-10 lg:px-14 xl:px-20">
-            <div className="mx-auto max-w-[1500px]">
-                <header className="relative overflow-hidden rounded-[2.4rem] border border-foreground/10 bg-foreground/[0.018] px-6 py-9 shadow-[0_30px_100px_rgba(0,0,0,0.14)] sm:px-9 sm:py-12 lg:px-12 lg:py-14">
+        <main className="min-h-screen w-full max-w-full overflow-x-clip bg-background px-4 pb-24 pt-28 text-foreground sm:px-7 sm:pb-28 sm:pt-32 md:px-10 lg:px-14 xl:px-20">
+            <div className="mx-auto min-w-0 w-full max-w-[1500px]">
+                <header className="relative min-w-0 max-w-full overflow-hidden rounded-[1.6rem] border border-foreground/10 bg-foreground/[0.018] px-5 py-8 shadow-[0_30px_100px_rgba(0,0,0,0.14)] sm:rounded-[2.4rem] sm:px-9 sm:py-12 lg:px-12 lg:py-14">
                     <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-foreground/[0.045] blur-3xl" />
-                    <div className="relative max-w-4xl">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-foreground/10 bg-background/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground backdrop-blur-xl">
-                            <ShoppingBag className="h-3.5 w-3.5" /> Necrotix Lab Marketplace
+                    <div className="relative min-w-0 max-w-4xl">
+                        <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-foreground/10 bg-background/70 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground backdrop-blur-xl sm:text-[10px] sm:tracking-[0.22em]">
+                            <ShoppingBag className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Necrotix Lab Marketplace</span>
                         </div>
-                        <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-[-0.04em] sm:text-5xl lg:text-6xl">Creative digital goods, built in the Lab.</h1>
-                        <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">Original digital art, downloadable resources, templates and software-related assets. Every product is delivered digitally with protected access.</p>
-                        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold text-muted-foreground">
-                            <span className="inline-flex items-center gap-2"><Sparkles className="h-3.5 w-3.5" /> Curated releases</span>
+                        <h1 className="mt-5 max-w-3xl break-words text-[2.15rem] font-black leading-[1.02] tracking-[-0.04em] [overflow-wrap:anywhere] sm:text-5xl lg:text-6xl">Creative digital goods, built in the Lab.</h1>
+                        <p className="mt-5 max-w-2xl break-words text-sm leading-7 text-muted-foreground [overflow-wrap:anywhere] sm:text-base">Original digital art, downloadable resources, templates and software-related assets. Every product is delivered digitally with protected access.</p>
+                        <div className="mt-6 flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-muted-foreground sm:gap-x-6">
+                            <span className="inline-flex min-w-0 items-center gap-2"><Sparkles className="h-3.5 w-3.5 shrink-0" /> Curated releases</span>
                             <span>Instant digital delivery</span>
                             <span>{products.length} product{products.length === 1 ? '' : 's'} available</span>
                         </div>
