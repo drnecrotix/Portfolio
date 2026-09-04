@@ -7,9 +7,10 @@ import type { PublicPost } from '@/lib/cms-posts';
 
 type Props = {
     posts: PublicPost[];
+    onPostOpen?: () => void;
 };
 
-export function HomeBlogSection({ posts }: Props) {
+export function HomeBlogSection({ posts, onPostOpen }: Props) {
     const visiblePosts = posts.slice(0, 5);
     if (!visiblePosts.length) return null;
 
@@ -28,7 +29,7 @@ export function HomeBlogSection({ posts }: Props) {
                         <p className="font-mono text-sm font-semibold uppercase tracking-[0.28em] text-foreground/80">Journal</p>
                         <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[10px] text-muted-foreground">{visiblePosts.length}</span>
                     </div>
-                    <Link href="/blog" className="group inline-flex items-center gap-2 text-sm font-medium text-foreground/65 transition hover:text-foreground">
+                    <Link href="/blog" onClick={onPostOpen} className="group inline-flex items-center gap-2 text-sm font-medium text-foreground/65 transition hover:text-foreground">
                         View all posts <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                     </Link>
                 </motion.div>
@@ -44,6 +45,7 @@ export function HomeBlogSection({ posts }: Props) {
                         >
                             <Link
                                 href={`/blog/${post.slug}`}
+                                onClick={onPostOpen}
                                 className="group grid grid-cols-[38px_minmax(0,1fr)_auto] items-center gap-4 border-b border-foreground/10 px-1 py-5 transition-colors hover:bg-foreground/[0.025] sm:grid-cols-[48px_160px_minmax(0,1fr)_160px_28px] sm:gap-6 sm:px-4 sm:py-6"
                             >
                                 <span className="font-mono text-[11px] tabular-nums text-muted-foreground/60 sm:text-xs">{String(index + 1).padStart(2, '0')}</span>
