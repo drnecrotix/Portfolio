@@ -70,7 +70,7 @@ model Project {
   highlights      String[]
   repoUrl         String?
   demoUrl         String?
-  role            String?
+  role             String?
   timeline        String?
   team            String?
   sortOrder       Int           @default(0)
@@ -216,6 +216,18 @@ model GalleryWorkLike {
 
   @@unique([slug, visitorId])
   @@index([slug, createdAt])
+}
+
+model ExperimentMetric {
+  experimentId String
+  variant      String
+  event        String
+  count        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@id([experimentId, variant, event])
+  @@index([experimentId, updatedAt])
 }
 
 model SiteSettings {
