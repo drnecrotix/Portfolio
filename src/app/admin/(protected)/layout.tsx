@@ -23,6 +23,10 @@ const navGroups = [
         ['Pages', '/admin/pages'],
         ['Media', '/admin/media'],
     ]],
+    ['Commerce', [
+        ['Digital Store', '/admin/store'],
+        ['Orders', '/admin/store/orders'],
+    ]],
     ['Appearance', [
         ['Navigation', '/admin/navigation'],
         ['Footer', '/admin/footer'],
