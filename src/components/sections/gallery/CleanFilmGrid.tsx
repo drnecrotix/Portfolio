@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -182,15 +182,6 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
         syncSliderIndex();
     };
 
-    const handleSliderWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-        const element = sliderRef.current;
-        if (!element) return;
-        if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-            event.preventDefault();
-            element.scrollLeft += event.deltaY;
-        }
-    };
-
     const preventSliderClickAfterDrag = (event: React.MouseEvent<HTMLAnchorElement>) => {
         if (!suppressSliderClickRef.current) return;
         event.preventDefault();
@@ -205,6 +196,21 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     };
 
     const sliderTitle = content.infiniteViewTitle === 'Infinite Preview' ? 'Slider View' : content.infiniteViewTitle;
+
+    useEffect(() => {
+        if (viewMode !== 'slider') return;
+        const element = sliderRef.current;
+        if (!element) return;
+
+        const handleWheel = (event: WheelEvent) => {
+            if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+            if (event.cancelable) event.preventDefault();
+            element.scrollLeft += event.deltaY;
+        };
+
+        element.addEventListener('wheel', handleWheel, { passive: false });
+        return () => element.removeEventListener('wheel', handleWheel);
+    }, [viewMode]);
 
     return (
         <section className="relative min-h-screen px-4 py-20 sm:px-6 md:px-10 lg:px-14 xl:px-16">
@@ -313,7 +319,6 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
                                 ref={sliderRef}
                                 data-lenis-prevent
                                 onScroll={syncSliderIndex}
-                                onWheel={handleSliderWheel}
                                 onPointerDown={handleSliderPointerDown}
                                 onPointerMove={handleSliderPointerMove}
                                 onPointerUp={finishSliderPointer}
