@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { readDigitalProductFile } from '@/lib/store-storage';
+import {
+    fetchExternalDigitalProduct,
+    isExternalDigitalProductStorageKey,
+    readDigitalProductFile,
+} from '@/lib/store-storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +30,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     if (!file) return NextResponse.json({ error: 'File not found.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
 
     try {
+        if (isExternalDigitalProductStorageKey(file.storageKey)) {
+            const remote = await fetchExternalDigitalProduct(file.storageKey);
+            await prisma.storeDownloadGrant.update({ where: { id: grant.id }, data: { downloads: { increment: 1 } } });
+            const headers = new Headers({
+                'Content-Type': remote.headers.get('content-type') || file.mimeType || 'application/octet-stream',
+                'Content-Disposition': `attachment; filename="${safeFileName(file.fileName)}"`,
+                'Cache-Control': 'private, no-store, max-age=0',
+                'X-Content-Type-Options': 'nosniff',
+            });
+            const contentLength = remote.headers.get('content-length');
+            if (contentLength && /^\d+$/.test(contentLength)) headers.set('Content-Length', contentLength);
+            return new Response(remote.body, { status: 200, headers });
+        }
+
         const stored = await readDigitalProductFile(file.storageKey);
         const responseBody = new ArrayBuffer(stored.bytes.byteLength);
         new Uint8Array(responseBody).set(stored.bytes);
