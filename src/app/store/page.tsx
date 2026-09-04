@@ -65,7 +65,7 @@ export default async function StorePage() {
                                     <div className="mt-5 flex items-end justify-between gap-4 border-t border-foreground/10 pt-4">
                                         <div>
                                             {product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents ? <p className="text-xs text-muted-foreground line-through">{money(product.compareAtPriceCents, product.currency)}</p> : null}
-                                            <p className="text-lg font-black">{product.priceCents === 0 ? 'Free' : money(product.priceCents, product.currency)}</p>
+                                            <p className="text-lg font-black">{product.priceCents === 0 ? 'Free download' : money(product.priceCents, product.currency)}</p>
                                         </div>
                                         <span className="text-xs text-muted-foreground">{product._count.files} {product._count.files === 1 ? 'file' : 'files'}</span>
                                     </div>
