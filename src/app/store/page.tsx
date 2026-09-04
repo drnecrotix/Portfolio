@@ -32,6 +32,7 @@ export default async function StorePage() {
         coverImageUrl: product.coverImageUrl,
         featured: product.featured,
         fileCount: product._count.files,
+        createdAt: product.createdAt.toISOString(),
     }));
 
     return (
