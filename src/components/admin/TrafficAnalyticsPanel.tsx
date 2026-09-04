@@ -167,7 +167,7 @@ export function TrafficAnalyticsPanel({
 
             <TrafficChart rows={data?.chart || []} />
 
-            <div className={cn('mt-5 grid gap-4', showMap ? 'xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]' : 'lg:grid-cols-2')}>
+            <div className={cn('mt-5 grid gap-4', showMap && 'xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]')}>
                 {showMap ? (
                     <div>
                         <div className="mb-3 flex items-center justify-between gap-3">
@@ -178,7 +178,7 @@ export function TrafficAnalyticsPanel({
                     </div>
                 ) : null}
 
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                <div className={cn('grid gap-4 sm:grid-cols-2', showMap && 'xl:grid-cols-1')}>
                     <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4">
                         <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Top countries</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Views</span></div>
                         <div className="mt-3 space-y-2.5">
