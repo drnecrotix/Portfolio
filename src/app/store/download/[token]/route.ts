@@ -27,13 +27,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
 
     try {
         const stored = await readDigitalProductFile(file.storageKey);
+        const responseBody = new ArrayBuffer(stored.bytes.byteLength);
+        new Uint8Array(responseBody).set(stored.bytes);
         await prisma.storeDownloadGrant.update({ where: { id: grant.id }, data: { downloads: { increment: 1 } } });
-        return new Response(stored.bytes, {
+        return new Response(responseBody, {
             status: 200,
             headers: {
                 'Content-Type': stored.contentType || file.mimeType || 'application/octet-stream',
                 'Content-Disposition': `attachment; filename="${safeFileName(file.fileName)}"`,
-                'Content-Length': String(stored.bytes.byteLength),
+                'Content-Length': String(responseBody.byteLength),
                 'Cache-Control': 'private, no-store, max-age=0',
                 'X-Content-Type-Options': 'nosniff',
             },
