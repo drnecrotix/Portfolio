@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { CheckCircle2, CircleDot, Database, ShieldCheck } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { StatusToast } from '@/components/admin/StatusToast';
 import { PortfolioUpdater, type PortfolioUpdateStatus } from '@/components/admin/PortfolioUpdater';
+import { TrafficAnalyticsPanel } from '@/components/admin/TrafficAnalyticsPanel';
 import { normalizeAssistantSettings } from '@/lib/assistant-settings';
 import { installedPortfolioVersion } from '@/lib/installed-version';
+import { TRAFFIC_METRIC_RETENTION_DAYS, TRAFFIC_SESSION_RETENTION_HOURS } from '@/lib/traffic-analytics';
 import { purgeApplicationCache } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +24,7 @@ const panelClass = 'rounded-2xl border border-foreground/10 bg-foreground/[0.025
 
 export default async function AdminDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
     const params = await searchParams;
-    const [projects, posts, pages, media, drafts, publishedPosts, activeUsers, revisions, settings, siteMode, recentRevisions] = await prisma.$transaction([
+    const [projects, posts, pages, media, drafts, publishedPosts, activeUsers, revisions, settings, siteMode] = await prisma.$transaction([
         prisma.project.count(),
         prisma.post.count(),
         prisma.page.count(),
@@ -32,7 +35,6 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         prisma.revision.count(),
         prisma.siteSettings.findUnique({ where: { id: 'default' } }),
         prisma.siteModeSettings.findUnique({ where: { id: 'default' } }),
-        prisma.revision.findMany({ take: 6, orderBy: { createdAt: 'desc' }, include: { user: { select: { name: true, email: true } } } }),
     ]);
 
     const cards = [['Projects', projects], ['Posts', posts], ['Pages', pages], ['Media', media], ['Draft posts', drafts], ['Published', publishedPosts], ['Active users', activeUsers], ['Revisions', revisions]];
@@ -84,31 +86,43 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
                 </div>
             </section>
 
-            <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(260px,0.5fr)]">
-                <div className={`${panelClass} min-w-0 p-5 sm:p-6`}>
-                    <div className="flex flex-col gap-3 border-b border-foreground/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
-                        <div><p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Activity</p><h3 className="mt-2 text-lg font-semibold">Recent revisions</h3></div>
-                        <Link href="/admin/revisions" className="text-sm text-muted-foreground transition hover:text-foreground">View history →</Link>
-                    </div>
-                    <div className="divide-y divide-foreground/10">
-                        {recentRevisions.length ? recentRevisions.map((revision) => (
-                            <div key={revision.id} className="grid gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                                <div className="min-w-0">
-                                    <p className="break-words text-sm text-foreground/85">{revision.note || `${revision.entityType} revision`}</p>
-                                    <p className="mt-1 break-words text-[10px] uppercase tracking-[0.14em] text-muted-foreground sm:text-xs">{revision.entityType} · {revision.user?.name ?? revision.user?.email ?? 'System'}</p>
-                                </div>
-                                <time className="text-xs text-muted-foreground sm:text-right">{revision.createdAt.toLocaleString('en-GB', { timeZone: settings?.timezone ?? 'Europe/Sofia' })}</time>
-                            </div>
-                        )) : <p className="py-8 text-sm text-muted-foreground">No revisions have been recorded yet.</p>}
-                    </div>
-                </div>
+            <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.45fr)]">
+                <TrafficAnalyticsPanel
+                    title="Traffic overview"
+                    description="Public traffic trend with 24h, 7-day and 30-day views. Only country and device category are aggregated."
+                />
 
-                <div className={`${panelClass} p-5 sm:p-6`}>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Quick access</p>
-                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-1">
-                        {[['New project', '/admin/projects/new'], ['New publication', '/admin/blog/new'], ['Manage media', '/admin/media'], ['AI Assistant', '/admin/assistant'], ['Site Mode', '/admin/site-mode'], ['Users & roles', '/admin/users']].map(([label, href]) => (
-                            <Link key={href} href={href} className="min-w-0 rounded-xl border border-foreground/10 px-3 py-3 text-sm text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground">{label}</Link>
-                        ))}
+                <div className="space-y-4">
+                    <div className={`${panelClass} p-5 sm:p-6`}>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Site health</p>
+                        <h3 className="mt-2 text-lg font-semibold">Production status</h3>
+                        <div className="mt-5 space-y-3 text-sm">
+                            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="size-4 text-emerald-500" /> Application</span><span className="font-medium">Online</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><Database className="size-4 text-emerald-500" /> Database</span><span className="font-medium">Connected</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><CircleDot className="size-4" /> Site mode</span><span className="font-mono text-xs">{siteMode?.mode ?? 'NORMAL'}</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><ShieldCheck className="size-4" /> Version</span><span className="font-mono text-xs">v{currentVersion}</span></div>
+                        </div>
+                        <div className="mt-5 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-xs leading-5 text-muted-foreground">
+                            Traffic aggregates expire after about {TRAFFIC_METRIC_RETENTION_DAYS} days. Anonymous live-session hashes expire after about {TRAFFIC_SESSION_RETENTION_HOURS} hours.
+                        </div>
+                    </div>
+
+                    <div className={`${panelClass} p-5 sm:p-6`}>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Quick access</p>
+                        <div className="mt-4 grid grid-cols-2 gap-2 xl:grid-cols-1">
+                            {[
+                                ['New project', '/admin/projects/new'],
+                                ['New publication', '/admin/blog/new'],
+                                ['Manage media', '/admin/media'],
+                                ['Experiments', '/admin/experiments'],
+                                ['Revision history', '/admin/revisions'],
+                                ['AI Assistant', '/admin/assistant'],
+                                ['Site Mode', '/admin/site-mode'],
+                                ['Users & roles', '/admin/users'],
+                            ].map(([label, href]) => (
+                                <Link key={href} href={href} className="min-w-0 rounded-xl border border-foreground/10 px-3 py-3 text-sm text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground">{label}</Link>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </section>
