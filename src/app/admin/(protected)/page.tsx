@@ -50,7 +50,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         <div className="mx-auto max-w-[1500px]">
             <StatusToast type={error ? 'error' : toastMessage ? 'success' : undefined} message={toastMessage} />
 
-            <header className="mb-6 flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+            <header className="mb-6 flex flex-col gap-4 border-b border-foreground/10 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground sm:text-xs">Control center</p>
                     <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Dashboard</h2>
@@ -62,15 +62,18 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             </header>
 
             <section className="mb-5">
-                <PortfolioUpdater currentVersion={currentVersion} initialStatus={updateStatus} />
-            </section>
-
-            <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.45fr)]">
                 <TrafficAnalyticsPanel
                     chartMode="weekday"
+                    refreshIntervalMs={5000}
                     title="Traffic overview"
-                    description="Interactive weekday traffic pattern. Compare page views and visits across the week using the last 7 or 30 days."
+                    description="See when people browse the site, how many anonymous sessions are active, and how many public pages are opened."
                 />
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,0.65fr)]">
+                <div className="min-w-0">
+                    <PortfolioUpdater currentVersion={currentVersion} initialStatus={updateStatus} />
+                </div>
 
                 <div className="space-y-4">
                     <div className={`${panelClass} p-5 sm:p-6`}>
