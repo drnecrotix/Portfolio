@@ -31,7 +31,7 @@ export const experimentDefinitions: readonly ExperimentDefinition[] = [
         primaryEvent: 'engaged',
         variants: {
             A: 'Current 2.5s intro',
-            B: 'Faster 1.8s intro',
+            B: 'Faster 2.0s intro',
         },
     },
     {
