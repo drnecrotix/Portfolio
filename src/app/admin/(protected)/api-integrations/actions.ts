@@ -29,7 +29,7 @@ const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
     groq: ['groq.apiKey'],
     gemini: ['gemini.apiKey'],
     openrouter: ['openrouter.apiKey'],
-    r2: ['r2.accountId', 'r2.accessKeyId', 'r2.secretAccessKey', 'r2.bucket', 'r2.publicBaseUrl'],
+    r2: ['r2.accountId', 'r2.accessKeyId', 'r2.secretAccessKey', 'r2.bucket', 'r2.storeBucket', 'r2.publicBaseUrl'],
     lemonsqueezy: ['lemonsqueezy.apiKey', 'lemonsqueezy.storeId', 'lemonsqueezy.webhookSecret'],
 };
 
@@ -45,6 +45,7 @@ const envNames: Record<string, string> = {
     'r2.accessKeyId': 'R2_ACCESS_KEY_ID',
     'r2.secretAccessKey': 'R2_SECRET_ACCESS_KEY',
     'r2.bucket': 'R2_BUCKET',
+    'r2.storeBucket': 'R2_STORE_BUCKET',
     'r2.publicBaseUrl': 'R2_PUBLIC_BASE_URL',
     'lemonsqueezy.apiKey': 'LEMON_SQUEEZY_API_KEY',
     'lemonsqueezy.storeId': 'LEMON_SQUEEZY_STORE_ID',
@@ -306,6 +307,7 @@ async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, s
     const accessKeyId = values['r2.accessKeyId'];
     const secretAccessKey = values['r2.secretAccessKey'];
     const bucket = values['r2.bucket'];
+    const storeBucket = values['r2.storeBucket'];
     if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
         throw new Error('R2 requires Account ID, Access Key ID, Secret Access Key and Bucket.');
     }
@@ -317,10 +319,15 @@ async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, s
     });
     try {
         await client.send(new HeadBucketCommand({ Bucket: bucket }), { abortSignal: AbortSignal.timeout(10_000) });
+        if (storeBucket && storeBucket !== bucket) {
+            await client.send(new HeadBucketCommand({ Bucket: storeBucket }), { abortSignal: AbortSignal.timeout(10_000) });
+        }
     } finally {
         client.destroy();
     }
-    return `Cloudflare R2 bucket “${bucket}” is reachable.`;
+    return storeBucket
+        ? `Cloudflare R2 media bucket “${bucket}” and private Store bucket “${storeBucket}” are reachable.`
+        : `Cloudflare R2 bucket “${bucket}” is reachable. Configure a separate private Store bucket before publishing downloadable products.`;
 }
 
 export async function testApiIntegration(id: ApiIntegrationId): Promise<ApiActionResult> {
