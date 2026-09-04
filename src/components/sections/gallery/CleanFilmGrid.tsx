@@ -27,7 +27,7 @@ type GalleryItem = {
     detailUrl: string;
 };
 
-function GalleryPreview({ item, sizes, className }: { item: GalleryItem; sizes: string; className?: string }) {
+function GalleryPreview({ item, sizes, className, fit = 'cover' }: { item: GalleryItem; sizes: string; className?: string; fit?: 'cover' | 'contain' }) {
     return (
         <>
             {item.thumbnail ? (
@@ -37,7 +37,7 @@ function GalleryPreview({ item, sizes, className }: { item: GalleryItem; sizes: 
                     fill
                     sizes={sizes}
                     loading="lazy"
-                    className={cn('object-cover', className, item.isNsfw && 'scale-110 blur-2xl')}
+                    className={cn(fit === 'contain' ? 'object-contain' : 'object-cover', className, item.isNsfw && 'scale-110 blur-2xl')}
                 />
             ) : (
                 <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-950 text-white/60">
@@ -63,8 +63,11 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
     const [filter, setFilter] = useState<FilterType>('all');
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [visibleCount, setVisibleCount] = useState(18);
+    const [sliderIndex, setSliderIndex] = useState(0);
     const rowScrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const sliderRef = useRef<HTMLDivElement | null>(null);
+    const sliderDragRef = useRef({ active: false, pointerId: -1, startX: 0, scrollLeft: 0, moved: false });
+    const suppressSliderClickRef = useRef(false);
 
     const galleryItems = useMemo<GalleryItem[]>(() => content.items
         .filter((item) => item.isVisible && item.mediaUrl)
@@ -114,16 +117,90 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
         rowScrollRefs.current[type]?.scrollBy({ left: direction === 'left' ? -400 : 400, behavior: 'smooth' });
     };
 
+    const scrollToSliderIndex = (index: number) => {
+        const element = sliderRef.current;
+        if (!element || !filteredItems.length) return;
+        const nextIndex = Math.max(0, Math.min(filteredItems.length - 1, index));
+        const cards = element.querySelectorAll<HTMLElement>('[data-slider-card]');
+        cards[nextIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        setSliderIndex(nextIndex);
+    };
+
     const scrollSlider = (direction: 'left' | 'right') => {
+        scrollToSliderIndex(sliderIndex + (direction === 'left' ? -1 : 1));
+    };
+
+    const syncSliderIndex = () => {
         const element = sliderRef.current;
         if (!element) return;
-        const distance = Math.max(320, element.clientWidth * 0.78);
-        element.scrollBy({ left: direction === 'left' ? -distance : distance, behavior: 'smooth' });
+        const cards = Array.from(element.querySelectorAll<HTMLElement>('[data-slider-card]'));
+        if (!cards.length) return;
+        const containerCenter = element.scrollLeft + element.clientWidth / 2;
+        let nearest = 0;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+        cards.forEach((card, index) => {
+            const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+            const distance = Math.abs(cardCenter - containerCenter);
+            if (distance < nearestDistance) {
+                nearest = index;
+                nearestDistance = distance;
+            }
+        });
+        setSliderIndex((current) => current === nearest ? current : nearest);
+    };
+
+    const handleSliderPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+        const element = sliderRef.current;
+        if (!element) return;
+        sliderDragRef.current = {
+            active: true,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            scrollLeft: element.scrollLeft,
+            moved: false,
+        };
+        element.setPointerCapture(event.pointerId);
+    };
+
+    const handleSliderPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+        const element = sliderRef.current;
+        const drag = sliderDragRef.current;
+        if (!element || !drag.active || drag.pointerId !== event.pointerId) return;
+        const delta = event.clientX - drag.startX;
+        if (Math.abs(delta) > 6) drag.moved = true;
+        element.scrollLeft = drag.scrollLeft - delta;
+    };
+
+    const finishSliderPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+        const element = sliderRef.current;
+        const drag = sliderDragRef.current;
+        if (!drag.active || drag.pointerId !== event.pointerId) return;
+        suppressSliderClickRef.current = drag.moved;
+        sliderDragRef.current = { active: false, pointerId: -1, startX: 0, scrollLeft: 0, moved: false };
+        if (element?.hasPointerCapture(event.pointerId)) element.releasePointerCapture(event.pointerId);
+        syncSliderIndex();
+    };
+
+    const handleSliderWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+        const element = sliderRef.current;
+        if (!element) return;
+        if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+            event.preventDefault();
+            element.scrollLeft += event.deltaY;
+        }
+    };
+
+    const preventSliderClickAfterDrag = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        if (!suppressSliderClickRef.current) return;
+        event.preventDefault();
+        suppressSliderClickRef.current = false;
     };
 
     const changeFilter = (next: FilterType) => {
         setFilter(next);
         setVisibleCount(18);
+        setSliderIndex(0);
         sliderRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
     };
 
@@ -218,30 +295,59 @@ export default function CleanFilmGrid({ isLowPowerMode, content }: { isLowPowerM
 
                     {viewMode === 'slider' && filteredItems.length > 0 && (
                         <div className="relative">
-                            <div className="mb-4 flex items-center justify-between gap-4 px-1">
+                            <div className="mb-4 flex flex-col gap-4 px-1 sm:flex-row sm:items-end sm:justify-between">
                                 <div>
                                     <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Slider</p>
-                                    <p className="mt-1 text-sm text-foreground/65">Browse the collection, then open a work directly.</p>
+                                    <p className="mt-1 text-sm text-foreground/65">Drag, use the mouse wheel, swipe, or use the controls.</p>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <button type="button" onClick={() => scrollSlider('left')} className="rounded-full border border-foreground/10 bg-background/70 p-2.5 text-muted-foreground transition hover:text-foreground" aria-label="Previous work"><ChevronLeft className="h-4 w-4" /></button>
-                                    <button type="button" onClick={() => scrollSlider('right')} className="rounded-full border border-foreground/10 bg-background/70 p-2.5 text-muted-foreground transition hover:text-foreground" aria-label="Next work"><ChevronRight className="h-4 w-4" /></button>
+                                <div className="flex items-center gap-3">
+                                    <span className="min-w-[58px] text-right font-mono text-[10px] tracking-[0.12em] text-muted-foreground">{String(sliderIndex + 1).padStart(2, '0')} / {String(filteredItems.length).padStart(2, '0')}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => scrollSlider('left')} disabled={sliderIndex === 0} className="rounded-full border border-foreground/10 bg-background/70 p-2.5 text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35" aria-label="Previous work"><ChevronLeft className="h-4 w-4" /></button>
+                                        <button type="button" onClick={() => scrollSlider('right')} disabled={sliderIndex >= filteredItems.length - 1} className="rounded-full border border-foreground/10 bg-background/70 p-2.5 text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35" aria-label="Next work"><ChevronRight className="h-4 w-4" /></button>
+                                    </div>
                                 </div>
                             </div>
-                            <div ref={sliderRef} data-lenis-prevent className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-5 pr-[12vw] scroll-smooth scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+
+                            <div
+                                ref={sliderRef}
+                                data-lenis-prevent
+                                onScroll={syncSliderIndex}
+                                onWheel={handleSliderWheel}
+                                onPointerDown={handleSliderPointerDown}
+                                onPointerMove={handleSliderPointerMove}
+                                onPointerUp={finishSliderPointer}
+                                onPointerCancel={finishSliderPointer}
+                                className="flex cursor-grab select-none snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-5 pr-[12vw] scroll-smooth active:cursor-grabbing scrollbar-hide"
+                                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-y pinch-zoom' }}
+                            >
                                 {filteredItems.map((item, index) => (
-                                    <motion.div key={item.id} initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, scale: 0.985 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.35 }} transition={{ duration: 0.4, delay: isLowPowerMode ? 0 : Math.min(index, 8) * 0.04 }} className="w-[86vw] max-w-[1080px] flex-none snap-center sm:w-[76vw] lg:w-[68vw]">
-                                        <Link href={item.detailUrl} className="group relative block aspect-video overflow-hidden rounded-2xl border border-foreground/10 bg-muted shadow-2xl">
-                                            <GalleryPreview item={item} sizes="(max-width: 639px) 86vw, (max-width: 1023px) 76vw, 68vw" className={cn('transition-transform duration-700', !item.isNsfw && 'group-hover:scale-[1.02]')} />
-                                            <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-                                            <div className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-white/80 backdrop-blur-md">{item.type === 'video' ? <Video className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}{galleryCreativeTypeLabel(item.creativeType)}</div>
-                                            <div className="absolute bottom-5 left-5 right-5 z-10 sm:bottom-7 sm:left-7 sm:right-7">
+                                    <motion.div key={item.id} data-slider-card initial={isLowPowerMode ? { opacity: 0 } : { opacity: 0, scale: 0.985 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.35 }} transition={{ duration: 0.4, delay: isLowPowerMode ? 0 : Math.min(index, 8) * 0.04 }} className="w-[90vw] max-w-[1120px] flex-none snap-center sm:w-[78vw] lg:w-[70vw]">
+                                        <Link href={item.detailUrl} onClick={preventSliderClickAfterDrag} draggable={false} className="group relative block h-[clamp(360px,68vh,720px)] overflow-hidden rounded-2xl border border-foreground/10 bg-black/85 shadow-2xl">
+                                            <GalleryPreview item={item} sizes="(max-width: 639px) 90vw, (max-width: 1023px) 78vw, 70vw" fit="contain" className={cn('p-3 transition-transform duration-500 sm:p-5', !item.isNsfw && 'group-hover:scale-[1.01]')} />
+                                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+                                            <div className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-white/80 backdrop-blur-md">{item.type === 'video' ? <Video className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}{galleryCreativeTypeLabel(item.creativeType)}</div>
+                                            <div className="pointer-events-none absolute bottom-5 left-5 right-5 z-10 sm:bottom-7 sm:left-7 sm:right-7">
                                                 <h3 className="text-xl font-medium text-white drop-shadow-md sm:text-3xl">{item.title}</h3>
                                                 {item.description && <p className="mt-2 line-clamp-2 max-w-2xl text-xs leading-5 text-white/65 sm:text-sm">{item.description}</p>}
                                             </div>
                                         </Link>
                                     </motion.div>
                                 ))}
+                            </div>
+
+                            <div className="mt-2 flex items-center gap-3 px-1">
+                                <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Browse</span>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={Math.max(0, filteredItems.length - 1)}
+                                    value={Math.min(sliderIndex, Math.max(0, filteredItems.length - 1))}
+                                    onChange={(event) => scrollToSliderIndex(Number(event.target.value))}
+                                    disabled={filteredItems.length <= 1}
+                                    className="h-1 min-w-0 flex-1 cursor-pointer accent-foreground disabled:cursor-default disabled:opacity-40"
+                                    aria-label="Slider position"
+                                />
                             </div>
                         </div>
                     )}
