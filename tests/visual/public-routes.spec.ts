@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-const routes = ['/', '/projects', '/blog', '/contact'] as const;
+const routes = ['/', '/projects', '/blog', '/contact', '/store'] as const;
 const themes = ['dark', 'light'] as const;
 
 async function gotoWithTheme(page: Page, route: string, theme: (typeof themes)[number]) {
@@ -30,9 +30,11 @@ for (const theme of themes) {
       }));
 
       // The existing mobile archive/contact compositions intentionally extend a
-      // little beyond the viewport. Guard against catastrophic regressions while
-      // baselining that current behavior instead of redesigning protected views.
-      const toleratedOverflow = testInfo.project.name.startsWith('mobile') ? 96 : 32;
+      // little beyond the viewport. The Store is explicitly required to remain
+      // inside the mobile viewport because its category rail owns its own scroll.
+      const toleratedOverflow = route === '/store'
+        ? 2
+        : testInfo.project.name.startsWith('mobile') ? 96 : 32;
       expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + toleratedOverflow);
       expect(dimensions.scrollHeight).toBeGreaterThanOrEqual(Math.min(300, dimensions.clientHeight));
 
@@ -55,6 +57,10 @@ for (const theme of themes) {
 
       if (route === '/contact') {
         await expect(page.getByRole('heading', { name: /contact|start a conversation|get in touch/i }).first()).toBeVisible();
+      }
+
+      if (route === '/store') {
+        await expect(page.getByRole('heading', { name: /Creative digital goods/i })).toBeVisible();
       }
 
       await page.screenshot({
