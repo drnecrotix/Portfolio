@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, CheckCircle2, Github, Instagram, Linkedin, Loader2, Mail, MapPin, Send, Twitter } from 'lucide-react';
@@ -170,7 +171,7 @@ export function ContactV2({ contact, socials }: Props) {
 
                             <label className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
                                 <input type="checkbox" checked={form.privacyAccepted} onChange={(e) => update('privacyAccepted', e.target.checked)} required className="mt-1 size-4" />
-                                <span>I agree to be contacted about this message. The submitted details will only be used to respond to this enquiry.</span>
+                                <span>I have read the <Link href="/privacy" className="text-foreground underline decoration-foreground/25 underline-offset-4 hover:decoration-foreground">Privacy & GDPR Policy</Link> and understand that these details will be processed to respond to this enquiry.</span>
                             </label>
 
                             {status === 'error' && <div role="alert" className="border-l-2 border-red-500 pl-4 text-sm text-red-400">{error}</div>}
