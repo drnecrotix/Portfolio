@@ -3,6 +3,7 @@ import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { buildPublicIdentity, defaultPublicIdentity } from '@/lib/public-identity';
 import { cmsPostToPublicPost, type PublicPost } from '@/lib/cms-posts';
 import { cmsProjectToPortfolioProject } from '@/lib/cms-projects';
+import { assignHomepageExperimentVariants } from '@/lib/experiments';
 import type { Project } from '@/types';
 import HomeClient from './HomeClient';
 
@@ -50,5 +51,13 @@ export default async function HomePage() {
         // Keep the public hero available even if CMS content cannot be loaded.
     }
 
-    return <HomeClient content={normalizeHomepageContent(rawContent)} identity={identity} posts={posts} projects={projects} />;
+    return (
+        <HomeClient
+            content={normalizeHomepageContent(rawContent)}
+            identity={identity}
+            posts={posts}
+            projects={projects}
+            experimentVariants={assignHomepageExperimentVariants()}
+        />
+    );
 }
