@@ -23,10 +23,13 @@ export async function POST(request: Request) {
         const contentLength = Number(request.headers.get('content-length') || 0);
         if (contentLength > 8_000) return NextResponse.json({ error: 'Request too large.' }, { status: 413 });
 
-        const body = await request.json() as { slug?: string };
+        const body = await request.json() as { slug?: string; acceptedDigitalTerms?: boolean };
         const slug = String(body.slug ?? '').trim().toLowerCase();
         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
             return NextResponse.json({ error: 'Invalid product.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
+        }
+        if (body.acceptedDigitalTerms !== true) {
+            return NextResponse.json({ error: 'Accept the Terms & Digital Content Policy before continuing.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
         }
 
         const product = await prisma.storeProduct.findUnique({
