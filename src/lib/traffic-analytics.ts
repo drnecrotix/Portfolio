@@ -38,7 +38,13 @@ export function countryCodeFromHeaders(headers: Headers) {
         headers.get('x-vercel-ip-country'),
         headers.get('cloudfront-viewer-country'),
         headers.get('x-country-code'),
-    ].find(Boolean)?.trim().toUpperCase();
+        headers.get('x-geo-country'),
+        headers.get('x-geoip-country-code'),
+        headers.get('x-forwarded-country'),
+        headers.get('x-client-country'),
+        headers.get('geoip-country-code'),
+        headers.get('x-appengine-country'),
+    ].find((value) => value?.trim())?.trim().toUpperCase();
 
     return raw && /^[A-Z]{2}$/.test(raw) ? raw : 'XX';
 }
