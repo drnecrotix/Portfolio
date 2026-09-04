@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -45,7 +46,12 @@ export function normalizeExternalDigitalProductUrl(raw: string) {
     }
     if (parsed.protocol !== 'https:') throw new Error('External file URL must use HTTPS.');
     const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-    if (!hostname || hostname === 'localhost' || hostname.endsWith('.localhost') || isPrivateIpv4(hostname) || hostname === '::1' || hostname.startsWith('fc') || hostname.startsWith('fd') || hostname.startsWith('fe80:')) {
+    const ipv6 = hostname.includes(':');
+    if (!hostname
+        || hostname === 'localhost'
+        || hostname.endsWith('.localhost')
+        || isPrivateIpv4(hostname)
+        || (ipv6 && (hostname === '::1' || hostname.startsWith('fc') || hostname.startsWith('fd') || hostname.startsWith('fe80:')))) {
         throw new Error('External file URL cannot target localhost or a private network address.');
     }
     parsed.username = '';
@@ -55,7 +61,7 @@ export function normalizeExternalDigitalProductUrl(raw: string) {
 
 export function externalDigitalProductStorageKey(rawUrl: string) {
     const url = normalizeExternalDigitalProductUrl(rawUrl);
-    return `${EXTERNAL_KEY_PREFIX}${Buffer.from(url, 'utf8').toString('base64url')}`;
+    return `${EXTERNAL_KEY_PREFIX}${randomUUID()}:${Buffer.from(url, 'utf8').toString('base64url')}`;
 }
 
 export function isExternalDigitalProductStorageKey(storageKey: string) {
@@ -65,7 +71,9 @@ export function isExternalDigitalProductStorageKey(storageKey: string) {
 function externalDigitalProductUrl(storageKey: string) {
     if (!isExternalDigitalProductStorageKey(storageKey)) throw new Error('Invalid external digital product storage key.');
     try {
-        const encoded = storageKey.slice(EXTERNAL_KEY_PREFIX.length);
+        const payload = storageKey.slice(EXTERNAL_KEY_PREFIX.length);
+        const separator = payload.indexOf(':');
+        const encoded = separator >= 0 ? payload.slice(separator + 1) : payload;
         return normalizeExternalDigitalProductUrl(Buffer.from(encoded, 'base64url').toString('utf8'));
     } catch (error) {
         if (error instanceof Error) throw error;
