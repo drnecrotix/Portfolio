@@ -9,6 +9,7 @@ import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
 import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
+import styles from './project-page.module.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,8 +74,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
     const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
 
     return (
-        <ContentWatermarkScope settings={watermark}>
-            <ProjectComposerPage project={updatedProject} />
-        </ContentWatermarkScope>
+        <div className={styles.projectPage}>
+            <ContentWatermarkScope settings={watermark}>
+                <ProjectComposerPage project={updatedProject} />
+            </ContentWatermarkScope>
+        </div>
     );
 }
