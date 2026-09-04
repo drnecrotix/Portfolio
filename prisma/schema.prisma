@@ -246,11 +246,13 @@ model TrafficMetric {
 }
 
 model TrafficSession {
-  sessionHash String   @id
-  countryCode String
-  deviceType  String
-  startedAt   DateTime @default(now())
-  lastSeenAt  DateTime @default(now())
+  sessionHash     String    @id
+  countryCode     String
+  deviceType      String
+  ipAddress       String?
+  countryLookupAt DateTime?
+  startedAt       DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
 
   @@index([lastSeenAt])
 }
