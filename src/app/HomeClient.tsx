@@ -212,7 +212,8 @@ export default function HomeClient({ content, identity, posts, projects, experim
             >
                 <HeroVisual isExiting={isReadyToAnimate} content={content} identity={identity} />
                 {showHeroCtas && (
-                    <motion.div
+                    <motion.nav
+                        aria-label="Featured portfolio links"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.55, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
@@ -228,7 +229,7 @@ export default function HomeClient({ content, identity, posts, projects, experim
                         }} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                             Explore gallery <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
-                    </motion.div>
+                    </motion.nav>
                 )}
             </motion.main>
             {projectsFirst ? <>{projectsSection}{journalSection}</> : <>{journalSection}{projectsSection}</>}
