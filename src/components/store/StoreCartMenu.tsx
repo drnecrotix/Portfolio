@@ -91,7 +91,7 @@ export function StoreCartMenu() {
     }
 
     return (
-        <div ref={rootRef} className="relative">
+        <div ref={rootRef} className="relative min-w-0">
             <motion.button
                 type="button"
                 whileHover={{ scale: 1.05 }}
@@ -111,35 +111,35 @@ export function StoreCartMenu() {
             </motion.button>
 
             {open ? (
-                <div className="absolute right-0 top-[calc(100%+0.75rem)] z-[120] w-[min(94vw,390px)] overflow-hidden rounded-2xl border border-foreground/10 bg-background/95 shadow-2xl backdrop-blur-xl">
-                    <div className="flex items-center justify-between border-b border-foreground/10 px-4 py-3">
-                        <div>
-                            <p className="text-sm font-black">Shopping cart</p>
-                            <p className="text-[11px] text-muted-foreground">{items.length} saved item{items.length === 1 ? '' : 's'} · {selectedSlugs.length} selected</p>
+                <div className="fixed inset-x-3 top-20 z-[120] max-h-[calc(100dvh-6rem)] min-w-0 overflow-hidden rounded-2xl border border-foreground/10 bg-background/95 shadow-2xl backdrop-blur-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.75rem)] sm:max-h-none sm:w-[min(94vw,390px)]">
+                    <div className="flex min-w-0 items-center justify-between gap-3 border-b border-foreground/10 px-4 py-3">
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-black">Shopping cart</p>
+                            <p className="truncate text-[11px] text-muted-foreground">{items.length} saved item{items.length === 1 ? '' : 's'} · {selectedSlugs.length} selected</p>
                         </div>
-                        <button type="button" onClick={() => setOpen(false)} className="rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Close cart"><X className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => setOpen(false)} className="shrink-0 rounded-full p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Close cart"><X className="h-4 w-4" /></button>
                     </div>
 
                     {items.length ? (
                         <>
-                            <div className="flex items-center justify-between border-b border-foreground/10 px-4 py-2.5 text-[11px]">
-                                <span className="inline-flex items-center gap-1.5 font-semibold text-muted-foreground"><CheckSquare2 className="h-3.5 w-3.5" /> Choose items</span>
-                                <button type="button" onClick={() => setSelectedSlugs(allSelected ? [] : items.map((item) => item.slug))} className="font-bold text-foreground hover:underline">{allSelected ? 'Clear' : 'Select all'}</button>
+                            <div className="flex min-w-0 items-center justify-between gap-3 border-b border-foreground/10 px-4 py-2.5 text-[11px]">
+                                <span className="inline-flex min-w-0 items-center gap-1.5 font-semibold text-muted-foreground"><CheckSquare2 className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Choose items</span></span>
+                                <button type="button" onClick={() => setSelectedSlugs(allSelected ? [] : items.map((item) => item.slug))} className="shrink-0 font-bold text-foreground hover:underline">{allSelected ? 'Clear' : 'Select all'}</button>
                             </div>
-                            <div className="max-h-[360px] overflow-y-auto p-2">
+                            <div className="max-h-[44dvh] overflow-y-auto overscroll-contain p-2 sm:max-h-[360px]">
                                 {items.map((item) => {
                                     const free = item.priceCents === 0;
                                     const selected = selectedSet.has(item.slug);
                                     return (
-                                        <div key={item.slug} className={`rounded-xl border p-2.5 transition ${selected ? 'border-foreground/12 bg-foreground/[0.025]' : 'border-transparent opacity-70 hover:bg-muted/40'}`}>
-                                            <div className="flex gap-2.5">
+                                        <div key={item.slug} className={`min-w-0 max-w-full rounded-xl border p-2.5 transition ${selected ? 'border-foreground/12 bg-foreground/[0.025]' : 'border-transparent opacity-70 hover:bg-muted/40'}`}>
+                                            <div className="flex min-w-0 gap-2.5">
                                                 <label className="flex shrink-0 items-start pt-4" aria-label={`Select ${item.title}`}>
                                                     <input type="checkbox" checked={selected} onChange={() => toggleSelected(item.slug)} className="h-4 w-4 accent-foreground" />
                                                 </label>
                                                 <Link
                                                     href={`/store/${item.slug}`}
                                                     onClick={() => setOpen(false)}
-                                                    className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-foreground/10 bg-muted bg-cover bg-center"
+                                                    className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-foreground/10 bg-muted bg-cover bg-center sm:h-14 sm:w-14"
                                                     style={item.coverImageUrl ? { backgroundImage: `url(${JSON.stringify(item.coverImageUrl).slice(1, -1)})` } : undefined}
                                                     aria-label={`Open ${item.title}`}
                                                 >
@@ -147,13 +147,13 @@ export function StoreCartMenu() {
                                                 </Link>
                                                 <div className="min-w-0 flex-1">
                                                     <Link href={`/store/${item.slug}`} onClick={() => setOpen(false)} className="block truncate text-sm font-bold hover:underline">{item.title}</Link>
-                                                    <p className="mt-1 text-xs font-semibold text-muted-foreground">{free ? 'Free download' : money(item.priceCents, item.currency)}</p>
-                                                    <div className="mt-2 flex items-center gap-2">
-                                                        <button type="button" onClick={() => checkout(item)} disabled={Boolean(loadingSlug) || !selected || !termsAccepted} className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-[11px] font-bold text-background disabled:cursor-not-allowed disabled:opacity-35">
-                                                            {free ? <Download className="h-3 w-3" /> : null}
-                                                            {loadingSlug === item.slug ? (free ? 'Preparing...' : 'Opening...') : (free ? 'Download' : 'Checkout')}
+                                                    <p className="mt-1 truncate text-xs font-semibold text-muted-foreground">{free ? 'Free download' : money(item.priceCents, item.currency)}</p>
+                                                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                                                        <button type="button" onClick={() => checkout(item)} disabled={Boolean(loadingSlug) || !selected || !termsAccepted} className="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-[11px] font-bold text-background disabled:cursor-not-allowed disabled:opacity-35">
+                                                            {free ? <Download className="h-3 w-3 shrink-0" /> : null}
+                                                            <span className="truncate">{loadingSlug === item.slug ? (free ? 'Preparing...' : 'Opening...') : (free ? 'Download' : 'Checkout')}</span>
                                                         </button>
-                                                        <button type="button" onClick={() => removeStoreCartItem(item.slug)} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={`Remove ${item.title} from cart`}><Trash2 className="h-3.5 w-3.5" /></button>
+                                                        <button type="button" onClick={() => removeStoreCartItem(item.slug)} className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={`Remove ${item.title} from cart`}><Trash2 className="h-3.5 w-3.5" /></button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -163,9 +163,9 @@ export function StoreCartMenu() {
                             </div>
 
                             <div className="border-t border-foreground/10 p-4">
-                                <label className="flex items-start gap-2.5 text-[11px] leading-5 text-muted-foreground">
+                                <label className="flex min-w-0 items-start gap-2.5 text-[11px] leading-5 text-muted-foreground">
                                     <input type="checkbox" checked={termsAccepted} onChange={(event) => { setTermsAccepted(event.target.checked); setError(''); }} className="mt-0.5 h-4 w-4 shrink-0 accent-foreground" />
-                                    <span>
+                                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">
                                         I agree to the <Link href="/terms" onClick={() => setOpen(false)} className="font-bold text-foreground underline underline-offset-2">Terms & Digital Content Policy</Link> and request immediate digital delivery. I understand that once delivery/download begins I may lose the statutory withdrawal right, without affecting mandatory rights for faulty or non-conforming digital content.
                                     </span>
                                 </label>
@@ -179,8 +179,8 @@ export function StoreCartMenu() {
                         </div>
                     )}
 
-                    {error ? <p role="alert" className="border-t border-foreground/10 px-4 py-3 text-xs text-red-500">{error}</p> : null}
-                    <div className="border-t border-foreground/10 px-4 py-3 text-[10px] leading-4 text-muted-foreground">Paid products are checked out separately through their configured provider. Selection lets you control which saved items are ready for checkout.</div>
+                    {error ? <p role="alert" className="break-words border-t border-foreground/10 px-4 py-3 text-xs text-red-500 [overflow-wrap:anywhere]">{error}</p> : null}
+                    <div className="break-words border-t border-foreground/10 px-4 py-3 text-[10px] leading-4 text-muted-foreground [overflow-wrap:anywhere]">Paid products are checked out separately through their configured provider. Selection lets you control which saved items are ready for checkout.</div>
                 </div>
             ) : null}
         </div>
