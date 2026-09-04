@@ -45,12 +45,13 @@ export default function HomeClient({ content, identity, posts, projects }: { con
 
     useEffect(() => {
         const hasLoaded = readPortfolioLoaded();
-        if (!hasLoaded) {
-            setIsFirstVisit(true);
-            return;
-        }
-        setIsFirstVisit(false);
-        const frame = window.requestAnimationFrame(() => { setSkipAnimation(true); setIsLoading(false); });
+        const frame = window.requestAnimationFrame(() => {
+            setIsFirstVisit(!hasLoaded);
+            if (hasLoaded) {
+                setSkipAnimation(true);
+                setIsLoading(false);
+            }
+        });
         return () => window.cancelAnimationFrame(frame);
     }, []);
 
