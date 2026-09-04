@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { PAGE_ACCESS_CONFIG_SLUG, normalizeManagedPageAccessSettings } from '@/lib/page-access';
 import { safeCmsMediaUrl } from '@/lib/sanitize-cms-html';
 
 function field(form: FormData, key: string, max = 500) {
@@ -28,11 +29,15 @@ function validEmail(value: string) {
     return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+async function requireAdministrator() {
+    const session = await auth();
+    if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) throw new Error('Forbidden');
+}
+
 export async function updateGeneralSettings(form: FormData) {
     let destination = '/admin/settings?saved=1';
     try {
-        const session = await auth();
-        if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) throw new Error('Forbidden');
+        await requireAdministrator();
 
         const siteName = field(form, 'siteName', 120);
         const siteDescription = field(form, 'siteDescription', 500);
@@ -79,6 +84,42 @@ export async function updateGeneralSettings(form: FormData) {
         revalidatePath('/admin/settings');
     } catch (error) {
         destination = `/admin/settings?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unable to save settings.')}`;
+    }
+    redirect(destination);
+}
+
+export async function updatePageAccessSettings(form: FormData) {
+    let destination = '/admin/settings?pageAccessSaved=1';
+    try {
+        await requireAdministrator();
+
+        const content = normalizeManagedPageAccessSettings({
+            wiki: field(form, 'wikiAccess', 20),
+            blog: field(form, 'blogAccess', 20),
+            gallery: field(form, 'galleryAccess', 20),
+            store: field(form, 'storeAccess', 20),
+        });
+
+        await prisma.page.upsert({
+            where: { slug: PAGE_ACCESS_CONFIG_SLUG },
+            create: {
+                slug: PAGE_ACCESS_CONFIG_SLUG,
+                title: 'Page access configuration',
+                status: 'DRAFT',
+                content,
+            },
+            update: { content },
+        });
+
+        revalidatePath('/', 'layout');
+        revalidatePath('/wiki', 'layout');
+        revalidatePath('/blog', 'layout');
+        revalidatePath('/gallery', 'layout');
+        revalidatePath('/store', 'layout');
+        revalidatePath('/sitemap.xml');
+        revalidatePath('/admin/settings');
+    } catch (error) {
+        destination = `/admin/settings?error=${encodeURIComponent(error instanceof Error ? error.message : 'Unable to save page access settings.')}`;
     }
     redirect(destination);
 }
