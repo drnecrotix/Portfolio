@@ -230,6 +230,31 @@ model ExperimentMetric {
   @@index([experimentId, updatedAt])
 }
 
+model TrafficMetric {
+  bucketStart DateTime
+  countryCode String
+  deviceType  String
+  pageViews   Int      @default(0)
+  visits      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@id([bucketStart, countryCode, deviceType])
+  @@index([bucketStart])
+  @@index([countryCode, bucketStart])
+  @@index([deviceType, bucketStart])
+}
+
+model TrafficSession {
+  sessionHash String   @id
+  countryCode String
+  deviceType  String
+  startedAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  @@index([lastSeenAt])
+}
+
 model SiteSettings {
   id                    String   @id @default("default")
   siteName              String   @default("Dr Necrotix")
