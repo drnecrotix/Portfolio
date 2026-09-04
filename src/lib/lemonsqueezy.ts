@@ -39,6 +39,54 @@ export async function testLemonSqueezyConnection() {
     return payload.data?.attributes?.name || `Store ${storeId}`;
 }
 
+export type LemonSqueezyCatalogVariant = {
+    id: string;
+    productId: string;
+    productName: string;
+    variantName: string;
+    priceCents: number;
+    priceFormatted: string;
+    status: string;
+    testMode: boolean;
+};
+
+export async function listLemonSqueezyVariants(): Promise<LemonSqueezyCatalogVariant[]> {
+    const config = await getRuntimeLemonSqueezyConfig();
+    const storeId = required(config.storeId, 'LEMON_SQUEEZY_STORE_ID');
+    const response = await apiFetch(`/products?filter[store_id]=${encodeURIComponent(storeId)}&include=variants&page[size]=100`);
+    const payload = await response.json() as {
+        data?: Array<{ id?: string; attributes?: { name?: string } }>;
+        included?: Array<{
+            type?: string;
+            id?: string;
+            attributes?: {
+                product_id?: number | string;
+                name?: string;
+                price?: number;
+                price_formatted?: string;
+                status?: string;
+                test_mode?: boolean;
+            };
+        }>;
+    };
+    const productNames = new Map((payload.data ?? []).map((product) => [String(product.id || ''), String(product.attributes?.name || product.id || 'Product')]));
+    return (payload.included ?? [])
+        .filter((item) => item.type === 'variants' && item.id)
+        .map((item) => {
+            const productId = String(item.attributes?.product_id || '');
+            return {
+                id: String(item.id),
+                productId,
+                productName: productNames.get(productId) || `Product ${productId}`,
+                variantName: String(item.attributes?.name || 'Default'),
+                priceCents: Number(item.attributes?.price || 0),
+                priceFormatted: String(item.attributes?.price_formatted || ''),
+                status: String(item.attributes?.status || ''),
+                testMode: Boolean(item.attributes?.test_mode),
+            };
+        });
+}
+
 export async function createLemonSqueezyCheckout(input: {
     variantId: string;
     productId: string;
