@@ -229,7 +229,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
 
     return (
         <>
-            <div className="h-full rounded-2xl border border-foreground/10 bg-foreground/[0.025] p-5 sm:p-6">
+            <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.025] p-5 sm:p-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Portfolio updates</p>

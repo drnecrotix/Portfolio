@@ -35,7 +35,7 @@ export default async function PrivacyPage() {
                     <li><strong>Blog comments:</strong> public display name, comment text and an optional private email address.</li>
                     <li><strong>Engagement:</strong> pseudonymous visitor identifiers used to remember Blog and Gallery likes, plus aggregate view counts.</li>
                     <li><strong>Interface experiments:</strong> random A/B variants are kept stable for the current browser session through a first-party session cookie. The experiment system records aggregate events such as exposures, section visibility and content opens and does not store a named visitor profile.</li>
-                    <li><strong>Traffic analytics:</strong> country code, broad device class (desktop, mobile, tablet or unknown), hourly page-view totals, estimated visit totals and short-lived anonymous session records. Country is derived from infrastructure/proxy country headers and device class from the browser user-agent. City, precise location and raw IP addresses are not stored in the analytics database.</li>
+                    <li><strong>Traffic analytics:</strong> country code, broad device class (desktop, mobile, tablet or unknown), hourly page-view totals, estimated visit totals and short-lived traffic session records. Country is taken from infrastructure/proxy country headers where available. If those headers are missing, the raw client IP address may be stored in the short-lived traffic-session record and used for an IP-to-country lookup. City and precise location are not collected.</li>
                     <li><strong>Technical and security data:</strong> IP address and request metadata used temporarily for rate limiting, abuse prevention and service security.</li>
                     <li><strong>AI assistant:</strong> the messages you choose to send, the conversation context required to answer them and short-lived technical data used for rate limiting.</li>
                     <li><strong>Preferences and browser storage:</strong> language, theme, first-visit/loading state, session view markers, chat history and short-lived first-party session identifiers.</li>
@@ -64,7 +64,7 @@ export default async function PrivacyPage() {
                     </div>
                     <div>
                         <h3>Short-retention traffic analytics</h3>
-                        <p className="mt-2">NecrotixLab measures broad traffic trends to understand which countries visit the site, what device classes are used and how traffic changes over short periods. The analytics layer is first-party, does not store city or precise location, does not retain raw IP addresses and ignores page-view tracking when the browser sends the Do Not Track signal. The legal basis relied on for this limited measurement is the legitimate interest in maintaining and improving the site with data minimisation (Article 6(1)(f)).</p>
+                        <p className="mt-2">NecrotixLab measures broad traffic trends to understand which countries visit the site, what device classes are used and how traffic changes over short periods. Country headers supplied by the hosting/CDN are preferred. When they are unavailable, the server may temporarily store the raw client IP address and request only a country code from the country.is IP-to-country service. The analytics layer does not collect city or precise coordinates and ignores page-view tracking when the browser sends the Do Not Track signal. The legal basis relied on for this limited measurement is the legitimate interest in maintaining and improving the site with short retention and data minimisation (Article 6(1)(f)).</p>
                     </div>
                     <div>
                         <h3>AI assistant</h3>
@@ -80,13 +80,13 @@ export default async function PrivacyPage() {
             <section>
                 <h2>4. Recipients and service providers</h2>
                 <p className="mt-4">Personal data is not sold. It may be processed by service providers only where necessary to operate the site, including hosting/infrastructure providers, the configured email provider for contact messages and the configured AI provider when you use the assistant.</p>
-                <p className="mt-3">Hosting or proxy infrastructure may provide a country-level request header used by the first-party traffic analytics layer. NecrotixLab stores the resulting country code and device class, not city coordinates or the raw visitor IP address, for this analytics purpose.</p>
+                <p className="mt-3">Hosting or proxy infrastructure may provide a country-level request header used by the first-party traffic analytics layer. If no supported country header is available, the server may send the visitor IP address to <strong>country.is</strong> only to resolve an ISO country code. NecrotixLab stores the country code in aggregate traffic metrics; the raw IP remains only in the short-lived traffic-session record and is not included in the long-term aggregate table.</p>
                 <p className="mt-3">Gallery pages may contain media hosted by services such as YouTube, Vimeo, TikTok, Instagram, Facebook, X/Twitter, Pinterest or Dailymotion. External media is treated separately because loading it can disclose technical information such as your IP address and browser details to that provider. See the <Link href="/cookies">Cookie Policy</Link>.</p>
             </section>
 
             <section>
                 <h2>5. International transfers</h2>
-                <p className="mt-4">Some infrastructure, email, AI or embedded-media providers may process data outside the European Economic Area. Where GDPR requires a transfer mechanism, the relevant provider/controller arrangement should use an applicable safeguard such as an adequacy decision or standard contractual clauses. Provider-specific terms and privacy notices also apply to their independent processing.</p>
+                <p className="mt-4">Some infrastructure, email, AI, IP-country lookup or embedded-media providers may process data outside the European Economic Area. Where GDPR requires a transfer mechanism, the relevant provider/controller arrangement should use an applicable safeguard such as an adequacy decision or standard contractual clauses. Provider-specific terms and privacy notices also apply to their independent processing.</p>
             </section>
 
             <section>
@@ -96,7 +96,7 @@ export default async function PrivacyPage() {
                     <li>Contact-form IP rate-limit entries are held in server memory for about 10 minutes.</li>
                     <li>AI rate-limit entries are short-lived, about one minute. The site does not persist submitted assistant messages in its database in the current implementation; the browser keeps the visible chat history for the current session.</li>
                     <li>A/B variant assignment is kept in a first-party session cookie and therefore has no fixed long-term expiry. Aggregate experiment counters may be retained for longitudinal comparison, but they do not contain a named visitor identifier.</li>
-                    <li>Anonymous traffic-session hashes are intended to be removed after about 24 hours of inactivity. Country/device traffic aggregates are intended to be removed after about 31 days, which supports the 24-hour, 7-day and 30-day dashboard views without keeping long-term traffic history.</li>
+                    <li>Traffic-session records, including a raw client IP address when available, are intended to be removed after about 24 hours of inactivity. Country/device traffic aggregates do not contain the raw IP and are intended to be removed after about 31 days, supporting the 24-hour, 7-day and 30-day dashboard views without keeping long-term IP history.</li>
                     <li>Comments remain until removed by moderation, deletion of the related publication or a valid erasure request, subject to applicable legal exceptions.</li>
                     <li>Like identifiers remain until the Like is removed or the related content is deleted. The corresponding first-party Like cookie currently has a maximum lifetime of two years.</li>
                     <li>Preference and session storage periods are described in the <Link href="/cookies">Cookie Policy</Link>.</li>
