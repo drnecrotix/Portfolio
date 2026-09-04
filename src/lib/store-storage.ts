@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -8,6 +9,7 @@ import { getRuntimeR2Config } from '@/lib/integration-runtime';
 
 const MAX_DIGITAL_FILE_BYTES = 250 * 1024 * 1024;
 const STORE_KEY_PREFIX = 'store/products/';
+const EXTERNAL_KEY_PREFIX = 'external:';
 
 function required(value: string | undefined, name: string) {
     if (!value) throw new Error(`${name} is not configured.`);
@@ -22,6 +24,61 @@ function localRoot() {
         throw new Error('STORE_PRIVATE_STORAGE_PATH must be outside the public directory.');
     }
     return root;
+}
+
+function isPrivateIpv4(hostname: string) {
+    const parts = hostname.split('.').map(Number);
+    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+    return parts[0] === 10
+        || parts[0] === 127
+        || (parts[0] === 169 && parts[1] === 254)
+        || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)
+        || (parts[0] === 192 && parts[1] === 168)
+        || parts[0] === 0;
+}
+
+export function normalizeExternalDigitalProductUrl(raw: string) {
+    let parsed: URL;
+    try {
+        parsed = new URL(raw.trim());
+    } catch {
+        throw new Error('External file URL must be a valid HTTPS URL.');
+    }
+    if (parsed.protocol !== 'https:') throw new Error('External file URL must use HTTPS.');
+    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    const ipv6 = hostname.includes(':');
+    if (!hostname
+        || hostname === 'localhost'
+        || hostname.endsWith('.localhost')
+        || isPrivateIpv4(hostname)
+        || (ipv6 && (hostname === '::1' || hostname.startsWith('fc') || hostname.startsWith('fd') || hostname.startsWith('fe80:')))) {
+        throw new Error('External file URL cannot target localhost or a private network address.');
+    }
+    parsed.username = '';
+    parsed.password = '';
+    return parsed.toString();
+}
+
+export function externalDigitalProductStorageKey(rawUrl: string) {
+    const url = normalizeExternalDigitalProductUrl(rawUrl);
+    return `${EXTERNAL_KEY_PREFIX}${randomUUID()}:${Buffer.from(url, 'utf8').toString('base64url')}`;
+}
+
+export function isExternalDigitalProductStorageKey(storageKey: string) {
+    return storageKey.startsWith(EXTERNAL_KEY_PREFIX);
+}
+
+function externalDigitalProductUrl(storageKey: string) {
+    if (!isExternalDigitalProductStorageKey(storageKey)) throw new Error('Invalid external digital product storage key.');
+    try {
+        const payload = storageKey.slice(EXTERNAL_KEY_PREFIX.length);
+        const separator = payload.indexOf(':');
+        const encoded = separator >= 0 ? payload.slice(separator + 1) : payload;
+        return normalizeExternalDigitalProductUrl(Buffer.from(encoded, 'base64url').toString('utf8'));
+    } catch (error) {
+        if (error instanceof Error) throw error;
+        throw new Error('Invalid external digital product storage key.');
+    }
 }
 
 function validStoreKey(storageKey: string) {
@@ -83,6 +140,28 @@ async function readFromR2(storageKey: string) {
     }
 }
 
+export async function fetchExternalDigitalProduct(storageKey: string) {
+    let url = externalDigitalProductUrl(storageKey);
+    for (let hop = 0; hop < 5; hop += 1) {
+        const response = await fetch(url, {
+            method: 'GET',
+            redirect: 'manual',
+            cache: 'no-store',
+            headers: { 'User-Agent': 'NecrotixLab-Store-Delivery/1.0', Accept: '*/*' },
+            signal: AbortSignal.timeout(30_000),
+        });
+        if ([301, 302, 303, 307, 308].includes(response.status)) {
+            const location = response.headers.get('location');
+            if (!location) throw new Error('External file redirect is missing a destination.');
+            url = normalizeExternalDigitalProductUrl(new URL(location, url).toString());
+            continue;
+        }
+        if (!response.ok || !response.body) throw new Error(`External file source returned HTTP ${response.status}.`);
+        return response;
+    }
+    throw new Error('External file source redirected too many times.');
+}
+
 export function validateDigitalProductFile(file: File) {
     if (!file.name.trim()) throw new Error('Digital product file name is required.');
     if (!file.size) throw new Error('Digital product file is empty.');
@@ -111,12 +190,11 @@ export async function uploadDigitalProductFile(productId: string, file: File, st
     const target = localPath(storageKey);
     await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
     await writeFile(target, Buffer.from(await file.arrayBuffer()), { flag: 'wx', mode: 0o600 });
-
-    // Keep productId in the signature for storage-provider parity and future shared-storage migration.
     void productId;
 }
 
 export async function readDigitalProductFile(storageKey: string) {
+    if (isExternalDigitalProductStorageKey(storageKey)) throw new Error('External digital product files must use streamed delivery.');
     validStoreKey(storageKey);
 
     if (await localFileExists(storageKey)) {
@@ -124,11 +202,11 @@ export async function readDigitalProductFile(storageKey: string) {
         return { bytes: new Uint8Array(bytes), contentType: '' };
     }
 
-    // Backward compatibility: Store files created before local storage was enabled may still live in R2.
     return readFromR2(storageKey);
 }
 
 export async function deleteDigitalProductFile(storageKey: string) {
+    if (isExternalDigitalProductStorageKey(storageKey)) return;
     validStoreKey(storageKey);
 
     if (await localFileExists(storageKey)) {
@@ -136,7 +214,6 @@ export async function deleteDigitalProductFile(storageKey: string) {
         return;
     }
 
-    // Backward compatibility for existing R2-backed product files.
     const runtime = await r2Config();
     const s3 = r2Client(runtime);
     try {

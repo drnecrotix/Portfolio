@@ -7,8 +7,14 @@ import { ChevronDown } from 'lucide-react';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 import type { AdminNavGroup, AdminNavItem } from '@/components/admin/AdminMobileNavigation';
 
+function isItemActive(pathname: string, href: string, items: readonly AdminNavItem[]) {
+    if (pathname === href) return true;
+    if (href === '/admin' || !pathname.startsWith(`${href}/`)) return false;
+    return !items.some(([, siblingHref]) => siblingHref !== href && siblingHref.startsWith(`${href}/`) && (pathname === siblingHref || pathname.startsWith(`${siblingHref}/`)));
+}
+
 function activeGroupForPath(pathname: string, navGroups: readonly AdminNavGroup[]) {
-    return navGroups.find(([groupLabel, items]) => items.some(([, href]) => pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`))))?.[0] ?? null;
+    return navGroups.find(([groupLabel, items]) => items.some(([, href]) => isItemActive(pathname, href, items)))?.[0] ?? null;
 }
 
 export function AdminDesktopNavigation({
@@ -67,7 +73,7 @@ export function AdminDesktopNavigation({
                                                 key={href}
                                                 href={href}
                                                 onClick={() => setOpenGroup(groupLabel)}
-                                                className={linkClass(pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`)))}
+                                                className={linkClass(isItemActive(pathname, href, items))}
                                             >
                                                 {label}
                                             </Link>
