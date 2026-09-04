@@ -42,8 +42,8 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
             lerp: 0.1,
             duration: 1.5,
             smoothWheel: true,
-            // smoothTouch is causing TS error in this version's types
-            // @ts-ignore
+            // smoothTouch is not present in this Lenis version's published option types.
+            // @ts-expect-error - supported at runtime by the currently installed Lenis build.
             smoothTouch: false
         }}>
             <RouteScrollReset />
