@@ -45,6 +45,19 @@ enum SiteMode {
   ARCHIVE
 }
 
+enum StoreProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum StoreOrderStatus {
+  PENDING
+  PAID
+  REFUNDED
+  CANCELLED
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
@@ -337,4 +350,117 @@ model Revision {
   page       Page?    @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
+}
+
+model StoreProduct {
+  id                    String                 @id @default(cuid())
+  slug                  String                 @unique
+  title                 String
+  excerpt               String?
+  description           String                 @db.Text
+  category              String?
+  tags                  String[]
+  priceCents            Int
+  compareAtPriceCents   Int?
+  currency              String                 @default("EUR")
+  coverImageUrl         String?
+  lemonSqueezyVariantId String?
+  status                StoreProductStatus     @default(DRAFT)
+  featured              Boolean                @default(false)
+  downloadLimit         Int                    @default(5)
+  seoTitle              String?
+  seoDescription        String?
+  publishedAt           DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  files                 StoreProductFile[]
+  orderItems            StoreOrderItem[]
+  downloadGrants        StoreDownloadGrant[]
+  checkoutSessions      StoreCheckoutSession[]
+
+  @@index([status, publishedAt])
+  @@index([category, status])
+  @@index([featured, status])
+}
+
+model StoreProductFile {
+  id        String       @id @default(cuid())
+  productId String
+  product   StoreProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  fileName  String
+  storageKey String       @unique
+  mimeType  String
+  size      Int
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  @@index([productId, sortOrder])
+}
+
+model StoreOrder {
+  id              String           @id @default(cuid())
+  provider        String           @default("lemonsqueezy")
+  providerOrderId String           @unique
+  email           String
+  customerName    String?
+  currency        String           @default("EUR")
+  subtotalCents   Int              @default(0)
+  totalCents      Int              @default(0)
+  status          StoreOrderStatus @default(PENDING)
+  paidAt          DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  items           StoreOrderItem[]
+  downloadGrants  StoreDownloadGrant[]
+
+  @@index([status, createdAt])
+  @@index([email, createdAt])
+}
+
+model StoreOrderItem {
+  id             String        @id @default(cuid())
+  orderId        String
+  order          StoreOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        StoreProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  title          String
+  unitPriceCents Int
+  quantity       Int           @default(1)
+  createdAt      DateTime      @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model StoreDownloadGrant {
+  id           String       @id @default(cuid())
+  token        String       @unique
+  orderId      String
+  order        StoreOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      StoreProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  downloads    Int          @default(0)
+  maxDownloads Int          @default(5)
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([orderId, productId])
+  @@index([productId, createdAt])
+}
+
+model StoreCheckoutSession {
+  id        String       @id @default(cuid())
+  token     String       @unique
+  productId String
+  product   StoreProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId   String?
+  expiresAt DateTime
+  paidAt    DateTime?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([productId, createdAt])
+  @@index([expiresAt])
 }
