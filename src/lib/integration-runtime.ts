@@ -77,6 +77,7 @@ export async function getRuntimeR2Config() {
         accessKeyId: stored['r2.accessKeyId'] || String(process.env.R2_ACCESS_KEY_ID ?? '').trim(),
         secretAccessKey: stored['r2.secretAccessKey'] || String(process.env.R2_SECRET_ACCESS_KEY ?? '').trim(),
         bucket: stored['r2.bucket'] || String(process.env.R2_BUCKET ?? '').trim(),
+        storeBucket: stored['r2.storeBucket'] || String(process.env.R2_STORE_BUCKET ?? '').trim(),
         publicBaseUrl: stored['r2.publicBaseUrl'] || String(process.env.R2_PUBLIC_BASE_URL ?? '').trim(),
     };
 }
