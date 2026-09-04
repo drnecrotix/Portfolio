@@ -8,14 +8,17 @@ const outputDir = path.resolve(process.env.LIVE_AUDIT_OUTPUT || 'live-site-audit
 const profiles = [
   { name: 'desktop', viewport: { width: 1440, height: 1000 }, isMobile: false },
   { name: 'mobile', viewport: { width: 390, height: 844 }, isMobile: true },
+  { name: 'mobile-small', viewport: { width: 360, height: 800 }, isMobile: true },
 ];
 const ignoredPrefixes = ['/admin', '/api', '/auth', '/_next', '/store/download', '/store/thanks', '/store/cancel'];
+const downloadableExtension = /\.(?:pdf|zip|rar|7z|tar|gz|jpg|jpeg|png|gif|webp|svg|avif|mp4|webm|mov|mp3|wav|ogg|doc|docx|xls|xlsx|ppt|pptx|psd|ai|fig|blend)$/i;
 
 function candidate(raw) {
   try {
     const url = new URL(raw, base);
     if (url.origin !== base.origin || !['http:', 'https:'].includes(url.protocol)) return null;
     if (ignoredPrefixes.some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) return null;
+    if (downloadableExtension.test(url.pathname)) return null;
     url.hash = '';
     for (const key of [...url.searchParams.keys()]) {
       if (/^(utm_|fbclid|gclid|ref$)/i.test(key)) url.searchParams.delete(key);
@@ -168,7 +171,7 @@ await mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const routes = await discoverRoutes(browser);
 console.log(`Live audit target: ${base.origin}`);
-console.log(`Discovered ${routes.length} public route(s).`);
+console.log(`Discovered ${routes.length} public HTML route(s).`);
 
 const results = [];
 for (const profile of profiles) {
@@ -206,8 +209,8 @@ const markdown = [
   '# Necrotix Lab live responsive audit', '',
   `- Target: ${base.origin}`,
   `- Generated: ${report.generatedAt}`,
-  `- Public routes discovered: ${routes.length}`,
-  `- Desktop/mobile checks: ${results.length}`,
+  `- Public HTML routes discovered: ${routes.length}`,
+  `- Responsive checks: ${results.length}`,
   `- Checks with findings: ${issueResults.length}`,
   `- Critical/high findings: ${serious.length}`, '', '## Findings', '',
 ];
