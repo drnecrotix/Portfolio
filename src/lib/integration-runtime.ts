@@ -80,3 +80,13 @@ export async function getRuntimeR2Config() {
         publicBaseUrl: stored['r2.publicBaseUrl'] || String(process.env.R2_PUBLIC_BASE_URL ?? '').trim(),
     };
 }
+
+export async function getRuntimeLemonSqueezyConfig() {
+    const settings = await loadSettings();
+    const stored = getStoredIntegrationValues(settings?.integrationSettings);
+    return {
+        apiKey: stored['lemonsqueezy.apiKey'] || String(process.env.LEMON_SQUEEZY_API_KEY ?? '').trim(),
+        storeId: stored['lemonsqueezy.storeId'] || String(process.env.LEMON_SQUEEZY_STORE_ID ?? '').trim(),
+        webhookSecret: stored['lemonsqueezy.webhookSecret'] || String(process.env.LEMON_SQUEEZY_WEBHOOK_SECRET ?? '').trim(),
+    };
+}
