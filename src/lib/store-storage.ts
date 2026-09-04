@@ -12,8 +12,8 @@ function required(value: string | undefined, name: string) {
 
 async function config() {
     const value = await getRuntimeR2Config();
-    if (!value.accountId || !value.accessKeyId || !value.secretAccessKey || !value.bucket) {
-        throw new Error('Cloudflare R2 must be configured before digital product files can be managed.');
+    if (!value.accountId || !value.accessKeyId || !value.secretAccessKey || !value.storeBucket) {
+        throw new Error('Cloudflare R2 private Store bucket must be configured before digital product files can be managed.');
     }
     return value;
 }
@@ -46,7 +46,7 @@ export async function uploadDigitalProductFile(productId: string, file: File, st
     const s3 = client(runtime);
     try {
         await s3.send(new PutObjectCommand({
-            Bucket: required(runtime.bucket, 'R2_BUCKET'),
+            Bucket: required(runtime.storeBucket, 'R2_STORE_BUCKET'),
             Key: storageKey,
             Body: Buffer.from(await file.arrayBuffer()),
             ContentType: file.type || 'application/octet-stream',
@@ -64,7 +64,7 @@ export async function readDigitalProductFile(storageKey: string) {
     const s3 = client(runtime);
     try {
         const result = await s3.send(new GetObjectCommand({
-            Bucket: required(runtime.bucket, 'R2_BUCKET'),
+            Bucket: required(runtime.storeBucket, 'R2_STORE_BUCKET'),
             Key: storageKey,
         }));
         if (!result.Body) throw new Error('Digital product file is unavailable.');
@@ -82,7 +82,7 @@ export async function deleteDigitalProductFile(storageKey: string) {
     const runtime = await config();
     const s3 = client(runtime);
     try {
-        await s3.send(new DeleteObjectCommand({ Bucket: required(runtime.bucket, 'R2_BUCKET'), Key: storageKey }));
+        await s3.send(new DeleteObjectCommand({ Bucket: required(runtime.storeBucket, 'R2_STORE_BUCKET'), Key: storageKey }));
     } finally {
         s3.destroy();
     }
