@@ -34,9 +34,10 @@ export default async function PrivacyPage() {
                     <li><strong>Contact enquiries:</strong> name, email address, reason, subject and message content.</li>
                     <li><strong>Blog comments:</strong> public display name, comment text and an optional private email address.</li>
                     <li><strong>Engagement:</strong> pseudonymous visitor identifiers used to remember Blog and Gallery likes, plus aggregate view counts.</li>
+                    <li><strong>Interface experiments:</strong> session-scoped A/B variant assignment in the browser and aggregate counters such as exposures, section visibility and content opens. The experiment database does not store a visitor identifier.</li>
                     <li><strong>Technical and security data:</strong> IP address and request metadata used temporarily for rate limiting, abuse prevention and service security.</li>
                     <li><strong>AI assistant:</strong> the messages you choose to send, the conversation context required to answer them and short-lived technical data used for rate limiting.</li>
-                    <li><strong>Preferences and browser storage:</strong> language, theme, first-visit/loading state, session view markers and chat history stored in your browser.</li>
+                    <li><strong>Preferences and browser storage:</strong> language, theme, first-visit/loading state, experiment assignment, session view markers and chat history stored in your browser.</li>
                     <li><strong>Administrative accounts:</strong> account identity and authentication information for authorised site administrators and editors.</li>
                 </ul>
             </section>
@@ -55,6 +56,10 @@ export default async function PrivacyPage() {
                     <div>
                         <h3>Likes and aggregate views</h3>
                         <p className="mt-2">Pseudonymous identifiers and session markers are used to provide requested Like functionality, avoid duplicate interactions and maintain aggregate engagement counts. These identifiers are not intended to identify you by name.</p>
+                    </div>
+                    <div>
+                        <h3>Interface experiments and product improvement</h3>
+                        <p className="mt-2">Limited first-party A/B tests compare presentation and navigation variants so the site can evaluate usability and content discovery. Variant assignment lasts only for the browser session and the server stores aggregate event totals rather than an experiment user profile. The legal basis is the legitimate interest in improving the website while minimising the data used (Article 6(1)(f)).</p>
                     </div>
                     <div>
                         <h3>AI assistant</h3>
@@ -84,6 +89,7 @@ export default async function PrivacyPage() {
                     <li>Contact-form submissions are sent by email and are not stored in the website database by the contact API. Correspondence is retained only for as long as reasonably necessary for the enquiry, ongoing relationship, security or legal claims.</li>
                     <li>Contact-form IP rate-limit entries are held in server memory for about 10 minutes.</li>
                     <li>AI rate-limit entries are short-lived, about one minute. The site does not persist submitted assistant messages in its database in the current implementation; the browser keeps the visible chat history for the current session.</li>
+                    <li>A/B variant assignments and event de-duplication markers are stored only for the browser session. The server retains aggregate experiment counters for longitudinal comparison; those counters do not contain a visitor identifier.</li>
                     <li>Comments remain until removed by moderation, deletion of the related publication or a valid erasure request, subject to applicable legal exceptions.</li>
                     <li>Like identifiers remain until the Like is removed or the related content is deleted. The corresponding first-party Like cookie currently has a maximum lifetime of two years.</li>
                     <li>Preference and session storage periods are described in the <Link href="/cookies">Cookie Policy</Link>.</li>
@@ -103,7 +109,7 @@ export default async function PrivacyPage() {
 
             <section>
                 <h2>9. Automated decisions and profiling</h2>
-                <p className="mt-4">NecrotixLab does not use the website data described here to make decisions about visitors that produce legal or similarly significant effects. The AI assistant generates conversational responses but is not used for automated eligibility, employment, credit or similar decisions.</p>
+                <p className="mt-4">NecrotixLab does not use the website data described here to make decisions about visitors that produce legal or similarly significant effects. A/B variants are randomly assigned for interface comparison only. The AI assistant generates conversational responses but is not used for automated eligibility, employment, credit or similar decisions.</p>
             </section>
 
             <section>
