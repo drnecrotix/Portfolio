@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, CloudUpload, Link2, Loader2, Save, ShieldCheck, Upload } from 'lucide-react';
+import { CheckCircle2, Link2, Loader2, Save, ShieldCheck, Upload } from 'lucide-react';
 import {
     loadStoreProviderCatalog,
     type PaymentProvider,
@@ -256,7 +256,7 @@ export function StoreProductForm({ product, action, storageConfigured = false, s
                                     />
                                 </label>
                                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    <CloudUpload className="h-4 w-4" />
+                                    <Upload className="h-4 w-4" />
                                     <span>{selectedFileName ? `Selected: ${selectedFileName}` : (storageConfigured ? (storeBucket || 'Necrotix Lab local private storage') : 'Local upload is currently unavailable.')}</span>
                                 </div>
                                 <p className="mt-2 text-[11px] leading-5 text-muted-foreground">For large files that exceed your hosting request limit, use Masked external link instead of uploading through the browser.</p>
