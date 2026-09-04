@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { CornerUpLeft, MessageCircle, Plus, RefreshCw, Send, ShieldCheck, X } from 'lucide-react';
 
@@ -169,7 +170,7 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
                     <div className="mb-6 flex items-start justify-between gap-4">
                         <div>
                             <h4 className="text-sm font-semibold">{replyTarget ? `Reply to ${replyTarget.authorName}` : 'Leave a comment'}</h4>
-                            <p className="mt-1 text-xs text-muted-foreground">Name is public. Email is optional and private.</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Name is public. Email is optional and private. See the <Link href="/privacy" className="text-foreground/80 underline decoration-foreground/20 underline-offset-4 hover:text-foreground">Privacy Policy</Link>.</p>
                         </div>
                         <button type="button" onClick={closeComposer} className="text-muted-foreground transition hover:text-foreground" aria-label="Close comment form">
                             <X className="h-4 w-4" />
@@ -210,6 +211,8 @@ export function BlogComments({ postId, initialComments }: { postId: string; init
                             <Send className="h-3.5 w-3.5" />{submitting ? 'Posting…' : replyTarget ? 'Post reply' : 'Post comment'}
                         </button>
                     </div>
+
+                    <p className="mt-4 max-w-2xl text-[11px] leading-5 text-muted-foreground/65">By posting, you acknowledge the <Link href="/privacy" className="underline decoration-foreground/20 underline-offset-4 hover:text-foreground">Privacy & GDPR Policy</Link> and agree to the <Link href="/terms" className="underline decoration-foreground/20 underline-offset-4 hover:text-foreground">Terms of Use</Link>.</p>
 
                     <div aria-live="polite" className="mt-3 min-h-5 text-xs">
                         {error && <span className="text-red-500">{error}</span>}

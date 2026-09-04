@@ -63,6 +63,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
         { url: `${baseUrl}/resume`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/contact`, changeFrequency: 'monthly', priority: 0.5 },
+        { url: `${baseUrl}/legal`, changeFrequency: 'yearly', priority: 0.35 },
+        { url: `${baseUrl}/privacy`, changeFrequency: 'yearly', priority: 0.35 },
+        { url: `${baseUrl}/cookies`, changeFrequency: 'yearly', priority: 0.3 },
+        { url: `${baseUrl}/terms`, changeFrequency: 'yearly', priority: 0.3 },
     ];
 
     if (!seo.sitemapAutoUpdate) return staticEntries;

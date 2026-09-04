@@ -27,6 +27,8 @@ export type FooterSettings = {
     aboutLinks: FooterLinkSetting[];
 };
 
+const legalOverviewLink: FooterLinkSetting = { label: 'Legal & Privacy', href: '/legal' };
+
 export const defaultFooterSettings: FooterSettings = {
     compactName: 'Dr Necrotix.',
     compactSecondary: 'All rights reserved.',
@@ -57,6 +59,7 @@ export const defaultFooterSettings: FooterSettings = {
         { label: 'Home', href: '/' },
         { label: 'Resume', href: '/resume' },
         { label: 'Contact', href: '/contact' },
+        legalOverviewLink,
     ],
     aboutLabel: 'About',
     aboutLinks: [
@@ -100,6 +103,12 @@ function normalizeInternalLink(item: FooterLinkSetting): FooterLinkSetting {
     return item;
 }
 
+function ensureLegalOverviewLink(items: FooterLinkSetting[]) {
+    return items.some((item) => item.href === legalOverviewLink.href)
+        ? items
+        : [...items, legalOverviewLink];
+}
+
 export function normalizeFooterSettings(value: unknown): FooterSettings {
     const source = object(value);
     const marquee = Array.isArray(source.marquee)
@@ -125,7 +134,7 @@ export function normalizeFooterSettings(value: unknown): FooterSettings {
         instagramUrl: typeof source.instagramUrl === 'string' ? source.instagramUrl.trim().slice(0, 2048) : defaultFooterSettings.instagramUrl,
         workspaceUrl: text(source.workspaceUrl, defaultFooterSettings.workspaceUrl, 2048),
         marquee: marquee.length ? marquee : defaultFooterSettings.marquee,
-        quickLinks: links(source.quickLinks, defaultFooterSettings.quickLinks, 6).map(normalizeInternalLink),
+        quickLinks: ensureLegalOverviewLink(links(source.quickLinks, defaultFooterSettings.quickLinks, 6).map(normalizeInternalLink)),
         aboutLabel: text(source.aboutLabel, defaultFooterSettings.aboutLabel, 80),
         aboutLinks: links(source.aboutLinks, defaultFooterSettings.aboutLinks, 8).map(normalizeInternalLink),
     };
