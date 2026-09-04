@@ -126,9 +126,11 @@ export async function installPortfolioUpdate() {
         mkdirSync(tmp, { recursive: true });
         const initialStatus = {
             state: 'starting',
-            message: `Update worker is starting for Portfolio ${remoteVersion}…`,
+            message: `Preparing Portfolio ${remoteVersion} update…`,
             updatedAt: new Date().toISOString(),
             targetVersion: remoteVersion,
+            stage: 'start',
+            progress: 3,
         };
         writeFileSync(join(tmp, 'update-status.json'), JSON.stringify(initialStatus, null, 2));
         const child = spawn(process.execPath, [script], { cwd: appRoot, env: process.env, detached: true, stdio: 'ignore' });
