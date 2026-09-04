@@ -19,7 +19,7 @@ import {
     type IntegrationTestRecord,
 } from '@/lib/integration-credentials';
 
-export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2';
+export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2' | 'lemonsqueezy';
 export type ApiActionResult = { ok: boolean; message: string; testedAt?: string; latencyMs?: number };
 
 const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
@@ -30,6 +30,7 @@ const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
     gemini: ['gemini.apiKey'],
     openrouter: ['openrouter.apiKey'],
     r2: ['r2.accountId', 'r2.accessKeyId', 'r2.secretAccessKey', 'r2.bucket', 'r2.publicBaseUrl'],
+    lemonsqueezy: ['lemonsqueezy.apiKey', 'lemonsqueezy.storeId', 'lemonsqueezy.webhookSecret'],
 };
 
 const envNames: Record<string, string> = {
@@ -45,6 +46,9 @@ const envNames: Record<string, string> = {
     'r2.secretAccessKey': 'R2_SECRET_ACCESS_KEY',
     'r2.bucket': 'R2_BUCKET',
     'r2.publicBaseUrl': 'R2_PUBLIC_BASE_URL',
+    'lemonsqueezy.apiKey': 'LEMON_SQUEEZY_API_KEY',
+    'lemonsqueezy.storeId': 'LEMON_SQUEEZY_STORE_ID',
+    'lemonsqueezy.webhookSecret': 'LEMON_SQUEEZY_WEBHOOK_SECRET',
 };
 
 const aiProviders = new Set<ApiIntegrationId>(['openai', 'groq', 'gemini', 'openrouter']);
@@ -186,6 +190,7 @@ export async function saveApiIntegration(input: {
         revalidatePath('/api/wakatime-stats');
         revalidatePath('/api/chat');
         revalidatePath('/admin/media');
+        revalidatePath('/admin/store');
 
         return { ok: true, message: Object.keys(changes).length > 0 ? 'Integration credentials saved securely. Run Test connection to verify them.' : 'No credential changes were submitted.' };
     } catch (error) {
@@ -282,6 +287,19 @@ async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, s
         if (!apiKey) throw new Error('No OpenRouter API key is configured.');
         await fetchChecked('https://openrouter.ai/api/v1/auth/key', { headers: { Authorization: `Bearer ${apiKey}` } });
         return 'OpenRouter API key is valid.';
+    }
+
+    if (id === 'lemonsqueezy') {
+        const apiKey = values['lemonsqueezy.apiKey'];
+        const storeId = values['lemonsqueezy.storeId'];
+        const webhookSecret = values['lemonsqueezy.webhookSecret'];
+        if (!apiKey || !storeId || !webhookSecret) throw new Error('Lemon Squeezy requires API Key, Store ID and Webhook Secret.');
+        const response = await fetchChecked(`https://api.lemonsqueezy.com/v1/stores/${encodeURIComponent(storeId)}`, {
+            headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/vnd.api+json' },
+        });
+        const data = await response.json();
+        const storeName = String(data?.data?.attributes?.name ?? '').trim();
+        return storeName ? `Connected to Lemon Squeezy store “${storeName}”.` : `Lemon Squeezy store ${storeId} is reachable.`;
     }
 
     const accountId = values['r2.accountId'];
