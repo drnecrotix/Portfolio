@@ -5,7 +5,7 @@ import { LegalDocument } from '@/components/legal/LegalDocument';
 
 export const metadata: Metadata = {
     title: 'Legal & Privacy - NecrotixLab',
-    description: 'Legal, privacy, GDPR and cookie information for necrotixlab.com.',
+    description: 'Legal, privacy, GDPR, digital content and cookie information for necrotixlab.com.',
     alternates: { canonical: '/legal' },
 };
 
@@ -24,8 +24,8 @@ const cards = [
     },
     {
         href: '/terms',
-        title: 'Terms of use',
-        description: 'Rules for using the website, comments, AI assistant, external services and site content.',
+        title: 'Terms & Digital Content',
+        description: 'Site rules, Digital Store delivery, withdrawal/refund policy, external services and content rights.',
         Icon: Scale,
     },
 ];
@@ -35,7 +35,7 @@ export default function LegalPage() {
         <LegalDocument
             eyebrow="Legal / 01"
             title="Legal, privacy and data protection."
-            summary="This section explains how necrotixlab.com handles personal data, browser storage, user-submitted content and third-party services."
+            summary="This section explains how necrotixlab.com handles personal data, browser storage, user-submitted content, digital Store purchases and third-party services."
         >
             <section>
                 <h2>GDPR at a glance</h2>
@@ -57,8 +57,8 @@ export default function LegalPage() {
                 <div className="flex items-start gap-3">
                     <FileText className="mt-1 size-5 shrink-0 text-muted-foreground" />
                     <div>
-                        <h2>Questions or data requests</h2>
-                        <p className="mt-3">For access, correction, deletion or another privacy request, use the <Link href="/contact">contact page</Link> and clearly mark the message as a privacy or data-protection request.</p>
+                        <h2>Questions, Store issues or data requests</h2>
+                        <p className="mt-3">For a Store delivery issue, access/correction/deletion request or another legal/privacy question, use the <Link href="/contact">contact page</Link> and clearly identify the subject of the request.</p>
                     </div>
                 </div>
             </section>
