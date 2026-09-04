@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getManagedPageAccessSettings, isManagedPagePublic } from '@/lib/page-access';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,8 @@ function escapeXml(value: string) {
 
 export async function GET() {
     let seo = defaultSeoDefaults;
+    const pageAccess = await getManagedPageAccessSettings();
+    const blogPublic = isManagedPagePublic(pageAccess, 'blog');
 
     try {
         const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
@@ -29,7 +32,7 @@ export async function GET() {
     }
 
     const now = new Date();
-    const posts = seo.rssAutoUpdate
+    const posts = seo.rssAutoUpdate && blogPublic
         ? await prisma.post.findMany({
               where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] },
               select: { slug: true, title: true, excerpt: true, authorName: true, publishedAt: true, createdAt: true, updatedAt: true },
