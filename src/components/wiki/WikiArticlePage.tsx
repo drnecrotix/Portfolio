@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, HelpCircle, Clock3, Hash, LibraryBig } from 'lucide-react';
+import { BookOpen, ChevronDown, Clock3, Hash, HelpCircle, LibraryBig, ListTree } from 'lucide-react';
 import type { PublicIdentity } from '@/lib/public-identity';
 import { prepareWikiArticleHtml, type WikiArticleContent, wikiCategoryLabel } from '@/lib/wiki-articles';
 
@@ -80,9 +80,28 @@ export function WikiArticlePage({
                         <Link href="/wiki/faq" className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/[0.045] px-3 py-2.5 text-xs font-semibold text-foreground/80 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-sky-700 dark:hover:text-sky-300"><HelpCircle className="size-4" /> FAQ</Link>
                     </div>
                     {prepared.headings.length ? (
-                        <details className="mb-7 rounded-xl border border-foreground/10 p-4 lg:hidden">
-                            <summary className="cursor-pointer list-none font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground [&::-webkit-details-marker]:hidden">Contents</summary>
-                            <div className="mt-3 border-t border-foreground/10 pt-3">{prepared.headings.map((heading) => <a key={heading.id} href={`#${heading.id}`} className={`block py-1.5 text-sm text-muted-foreground ${heading.level === 3 ? 'pl-4' : ''}`}>{heading.label}</a>)}</div>
+                        <details className="group mb-7 overflow-hidden rounded-2xl border border-sky-500/25 bg-sky-500/[0.045] shadow-sm transition open:bg-sky-500/[0.065] lg:hidden">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+                                <span className="flex min-w-0 items-center gap-3">
+                                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-300"><ListTree className="size-4" /></span>
+                                    <span className="min-w-0">
+                                        <span className="block text-xs font-bold uppercase tracking-[0.16em] text-foreground/85">Contents</span>
+                                        <span className="mt-0.5 block text-[10px] text-muted-foreground">{prepared.headings.length} sections</span>
+                                    </span>
+                                </span>
+                                <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+                            </summary>
+                            <div className="border-t border-sky-500/15 bg-background/35 px-3 py-2">
+                                {prepared.headings.map((heading) => (
+                                    <a
+                                        key={heading.id}
+                                        href={`#${heading.id}`}
+                                        className={`block rounded-xl px-3 py-2.5 text-sm leading-5 text-foreground/75 transition hover:bg-sky-500/[0.08] hover:text-foreground ${heading.level === 3 ? 'ml-3 border-l border-sky-500/20 pl-4' : ''}`}
+                                    >
+                                        {heading.label}
+                                    </a>
+                                ))}
+                            </div>
                         </details>
                     ) : null}
                     <div className="prose max-w-none prose-headings:scroll-mt-28 prose-headings:font-black prose-headings:tracking-[-0.03em] prose-p:leading-8 prose-p:text-foreground/78 prose-a:text-sky-400 prose-a:underline-offset-4 prose-strong:text-foreground prose-blockquote:border-foreground/20 prose-blockquote:text-foreground/70 prose-li:text-foreground/75 prose-code:before:content-none prose-code:after:content-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: prepared.html }} />

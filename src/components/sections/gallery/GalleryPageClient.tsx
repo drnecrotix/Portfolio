@@ -3,16 +3,18 @@
 import dynamic from 'next/dynamic';
 import CleanFilmGrid from '@/components/sections/gallery/CleanFilmGrid';
 import ManifestoHero from '@/components/sections/gallery/ManifestoHero';
+import { ContentWatermarkScope } from '@/components/ui/ContentWatermarkScope';
 import { DeferredMount } from '@/components/ui/DeferredMount';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { usePerformance } from '@/hooks/usePerformance';
+import type { ContentWatermarkSettings } from '@/lib/content-watermark';
 import type { GallerySettings } from '@/lib/gallery-settings';
 
 const GLSLHills = dynamic(() => import('@/components/ui/glsl-hills').then((mod) => mod.GLSLHills), {
   ssr: false,
 });
 
-export function GalleryPageClient({ content }: { content: GallerySettings }) {
+export function GalleryPageClient({ content, watermark }: { content: GallerySettings; watermark: ContentWatermarkSettings }) {
   const { isLowPowerMode } = usePerformance();
 
   return (
@@ -27,7 +29,9 @@ export function GalleryPageClient({ content }: { content: GallerySettings }) {
       <div className="relative z-10">
         <ManifestoHero isLowPowerMode={isLowPowerMode} content={content} />
         <ErrorBoundary fallback={<div className="container mx-auto py-20 text-center">Gallery Grid Unavailable</div>}>
-          <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} />
+          <ContentWatermarkScope settings={watermark}>
+            <CleanFilmGrid isLowPowerMode={isLowPowerMode} content={content} />
+          </ContentWatermarkScope>
         </ErrorBoundary>
       </div>
     </main>

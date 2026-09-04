@@ -110,6 +110,7 @@ import { ThemeAwareClickSpark } from '@/components/ui/ThemeAwareClickSpark';
 import { ConditionalNavigation } from '@/components/layout/ConditionalNavigation';
 import { ArcPreloaderWrapper } from '@/components/layout/ArcPreloaderWrapper';
 import { ChatBot } from '@/components/layout/ChatBot';
+import { TrafficAnalyticsTracker } from '@/components/analytics/TrafficAnalyticsTracker';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
     const locale = await getLocale();
@@ -145,6 +146,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                                 <ArcPreloaderWrapper>
                                     <ConditionalNavigation>{children}</ConditionalNavigation>
                                 </ArcPreloaderWrapper>
+                                <TrafficAnalyticsTracker />
                                 <ChatBot headless />
                             </ThemeAwareClickSpark>
                         </SmoothScrollProvider>

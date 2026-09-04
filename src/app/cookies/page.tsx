@@ -10,6 +10,8 @@ export const metadata: Metadata = {
 
 const rows = [
     ['locale', 'Cookie', 'Remembers a language selected by the visitor.', 'Up to 1 year', 'Preference / requested functionality'],
+    ['necrotix_experiment_variants', 'Session cookie', 'Keeps the randomly assigned homepage A/B variants stable for the current browser session so repeated refreshes do not move the same session between variants.', 'Browser session', 'First-party measurement'],
+    ['necrotix_traffic_session', 'HTTP-only session cookie', 'Random first-party session identifier used to estimate visits and live traffic. The server hashes the value before storing the short-lived session record.', 'Browser session; server session record about 24 hours', 'First-party measurement'],
     ['necrotix_blog_like_id', 'Cookie', 'Pseudonymous identifier created when Blog Like functionality is used, so the site can remember and toggle that interaction.', 'Up to 2 years', 'Functional interaction'],
     ['necrotix_gallery_like_id', 'Cookie', 'Pseudonymous identifier created when Gallery Like functionality is used.', 'Up to 2 years', 'Functional interaction'],
     ['portfolio-private-access', 'Cookie', 'Temporary access token when the site owner enables Private mode and a visitor successfully enters the access password.', 'About 12 hours', 'Strictly necessary'],
@@ -27,7 +29,7 @@ export default function CookiesPage() {
         <LegalDocument
             eyebrow="Cookies / Storage"
             title="Cookie & browser storage policy."
-            summary="NecrotixLab uses a limited set of first-party cookies and browser-storage entries for requested features, preferences, security and aggregate engagement."
+            summary="NecrotixLab uses a limited set of first-party cookies and browser-storage entries for requested features, preferences, security, short-retention analytics and aggregate engagement."
         >
             <section>
                 <h2>1. What cookies and browser storage are</h2>
@@ -59,9 +61,11 @@ export default function CookiesPage() {
             </section>
 
             <section>
-                <h2>3. Essential, functional and aggregate measurement storage</h2>
-                <p className="mt-4">Storage that is strictly necessary to provide a feature explicitly requested by you, authenticate authorised administrators, remember a security choice or maintain essential site operation may be used without a separate advertising-style consent banner. Functional identifiers such as Like cookies are created only when the corresponding interactive feature is used.</p>
-                <p className="mt-3">NecrotixLab also runs limited first-party A/B tests to compare interface variants. The experiment variant is assigned for each homepage request and is not stored in cookies, local storage or session storage. The server stores only aggregate counters such as exposures, project opens and section visibility; it does not create an experiment visitor profile.</p>
+                <h2>3. First-party functional and measurement storage</h2>
+                <p className="mt-4">Storage used for requested functionality includes language, theme, authentication, private-site access, Likes and session-level view markers. These entries are separate from advertising and cross-site behavioural tracking.</p>
+                <p className="mt-3">NecrotixLab also runs limited first-party A/B tests. A small session cookie stores only the current A/B variant letters so a browser session stays in the same variants across refreshes. Experiment event data is kept as aggregate counters such as exposures, project opens and section visibility rather than as a named visitor profile.</p>
+                <p className="mt-3">Short-retention traffic analytics uses a random HTTP-only session cookie to estimate visits and live traffic. The server hashes that random value before storing the temporary session record. The analytics database stores only country code, broad device class and hourly aggregate traffic totals. It does not store city, precise coordinates or raw IP addresses for analytics. Country/device aggregates are intended to be removed after about 31 days, and anonymous session hashes after about 24 hours of inactivity.</p>
+                <p className="mt-3">When a browser sends the Do Not Track signal, the public page-view tracker does not submit traffic analytics events.</p>
                 <p className="mt-3">The current application code does not intentionally set first-party advertising or cross-site behavioural advertising cookies.</p>
             </section>
 
@@ -73,8 +77,8 @@ export default function CookiesPage() {
 
             <section>
                 <h2>5. Managing storage</h2>
-                <p className="mt-4">You can delete cookies, local storage and session storage through your browser settings. Deleting functional storage can reset language, theme, Like state, view-session markers, chat history or private-access state.</p>
-                <p className="mt-3">Blocking all cookies may prevent authentication, Private mode and some interactive features from working correctly.</p>
+                <p className="mt-4">You can delete cookies, local storage and session storage through your browser settings. Deleting functional or measurement storage can reset language, theme, Like state, view-session markers, A/B assignment, traffic-session state, chat history or private-access state.</p>
+                <p className="mt-3">Blocking all cookies may prevent authentication, Private mode and some interactive or measurement features from working correctly.</p>
             </section>
 
             <section>

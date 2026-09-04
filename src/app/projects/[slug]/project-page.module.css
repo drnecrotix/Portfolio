@@ -1,0 +1,9 @@
+.projectPage :global(.aspect-video:has(> img.cursor-zoom-in)) {
+    cursor: default !important;
+    pointer-events: none;
+}
+
+.projectPage :global(.aspect-video:has(> img.cursor-zoom-in) > img) {
+    cursor: default !important;
+    transform: none !important;
+}
