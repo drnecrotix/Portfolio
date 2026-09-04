@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { canAccessManagedPage, getManagedPageAccessSettings, type ManagedPageKey } from '@/lib/page-access';
 
 const LEGACY_PAGE_TITLE = 'Experience page configuration';
 
@@ -30,7 +32,26 @@ const fallback: PublicNavigationItem[] = [
 
 export const dynamic = 'force-dynamic';
 
+function managedKeyFromHref(href: string): ManagedPageKey | null {
+    const path = href.split(/[?#]/, 1)[0] || '';
+    if (path === '/wiki' || path.startsWith('/wiki/')) return 'wiki';
+    if (path === '/blog' || path.startsWith('/blog/')) return 'blog';
+    if (path === '/gallery' || path.startsWith('/gallery/')) return 'gallery';
+    if (path === '/store' || path.startsWith('/store/')) return 'store';
+    return null;
+}
+
 export async function GET() {
+    const [pageAccess, session] = await Promise.all([
+        getManagedPageAccessSettings(),
+        auth().catch(() => null),
+    ]);
+    const isAdmin = Boolean(session?.user && ['OWNER', 'ADMIN'].includes(session.user.role));
+    const allowed = (item: PublicNavigationItem) => {
+        const key = managedKeyFromHref(item.href);
+        return !key || canAccessManagedPage(pageAccess, key, isAdmin);
+    };
+
     try {
         const [items, journeyPage] = await Promise.all([
             prisma.navigationItem.findMany({ where: { isVisible: true }, orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }] }),
@@ -51,18 +72,20 @@ export async function GET() {
                 parentId: item.parentId,
             };
 
-            // Public navigation must honor the CMS record exactly. Wiki links are managed
-            // manually in Navigation, so no label/path/order heuristic may suppress them.
             const journeyItem = item.id === 'experience' || item.href === '/experience' || item.href === '/journey';
             if (journeyItem) return { ...base, label: pageName, href: '/journey' };
             const labItem = item.id === 'skills' || item.id === 'lab' || item.href === '/skills' || item.href === '/lab';
             return labItem ? { ...base, label: item.label === 'Skills' ? 'Lab' : item.label, href: '/lab' } : base;
-        });
+        }).filter(allowed);
 
-        return NextResponse.json(normalized.length ? normalized : fallback.map((item) => item.id === 'experience' ? { ...item, label: pageName } : item), {
+        const visibleFallback = fallback
+            .map((item) => item.id === 'experience' ? { ...item, label: pageName } : item)
+            .filter(allowed);
+
+        return NextResponse.json(normalized.length ? normalized : visibleFallback, {
             headers: { 'Cache-Control': 'no-store, max-age=0' },
         });
     } catch {
-        return NextResponse.json(fallback, { headers: { 'Cache-Control': 'no-store, max-age=0' } });
+        return NextResponse.json(fallback.filter(allowed), { headers: { 'Cache-Control': 'no-store, max-age=0' } });
     }
 }
