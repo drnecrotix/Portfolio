@@ -1,26 +1,70 @@
 import { prisma } from '@/lib/prisma';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
+import { normalizeManagedPageAccessSettings, PAGE_ACCESS_CONFIG_SLUG } from '@/lib/page-access';
 import { StatusToast } from '@/components/admin/StatusToast';
 import { MediaPicker } from '@/components/admin/MediaPicker';
-import { updateGeneralSettings } from './actions';
+import { updateGeneralSettings, updatePageAccessSettings } from './actions';
 
 const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
+const accessLabels = {
+    wiki: { title: 'Wiki', path: '/wiki', description: 'Personal Wiki, Wiki articles and FAQ pages.' },
+    blog: { title: 'Blog', path: '/blog', description: 'Blog archive and all public article pages.' },
+    gallery: { title: 'Gallery', path: '/gallery', description: 'Gallery index and individual gallery work pages.' },
+    store: { title: 'Store', path: '/store', description: 'Digital Store catalog, product pages and checkout entry points.' },
+} as const;
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
-    const [raw, params] = await Promise.all([
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; pageAccessSaved?: string; error?: string }> }) {
+    const [raw, accessConfig, params] = await Promise.all([
         prisma.siteSettings.findUnique({ where: { id: 'default' } }),
+        prisma.page.findUnique({ where: { slug: PAGE_ACCESS_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
         searchParams,
     ]);
     const settings = normalizeGeneralSiteSettings(raw);
+    const pageAccess = normalizeManagedPageAccessSettings(accessConfig?.content);
+    const savedMessage = params.pageAccessSaved
+        ? 'Page access settings saved and public routes refreshed.'
+        : params.saved
+            ? 'Settings saved and public cache refreshed.'
+            : undefined;
 
     return (
         <div className="mx-auto max-w-5xl">
-            <StatusToast type={params.error ? 'error' : params.saved ? 'success' : undefined} message={params.error || (params.saved ? 'Settings saved and public cache refreshed.' : undefined)} />
+            <StatusToast type={params.error ? 'error' : savedMessage ? 'success' : undefined} message={params.error || savedMessage} />
             <div className="mb-10">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/35">General Settings</p>
                 <h2 className="mt-2 text-4xl font-semibold">Site identity & preferences</h2>
-                <p className="mt-3 max-w-2xl text-sm text-white/45">Central settings for identity, theme defaults, contact details, contact-form delivery and social profiles.</p>
+                <p className="mt-3 max-w-2xl text-sm text-white/45">Central settings for identity, theme defaults, contact details, page availability, contact-form delivery and social profiles.</p>
             </div>
+
+            <form action={updatePageAccessSettings} className="mb-8 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
+                <div className="mb-6">
+                    <h3 className="text-lg font-semibold">Page availability & access</h3>
+                    <p className="mt-1 max-w-3xl text-xs leading-5 text-white/40">Temporarily disable selected public sections or make them visible only while signed in as Owner/Admin. This works independently from Site Mode and applies to the whole route section, including its child pages.</p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                    {(Object.keys(accessLabels) as Array<keyof typeof accessLabels>).map((key) => {
+                        const item = accessLabels[key];
+                        return (
+                            <label key={key} className="rounded-xl border border-white/10 bg-black/10 p-4 text-sm text-white/60">
+                                <span className="flex items-center justify-between gap-3">
+                                    <span className="font-semibold text-white/85">{item.title}</span>
+                                    <span className="rounded-full border border-white/10 px-2 py-1 font-mono text-[10px] text-white/35">{item.path}</span>
+                                </span>
+                                <span className="mt-2 block text-xs leading-5 text-white/35">{item.description}</span>
+                                <select name={`${key}Access`} defaultValue={pageAccess[key]} className={`${input} [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white`}>
+                                    <option value="PUBLIC">Enabled - public</option>
+                                    <option value="ADMIN_ONLY">Admin only - Owner/Admin</option>
+                                    <option value="DISABLED">Disabled - unavailable</option>
+                                </select>
+                            </label>
+                        );
+                    })}
+                </div>
+                <div className="mt-5 rounded-xl border border-amber-300/10 bg-amber-300/[0.035] px-4 py-3 text-xs leading-5 text-amber-100/60">
+                    Disabled and Admin-only sections are removed from the public sitemap. Admin-only access requires an active Owner/Admin login session. Store download grant URLs remain independent so existing paid downloads are not revoked by hiding the Store catalog.
+                </div>
+                <button className="mt-5 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Save page access</button>
+            </form>
 
             <form action={updateGeneralSettings} className="space-y-8">
                 <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
