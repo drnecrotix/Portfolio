@@ -10,7 +10,7 @@ function money(cents: number, currency: string) {
     return new Intl.NumberFormat('en', { style: 'currency', currency }).format(cents / 100);
 }
 
-export function StoreCartMenu({ visible }: { visible: boolean }) {
+export function StoreCartMenu() {
     const [open, setOpen] = useState(false);
     const [items, setItems] = useState<StoreCartItem[]>([]);
     const [loadingSlug, setLoadingSlug] = useState('');
@@ -29,10 +29,6 @@ export function StoreCartMenu({ visible }: { visible: boolean }) {
     }, []);
 
     useEffect(() => {
-        if (!visible) setOpen(false);
-    }, [visible]);
-
-    useEffect(() => {
         if (!open) return;
         const closeOutside = (event: MouseEvent) => {
             if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
@@ -47,8 +43,6 @@ export function StoreCartMenu({ visible }: { visible: boolean }) {
             document.removeEventListener('keydown', closeEscape);
         };
     }, [open]);
-
-    if (!visible) return null;
 
     async function checkout(item: StoreCartItem) {
         if (loadingSlug) return;
