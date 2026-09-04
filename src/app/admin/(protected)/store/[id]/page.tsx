@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { StoreProductForm } from '@/components/admin/StoreProductForm';
+import { getRuntimeR2Config } from '@/lib/integration-runtime';
 import { prisma } from '@/lib/prisma';
 import { removeStoreProductFile, updateStoreProduct } from '../actions';
 
@@ -8,11 +9,15 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditStoreProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const product = await prisma.storeProduct.findUnique({
-        where: { id },
-        include: { files: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] } },
-    });
+    const [product, r2] = await Promise.all([
+        prisma.storeProduct.findUnique({
+            where: { id },
+            include: { files: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] } },
+        }),
+        getRuntimeR2Config(),
+    ]);
     if (!product) notFound();
+    const storageConfigured = Boolean(r2.accountId && r2.accessKeyId && r2.secretAccessKey && r2.storeBucket);
 
     return (
         <div className="mx-auto max-w-5xl space-y-7">
@@ -43,6 +48,8 @@ export default async function EditStoreProductPage({ params }: { params: Promise
                     seoDescription: product.seoDescription,
                 }}
                 action={updateStoreProduct.bind(null, product.id)}
+                storageConfigured={storageConfigured}
+                storeBucket={r2.storeBucket || null}
             />
 
             <section className="rounded-2xl border border-foreground/10 bg-foreground/[0.015] p-5 sm:p-6">
