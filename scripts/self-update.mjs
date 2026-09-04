@@ -171,6 +171,13 @@ try {
   status('running', 'Preparing a staged production build…', { targetVersion });
   rmSync(stagedBuildDir, { recursive: true, force: true });
 
+  // The live .next runtime does not use generated TypeScript declaration files.
+  // Remove only those generated type trees so a deleted route cannot remain in
+  // tsconfig's .next/types include and poison the next staged build.
+  status('running', 'Clearing stale generated Next.js route types…', { targetVersion });
+  rmSync(join(buildDir, 'types'), { recursive: true, force: true });
+  rmSync(join(buildDir, 'dev', 'types'), { recursive: true, force: true });
+
   const existingNodeOptions = (process.env.NODE_OPTIONS || '').trim().split(/\s+/).filter(Boolean);
   const buildNodeOptions = [...existingNodeOptions];
   if (!buildNodeOptions.some((option) => option.startsWith('--max-old-space-size='))) buildNodeOptions.push('--max-old-space-size=6144');

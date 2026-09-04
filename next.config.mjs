@@ -3,6 +3,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const useN0cBuildTuning = process.env.NEXT_N0C_WASM_SWC === '1';
 const buildDistDir = process.env.NEXT_DIST_DIR?.trim() || '.next';
+const isStagedUpdaterBuild = buildDistDir === '.next-update';
 const publicAssetCacheHeader = { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' };
 const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'woff', 'woff2'];
 const contentSecurityPolicy = [
@@ -34,6 +35,14 @@ const nextConfig = {
     distDir: buildDistDir,
     reactStrictMode: true,
     transpilePackages: ['three'],
+    // The self-updater builds into .next-update while the live .next tree stays in
+    // place. Older deployments can therefore still contain stale generated route
+    // types for files that were removed by the incoming release. GitHub CI performs
+    // the authoritative TypeScript check before merge, so only the staged updater
+    // build skips Next's duplicate type-check pass.
+    typescript: {
+        ignoreBuildErrors: isStagedUpdaterBuild,
+    },
     experimental: {
         ...(useN0cBuildTuning
             ? {
