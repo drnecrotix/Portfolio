@@ -55,9 +55,12 @@ export function ExperimentsDashboard() {
     }, []);
 
     useEffect(() => {
-        void refresh();
+        const frame = window.requestAnimationFrame(() => void refresh());
         const timer = window.setInterval(() => void refresh(), 5000);
-        return () => window.clearInterval(timer);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            window.clearInterval(timer);
+        };
     }, [refresh]);
 
     return (
