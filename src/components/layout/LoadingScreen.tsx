@@ -9,14 +9,14 @@ interface LoadingScreenProps {
     duration?: number;
 }
 
-const EXIT_DURATION_MS = 1400;
-
 export function LoadingScreen({ onComplete, onExitStart, duration = 2500 }: LoadingScreenProps) {
     const [isLoading, setIsLoading] = useState(true);
     const exitStarted = useRef(false);
     const completionTimer = useRef<number | null>(null);
     const onCompleteRef = useRef(onComplete);
     const onExitStartRef = useRef(onExitStart);
+    const safeDuration = Number.isFinite(duration) ? Math.max(1700, duration) : 2500;
+    const exitDurationMs = safeDuration < 2200 ? 850 : 1400;
 
     useEffect(() => {
         onCompleteRef.current = onComplete;
@@ -30,15 +30,14 @@ export function LoadingScreen({ onComplete, onExitStart, duration = 2500 }: Load
         onExitStartRef.current?.();
         completionTimer.current = window.setTimeout(() => {
             onCompleteRef.current?.();
-        }, EXIT_DURATION_MS);
-    }, []);
+        }, exitDurationMs);
+    }, [exitDurationMs]);
 
     useEffect(() => {
-        const safeDuration = Number.isFinite(duration) ? Math.max(1800, duration) : 2500;
-        const exitDelay = Math.max(900, safeDuration - EXIT_DURATION_MS);
+        const exitDelay = Math.max(900, safeDuration - exitDurationMs);
         const exitTimer = window.setTimeout(beginExit, exitDelay);
         return () => window.clearTimeout(exitTimer);
-    }, [beginExit, duration]);
+    }, [beginExit, exitDurationMs, safeDuration]);
 
     useEffect(() => () => {
         if (completionTimer.current !== null) window.clearTimeout(completionTimer.current);
@@ -54,7 +53,7 @@ export function LoadingScreen({ onComplete, onExitStart, duration = 2500 }: Load
                         scale: 1.025,
                         filter: 'blur(12px)',
                         transition: {
-                            duration: EXIT_DURATION_MS / 1000,
+                            duration: exitDurationMs / 1000,
                             ease: [0.16, 1, 0.3, 1],
                         },
                     }}
@@ -65,7 +64,7 @@ export function LoadingScreen({ onComplete, onExitStart, duration = 2500 }: Load
                         aria-hidden
                         className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(56,189,248,0.10),transparent_34%),radial-gradient(circle_at_18%_78%,rgba(139,92,246,0.08),transparent_30%),linear-gradient(135deg,#050506_0%,#09090c_50%,#040405_100%)]"
                         exit={{ opacity: 0.55, scale: 1.035 }}
-                        transition={{ duration: EXIT_DURATION_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ duration: exitDurationMs / 1000, ease: [0.16, 1, 0.3, 1] }}
                     />
 
                     <motion.div
