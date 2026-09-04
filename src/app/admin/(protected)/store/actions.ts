@@ -55,13 +55,14 @@ function readForm(formData: FormData) {
     const rawProvider = value(formData, 'paymentProvider', 32) || 'LEMON_SQUEEZY';
     if (!PROVIDERS.includes(rawProvider as PaymentProvider)) throw new Error('Invalid payment provider.');
     const paymentProvider = rawProvider as PaymentProvider;
-    const priceCents = cents(formData, 'price', true)!;
+    const priceCents = cents(formData, 'price') ?? 0;
     const compareAtPriceCents = cents(formData, 'compareAtPrice');
     const downloadLimit = Math.max(1, Math.min(100, Math.trunc(Number(formData.get('downloadLimit') || 5) || 5)));
     const lemonSqueezyVariantId = value(formData, 'lemonSqueezyVariantId', 120) || null;
     const creemProductId = value(formData, 'creemProductId', 160) || null;
-    if (status === 'PUBLISHED' && paymentProvider === 'LEMON_SQUEEZY' && !lemonSqueezyVariantId) throw new Error('Lemon Squeezy variant ID is required before publishing.');
-    if (status === 'PUBLISHED' && paymentProvider === 'CREEM' && !creemProductId) throw new Error('Creem Product ID is required before publishing.');
+    const freeDownload = priceCents === 0;
+    if (!freeDownload && status === 'PUBLISHED' && paymentProvider === 'LEMON_SQUEEZY' && !lemonSqueezyVariantId) throw new Error('Lemon Squeezy variant ID is required before publishing a paid product.');
+    if (!freeDownload && status === 'PUBLISHED' && paymentProvider === 'CREEM' && !creemProductId) throw new Error('Creem Product ID is required before publishing a paid product.');
     if (creemProductId && !/^prod_[A-Za-z0-9]+$/.test(creemProductId)) throw new Error('Creem Product ID must start with prod_.');
 
     return {
