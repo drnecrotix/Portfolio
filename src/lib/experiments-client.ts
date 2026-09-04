@@ -58,9 +58,12 @@ export function useExperiment(id: ExperimentId, autoExpose = true) {
 
     useEffect(() => {
         const assigned = assignVariant(id);
-        setVariant(assigned);
-        setReady(true);
-        if (autoExpose) sendOnce(assigned, 'exposure');
+        const frame = window.requestAnimationFrame(() => {
+            setVariant(assigned);
+            setReady(true);
+            if (autoExpose) sendOnce(assigned, 'exposure');
+        });
+        return () => window.cancelAnimationFrame(frame);
     }, [autoExpose, id, sendOnce]);
 
     const track = useCallback((event: ExperimentEvent, once = true) => {
