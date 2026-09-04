@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Trash2, X } from 'lucide-react';
+import { Download, ShoppingCart, Trash2, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { readStoreCart, removeStoreCartItem, STORE_CART_EVENT, type StoreCartItem } from '@/lib/store-cart';
 
@@ -101,23 +101,35 @@ export function StoreCartMenu({ visible }: { visible: boolean }) {
 
                     {items.length ? (
                         <div className="max-h-[420px] overflow-y-auto p-2">
-                            {items.map((item) => (
-                                <div key={item.slug} className="rounded-xl p-2.5 transition hover:bg-muted/50">
-                                    <div className="flex gap-3">
-                                        <Link href={`/store/${item.slug}`} onClick={() => setOpen(false)} className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-foreground/10 bg-muted">
-                                            {item.coverImageUrl ? <img src={item.coverImageUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ShoppingCart className="h-4 w-4 text-muted-foreground" /></div>}
-                                        </Link>
-                                        <div className="min-w-0 flex-1">
-                                            <Link href={`/store/${item.slug}`} onClick={() => setOpen(false)} className="block truncate text-sm font-bold hover:underline">{item.title}</Link>
-                                            <p className="mt-1 text-xs font-semibold text-muted-foreground">{item.priceCents === 0 ? 'Free' : money(item.priceCents, item.currency)}</p>
-                                            <div className="mt-2 flex items-center gap-2">
-                                                <button type="button" onClick={() => checkout(item)} disabled={Boolean(loadingSlug)} className="rounded-lg bg-foreground px-3 py-1.5 text-[11px] font-bold text-background disabled:cursor-wait disabled:opacity-60">{loadingSlug === item.slug ? 'Opening...' : 'Checkout'}</button>
-                                                <button type="button" onClick={() => removeStoreCartItem(item.slug)} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={`Remove ${item.title} from cart`}><Trash2 className="h-3.5 w-3.5" /></button>
+                            {items.map((item) => {
+                                const free = item.priceCents === 0;
+                                return (
+                                    <div key={item.slug} className="rounded-xl p-2.5 transition hover:bg-muted/50">
+                                        <div className="flex gap-3">
+                                            <Link
+                                                href={`/store/${item.slug}`}
+                                                onClick={() => setOpen(false)}
+                                                className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-foreground/10 bg-muted bg-cover bg-center"
+                                                style={item.coverImageUrl ? { backgroundImage: `url(${JSON.stringify(item.coverImageUrl).slice(1, -1)})` } : undefined}
+                                                aria-label={`Open ${item.title}`}
+                                            >
+                                                {!item.coverImageUrl ? <span className="flex h-full items-center justify-center"><ShoppingCart className="h-4 w-4 text-muted-foreground" /></span> : null}
+                                            </Link>
+                                            <div className="min-w-0 flex-1">
+                                                <Link href={`/store/${item.slug}`} onClick={() => setOpen(false)} className="block truncate text-sm font-bold hover:underline">{item.title}</Link>
+                                                <p className="mt-1 text-xs font-semibold text-muted-foreground">{free ? 'Free download' : money(item.priceCents, item.currency)}</p>
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <button type="button" onClick={() => checkout(item)} disabled={Boolean(loadingSlug)} className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-[11px] font-bold text-background disabled:cursor-wait disabled:opacity-60">
+                                                        {free ? <Download className="h-3 w-3" /> : null}
+                                                        {loadingSlug === item.slug ? (free ? 'Preparing...' : 'Opening...') : (free ? 'Download' : 'Checkout')}
+                                                    </button>
+                                                    <button type="button" onClick={() => removeStoreCartItem(item.slug)} className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={`Remove ${item.title} from cart`}><Trash2 className="h-3.5 w-3.5" /></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="px-5 py-8 text-center">
@@ -128,7 +140,7 @@ export function StoreCartMenu({ visible }: { visible: boolean }) {
                     )}
 
                     {error ? <p role="alert" className="border-t border-foreground/10 px-4 py-3 text-xs text-red-500">{error}</p> : null}
-                    <div className="border-t border-foreground/10 px-4 py-3 text-[10px] leading-4 text-muted-foreground">Each digital product is checked out separately through its configured payment provider.</div>
+                    <div className="border-t border-foreground/10 px-4 py-3 text-[10px] leading-4 text-muted-foreground">Paid products are checked out separately through their configured provider. Free products download without payment.</div>
                 </div>
             ) : null}
         </div>
