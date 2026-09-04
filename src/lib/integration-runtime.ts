@@ -77,6 +77,17 @@ export async function getRuntimeR2Config() {
         accessKeyId: stored['r2.accessKeyId'] || String(process.env.R2_ACCESS_KEY_ID ?? '').trim(),
         secretAccessKey: stored['r2.secretAccessKey'] || String(process.env.R2_SECRET_ACCESS_KEY ?? '').trim(),
         bucket: stored['r2.bucket'] || String(process.env.R2_BUCKET ?? '').trim(),
+        storeBucket: stored['r2.storeBucket'] || String(process.env.R2_STORE_BUCKET ?? '').trim(),
         publicBaseUrl: stored['r2.publicBaseUrl'] || String(process.env.R2_PUBLIC_BASE_URL ?? '').trim(),
+    };
+}
+
+export async function getRuntimeLemonSqueezyConfig() {
+    const settings = await loadSettings();
+    const stored = getStoredIntegrationValues(settings?.integrationSettings);
+    return {
+        apiKey: stored['lemonsqueezy.apiKey'] || String(process.env.LEMON_SQUEEZY_API_KEY ?? '').trim(),
+        storeId: stored['lemonsqueezy.storeId'] || String(process.env.LEMON_SQUEEZY_STORE_ID ?? '').trim(),
+        webhookSecret: stored['lemonsqueezy.webhookSecret'] || String(process.env.LEMON_SQUEEZY_WEBHOOK_SECRET ?? '').trim(),
     };
 }

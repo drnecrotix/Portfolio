@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { galleryItemHref, galleryItemImages, normalizeGallerySettings } from '@/lib/gallery-settings';
+import { getManagedPageAccessSettings, isManagedPagePublic } from '@/lib/page-access';
 import { defaultSeoDefaults, normalizeSeoDefaults } from '@/lib/seo-settings';
 import { defaultPersonalWikiContent, normalizePersonalWikiContent, PERSONAL_WIKI_CONFIG_SLUG } from '@/lib/wiki-content';
 import { normalizeWikiArticleContent, WIKI_ARTICLE_PREFIX } from '@/lib/wiki-articles';
@@ -16,6 +17,11 @@ function absoluteMediaUrl(baseUrl: string, value: string) {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const pageAccess = await getManagedPageAccessSettings();
+    const blogPublic = isManagedPagePublic(pageAccess, 'blog');
+    const galleryPublic = isManagedPagePublic(pageAccess, 'gallery');
+    const storePublic = isManagedPagePublic(pageAccess, 'store');
+    const wikiPublic = isManagedPagePublic(pageAccess, 'wiki');
     let seo = defaultSeoDefaults;
     let gallery = normalizeGallerySettings(null);
     let galleryUpdatedAt: Date | undefined;
@@ -50,12 +56,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const staticEntries: MetadataRoute.Sitemap = [
         { url: baseUrl, changeFrequency: 'weekly', priority: 1 },
-        ...(seo.sitemapIncludeBlog ? [{ url: `${baseUrl}/blog`, changeFrequency: 'daily' as const, priority: 0.9 }] : []),
+        ...(seo.sitemapIncludeBlog && blogPublic ? [{ url: `${baseUrl}/blog`, changeFrequency: 'daily' as const, priority: 0.9 }] : []),
         ...(seo.sitemapIncludeProjects ? [{ url: `${baseUrl}/projects`, changeFrequency: 'weekly' as const, priority: 0.9 }] : []),
-        { url: `${baseUrl}/gallery`, lastModified: galleryUpdatedAt, changeFrequency: 'weekly', priority: 0.8, images: galleryImages.length ? galleryImages : undefined },
+        ...(storePublic ? [{ url: `${baseUrl}/store`, changeFrequency: 'weekly' as const, priority: 0.9 }] : []),
+        ...(galleryPublic ? [{ url: `${baseUrl}/gallery`, lastModified: galleryUpdatedAt, changeFrequency: 'weekly' as const, priority: 0.8, images: galleryImages.length ? galleryImages : undefined }] : []),
         { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/lab`, changeFrequency: 'monthly', priority: 0.7 },
-        ...(wikiEnabled ? [
+        ...(wikiEnabled && wikiPublic ? [
             { url: `${baseUrl}/wiki`, changeFrequency: 'monthly' as const, priority: 0.8 },
             { url: `${baseUrl}/wiki/articles`, changeFrequency: 'weekly' as const, priority: 0.7 },
             ...(faqEnabled && faqIndexable ? [{ url: `${baseUrl}/wiki/faq`, changeFrequency: 'monthly' as const, priority: 0.75 }] : []),
@@ -73,18 +80,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     try {
         const now = new Date();
-        const [projects, posts, pages, wikiArticles] = await Promise.all([
+        const [projects, posts, pages, wikiArticles, storeProducts] = await Promise.all([
             seo.sitemapIncludeProjects
                 ? prisma.project.findMany({ where: { status: { in: ['ONGOING', 'COMPLETED'] } }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
-            seo.sitemapIncludeBlog
+            seo.sitemapIncludeBlog && blogPublic
                 ? prisma.post.findMany({ where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
             seo.sitemapIncludePages
                 ? prisma.page.findMany({ where: { status: 'PUBLISHED', NOT: { slug: { startsWith: '__' } } }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
-            wikiEnabled
+            wikiEnabled && wikiPublic
                 ? prisma.page.findMany({ where: { status: 'PUBLISHED', slug: { startsWith: WIKI_ARTICLE_PREFIX } }, select: { content: true, updatedAt: true } })
+                : Promise.resolve([]),
+            storePublic
+                ? prisma.storeProduct.findMany({ where: { status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] }, select: { slug: true, updatedAt: true } })
                 : Promise.resolve([]),
         ]);
 
@@ -94,18 +104,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             return { url: `${baseUrl}/wiki/${content.slug}`, lastModified: article.updatedAt, changeFrequency: 'monthly' as const, priority: 0.7 };
         }).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
-        const galleryEntries: MetadataRoute.Sitemap = gallery.items
-            .filter((item) => item.isVisible && item.isIndexable && item.slug)
-            .map((item) => {
-                const images = item.isNsfw ? [] : galleryItemImages(item).map((image) => absoluteMediaUrl(baseUrl, image)).filter(Boolean);
-                return {
-                    url: `${baseUrl}${galleryItemHref(item.slug)}`,
-                    lastModified: galleryUpdatedAt,
-                    changeFrequency: 'monthly' as const,
-                    priority: 0.75,
-                    images: images.length ? images : undefined,
-                };
-            });
+        const galleryEntries: MetadataRoute.Sitemap = galleryPublic
+            ? gallery.items
+                .filter((item) => item.isVisible && item.isIndexable && item.slug)
+                .map((item) => {
+                    const images = item.isNsfw ? [] : galleryItemImages(item).map((image) => absoluteMediaUrl(baseUrl, image)).filter(Boolean);
+                    return {
+                        url: `${baseUrl}${galleryItemHref(item.slug)}`,
+                        lastModified: galleryUpdatedAt,
+                        changeFrequency: 'monthly' as const,
+                        priority: 0.75,
+                        images: images.length ? images : undefined,
+                    };
+                })
+            : [];
 
         return [
             ...staticEntries,
@@ -113,6 +125,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             ...wikiEntries,
             ...projects.map((project) => ({ url: `${baseUrl}/projects/${project.slug}`, lastModified: project.updatedAt, changeFrequency: 'monthly' as const, priority: 0.8 })),
             ...posts.map((post) => ({ url: `${baseUrl}/blog/${post.slug}`, lastModified: post.updatedAt, changeFrequency: 'monthly' as const, priority: 0.8 })),
+            ...storeProducts.map((product) => ({ url: `${baseUrl}/store/${product.slug}`, lastModified: product.updatedAt, changeFrequency: 'monthly' as const, priority: 0.85 })),
             ...pages.map((page) => ({ url: `${baseUrl}/pages/${page.slug}`, lastModified: page.updatedAt, changeFrequency: 'monthly' as const, priority: 0.6 })),
         ];
     } catch {
