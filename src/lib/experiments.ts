@@ -13,6 +13,8 @@ export type ExperimentEvent =
     | 'blog_open'
     | 'gallery_open';
 
+export type ExperimentVariantMap = Record<ExperimentId, ExperimentVariant>;
+
 export type ExperimentDefinition = {
     id: ExperimentId;
     name: string;
@@ -59,4 +61,13 @@ export const experimentEvents = new Set<ExperimentEvent>(['exposure', 'engaged',
 
 export function getExperimentDefinition(id: ExperimentId) {
     return experimentDefinitions.find((definition) => definition.id === id)!;
+}
+
+export function assignHomepageExperimentVariants(): ExperimentVariantMap {
+    const pick = (): ExperimentVariant => Math.random() < 0.5 ? 'A' : 'B';
+    return {
+        'niko-loader-duration': pick(),
+        'home-section-order': pick(),
+        'hero-micro-cta': pick(),
+    };
 }
