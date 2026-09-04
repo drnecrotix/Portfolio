@@ -83,6 +83,20 @@ export default async function ApiIntegrationsPage() {
             lastTest: tests.wakatime ?? null,
         },
         {
+            id: 'lemonsqueezy',
+            name: 'Lemon Squeezy',
+            category: 'Commerce & payments',
+            description: 'Creates checkout sessions for Necrotix Lab digital products and verifies paid orders through signed webhooks.',
+            usedBy: ['Digital Store checkout', 'Order verification', 'Secure download grants'],
+            docsHint: 'Create an API key and webhook in Lemon Squeezy. Point the webhook to /api/store/webhook and subscribe to order_created and order_refunded. The webhook signing secret must match the value entered here.',
+            fields: [
+                field('lemonsqueezy.apiKey', 'API Key', 'LEMON_SQUEEZY_API_KEY', true),
+                field('lemonsqueezy.storeId', 'Store ID', 'LEMON_SQUEEZY_STORE_ID', false),
+                field('lemonsqueezy.webhookSecret', 'Webhook Secret', 'LEMON_SQUEEZY_WEBHOOK_SECRET', true),
+            ],
+            lastTest: tests.lemonsqueezy ?? null,
+        },
+        {
             id: 'openai',
             name: 'OpenAI',
             category: 'AI provider',
@@ -125,10 +139,10 @@ export default async function ApiIntegrationsPage() {
         {
             id: 'r2',
             name: 'Cloudflare R2',
-            category: 'Media storage',
-            description: 'Stores managed media uploads in an R2 bucket. If it is unavailable, the site falls back to local uploads where supported.',
-            usedBy: ['Media Library uploads', 'Blog media', 'Project media', 'Journey media'],
-            docsHint: 'Create an R2 API token with object read/write access to the selected bucket. Public Base URL is the domain used to serve uploaded files.',
+            category: 'Media & private file storage',
+            description: 'Stores managed media uploads and private digital product files. Store files use private object keys and are never served from the public media URL.',
+            usedBy: ['Media Library uploads', 'Blog media', 'Project media', 'Journey media', 'Digital Store private files'],
+            docsHint: 'Create an R2 API token with object read/write access to the selected bucket. Public Base URL is used only for public media; Store downloads are proxied through verified purchase access.',
             fields: [
                 field('r2.accountId', 'Account ID', 'R2_ACCOUNT_ID', false),
                 field('r2.accessKeyId', 'Access Key ID', 'R2_ACCESS_KEY_ID', true),
