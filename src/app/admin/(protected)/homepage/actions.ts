@@ -14,7 +14,7 @@ function getString(form: FormData, key: keyof HomepageContent, max: number) {
 
 function getLimit(form: FormData, key: 'homeBlogPostLimit' | 'homeProjectLimit', fallback: number) {
     const value = Number(form.get(key));
-    return Number.isFinite(value) ? Math.max(1, Math.min(12, Math.round(value))) : fallback;
+    return Number.isFinite(value) ? Math.max(1, Math.min(5, Math.round(value))) : fallback;
 }
 
 function safeLink(value: string, fallback: string) {
