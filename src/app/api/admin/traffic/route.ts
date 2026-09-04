@@ -65,12 +65,16 @@ export async function GET(request: NextRequest) {
         prisma.trafficMetric.deleteMany({ where: { bucketStart: { lt: staleMetric } } }).catch(() => undefined),
     ]);
 
-    const [rows, liveVisitors] = await Promise.all([
+    const [rows, liveVisitors, recentSessions] = await Promise.all([
         prisma.trafficMetric.findMany({
             where: { bucketStart: { gte: cutoff } },
             orderBy: { bucketStart: 'asc' },
         }),
         prisma.trafficSession.count({ where: { lastSeenAt: { gte: liveCutoff } } }),
+        prisma.trafficSession.findMany({
+            where: { lastSeenAt: { gte: staleSession } },
+            select: { countryCode: true, countrySource: true, ipAddress: true },
+        }),
     ]);
 
     const chart = buildChartBuckets(range, now);
@@ -111,6 +115,13 @@ export async function GET(request: NextRequest) {
         .map(([device, value]) => ({ device, ...value }))
         .sort((a, b) => b.pageViews - a.pageViews || b.visits - a.visits);
 
+    const unknownCountry = countryTotals.get('XX') || { pageViews: 0, visits: 0 };
+    const attributedPageViews = Math.max(0, pageViews - unknownCountry.pageViews);
+    const sourceCounts = recentSessions.reduce<Record<string, number>>((acc, item) => {
+        acc[item.countrySource] = (acc[item.countrySource] || 0) + 1;
+        return acc;
+    }, {});
+
     return NextResponse.json({
         range,
         summary: {
@@ -122,6 +133,13 @@ export async function GET(request: NextRequest) {
         chart,
         countries,
         devices,
+        attribution: {
+            attributedPageViews,
+            unattributedPageViews: unknownCountry.pageViews,
+            coverage: pageViews > 0 ? attributedPageViews / pageViews : 0,
+            sessionsWithIp: recentSessions.filter((item) => Boolean(item.ipAddress)).length,
+            sources: sourceCounts,
+        },
         retention: {
             aggregateDays: TRAFFIC_METRIC_RETENTION_DAYS,
             sessionHours: TRAFFIC_SESSION_RETENTION_HOURS,
