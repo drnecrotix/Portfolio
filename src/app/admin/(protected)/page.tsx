@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma';
 import { StatusToast } from '@/components/admin/StatusToast';
 import { PortfolioUpdater, type PortfolioUpdateStatus } from '@/components/admin/PortfolioUpdater';
 import { TrafficAnalyticsPanel } from '@/components/admin/TrafficAnalyticsPanel';
-import { normalizeAssistantSettings } from '@/lib/assistant-settings';
 import { installedPortfolioVersion } from '@/lib/installed-version';
 import { TRAFFIC_METRIC_RETENTION_DAYS, TRAFFIC_SESSION_RETENTION_HOURS } from '@/lib/traffic-analytics';
 import { purgeApplicationCache } from './actions';
@@ -24,21 +23,24 @@ const panelClass = 'rounded-2xl border border-foreground/10 bg-foreground/[0.025
 
 export default async function AdminDashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
     const params = await searchParams;
-    const [projects, posts, pages, media, drafts, publishedPosts, activeUsers, revisions, settings, siteMode] = await prisma.$transaction([
+    const [projects, posts, pages, media, drafts, settings, siteMode] = await prisma.$transaction([
         prisma.project.count(),
         prisma.post.count(),
         prisma.page.count(),
         prisma.mediaAsset.count(),
         prisma.post.count({ where: { status: 'DRAFT' } }),
-        prisma.post.count({ where: { status: 'PUBLISHED' } }),
-        prisma.user.count({ where: { isActive: true } }),
-        prisma.revision.count(),
         prisma.siteSettings.findUnique({ where: { id: 'default' } }),
         prisma.siteModeSettings.findUnique({ where: { id: 'default' } }),
     ]);
 
-    const cards = [['Projects', projects], ['Posts', posts], ['Pages', pages], ['Media', media], ['Draft posts', drafts], ['Published', publishedPosts], ['Active users', activeUsers], ['Revisions', revisions]];
-    const assistant = normalizeAssistantSettings(settings?.assistantSettings);
+    const contentStats = [
+        ['Projects', projects],
+        ['Posts', posts],
+        ['Pages', pages],
+        ['Media', media],
+        ['Draft posts', drafts],
+    ] as const;
+
     const updateStatus = readUpdateStatus();
     const currentVersion = installedPortfolioVersion();
     const error = typeof params.error === 'string' ? params.error : undefined;
@@ -59,52 +61,52 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
                 </div>
             </header>
 
-            <section className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4 xl:grid-cols-8" aria-label="Site statistics">
-                {cards.map(([label, value]) => (
-                    <div key={label} className={`${panelClass} min-w-0 p-4 sm:p-5`}>
-                        <p className="truncate text-[9px] uppercase tracking-[0.14em] text-muted-foreground sm:text-[10px] sm:tracking-[0.18em]">{label}</p>
-                        <p className="mt-3 text-2xl font-semibold tabular-nums sm:text-3xl">{value}</p>
-                    </div>
-                ))}
+            <section className="mb-5">
+                <PortfolioUpdater currentVersion={currentVersion} initialStatus={updateStatus} />
             </section>
 
-            <section className="mt-5 grid gap-4 lg:grid-cols-12">
-                <div className="min-w-0 lg:col-span-5"><PortfolioUpdater currentVersion={currentVersion} initialStatus={updateStatus} /></div>
-
-                <div className={`${panelClass} p-5 sm:p-6 lg:col-span-3`}>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Cache</p>
-                    <h3 className="mt-2 text-lg font-semibold">Public cache</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">Blog and Project pages stay dynamic. Sitemap and RSS refresh automatically within 1 hour, and content edits trigger them immediately. Use this button to force revalidation of all public routes, metadata, sitemap, RSS and robots.txt.</p>
-                    <form action={purgeApplicationCache} className="mt-5"><button className="w-full rounded-xl border border-foreground/15 px-4 py-2.5 text-sm transition hover:bg-foreground/[0.05] sm:w-auto">Purge public cache</button></form>
-                </div>
-
-                <div className={`${panelClass} p-5 sm:p-6 lg:col-span-4`}>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">AI Assistant</p>
-                    <h3 className="mt-2 text-lg font-semibold">{assistant.assistantName}</h3>
-                    <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">{assistant.enabled ? 'Enabled' : 'Disabled'} · {assistant.providerOrder.join(' → ')} · temp {assistant.temperature}</p>
-                    <Link href="/admin/assistant" className="mt-5 inline-flex rounded-xl border border-foreground/15 px-4 py-2.5 text-sm transition hover:bg-foreground/[0.05]">Edit assistant</Link>
-                </div>
-            </section>
-
-            <section className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.45fr)]">
+            <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.45fr)]">
                 <TrafficAnalyticsPanel
+                    chartMode="weekday"
                     title="Traffic overview"
-                    description="Public traffic trend with 24h, 7-day and 30-day views. Only country and device category are aggregated."
+                    description="Interactive weekday traffic pattern. Compare page views and visits across the week using the last 7 or 30 days."
                 />
 
                 <div className="space-y-4">
                     <div className={`${panelClass} p-5 sm:p-6`}>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Site health</p>
-                        <h3 className="mt-2 text-lg font-semibold">Production status</h3>
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Site health</p>
+                                <h3 className="mt-2 text-lg font-semibold">Production status</h3>
+                            </div>
+                            <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-600 dark:text-emerald-400">Healthy</span>
+                        </div>
+
                         <div className="mt-5 space-y-3 text-sm">
                             <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="size-4 text-emerald-500" /> Application</span><span className="font-medium">Online</span></div>
                             <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><Database className="size-4 text-emerald-500" /> Database</span><span className="font-medium">Connected</span></div>
                             <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><CircleDot className="size-4" /> Site mode</span><span className="font-mono text-xs">{siteMode?.mode ?? 'NORMAL'}</span></div>
                             <div className="flex items-center justify-between gap-3"><span className="inline-flex items-center gap-2 text-muted-foreground"><ShieldCheck className="size-4" /> Version</span><span className="font-mono text-xs">v{currentVersion}</span></div>
                         </div>
-                        <div className="mt-5 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-xs leading-5 text-muted-foreground">
+
+                        <div className="mt-5 border-t border-foreground/10 pt-5">
+                            <div className="flex items-center justify-between gap-3"><p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Content snapshot</p><span className="text-[10px] text-muted-foreground">Current totals</span></div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                {contentStats.map(([label, value], index) => (
+                                    <div key={label} className={`${index === contentStats.length - 1 ? 'col-span-2' : ''} rounded-xl border border-foreground/10 bg-background/45 px-3 py-3`}>
+                                        <div className="flex items-center justify-between gap-3"><span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</span><span className="text-lg font-semibold tabular-nums">{value}</span></div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="mt-5 rounded-xl border border-foreground/10 bg-background/40 px-4 py-3 text-[11px] leading-5 text-muted-foreground">
                             Traffic aggregates expire after about {TRAFFIC_METRIC_RETENTION_DAYS} days. Anonymous live-session hashes expire after about {TRAFFIC_SESSION_RETENTION_HOURS} hours.
                         </div>
+
+                        <form action={purgeApplicationCache} className="mt-4">
+                            <button className="w-full rounded-xl border border-foreground/15 px-4 py-2.5 text-sm font-medium transition hover:bg-foreground/[0.05]">Purge public cache</button>
+                        </form>
                     </div>
 
                     <div className={`${panelClass} p-5 sm:p-6`}>
