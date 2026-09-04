@@ -91,3 +91,12 @@ export async function getRuntimeLemonSqueezyConfig() {
         webhookSecret: stored['lemonsqueezy.webhookSecret'] || String(process.env.LEMON_SQUEEZY_WEBHOOK_SECRET ?? '').trim(),
     };
 }
+
+export async function getRuntimeCreemConfig() {
+    const settings = await loadSettings();
+    const stored = getStoredIntegrationValues(settings?.integrationSettings);
+    return {
+        apiKey: stored['creem.apiKey'] || String(process.env.CREEM_API_KEY ?? '').trim(),
+        webhookSecret: stored['creem.webhookSecret'] || String(process.env.CREEM_WEBHOOK_SECRET ?? '').trim(),
+    };
+}
