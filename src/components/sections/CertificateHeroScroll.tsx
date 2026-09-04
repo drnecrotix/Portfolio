@@ -318,6 +318,7 @@ const CertificateHeroScroll: FC<CertificateHeroScrollProps> = ({ onDownloadClick
                                     src={cert.src}
                                     alt={cert.alt}
                                     fill
+                                    unoptimized
                                     priority={index < 2} // Priority loading for first few
                                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                     className="object-cover opacity-90 hover:opacity-100 transition-opacity"
