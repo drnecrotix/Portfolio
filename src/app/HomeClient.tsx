@@ -9,7 +9,8 @@ import { HeroVisual } from '@/components/sections/HeroVisual';
 import { HomeBlogSection } from '@/components/home/HomeBlogSection';
 import { HomeProjectsSection } from '@/components/home/HomeProjectsSection';
 import { usePreloadState } from '@/components/ui/arc-preloader-hero';
-import { useExperiment } from '@/lib/experiments-client';
+import { useExperimentTelemetry } from '@/lib/experiments-client';
+import type { ExperimentVariantMap } from '@/lib/experiments';
 import type { HomepageContent } from '@/lib/homepage-content';
 import type { PublicIdentity } from '@/lib/public-identity';
 import type { PublicPost } from '@/lib/cms-posts';
@@ -32,11 +33,17 @@ function writePortfolioLoaded() {
     }
 }
 
-export default function HomeClient({ content, identity, posts, projects }: { content: HomepageContent; identity: PublicIdentity; posts: PublicPost[]; projects: Project[] }) {
+type Props = {
+    content: HomepageContent;
+    identity: PublicIdentity;
+    posts: PublicPost[];
+    projects: Project[];
+    experimentVariants: ExperimentVariantMap;
+};
+
+export default function HomeClient({ content, identity, posts, projects, experimentVariants }: Props) {
     const { phase } = usePreloadState();
-    const { variant: loaderVariant, ready: loaderReady, track: trackLoader } = useExperiment('niko-loader-duration', false);
-    const { variant: orderVariant, ready: orderReady, track: trackOrder } = useExperiment('home-section-order', false);
-    const { variant: heroVariant, ready: heroReady, track: trackHero } = useExperiment('hero-micro-cta');
+    const trackExperiment = useExperimentTelemetry(experimentVariants);
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialLoadingExit, setIsInitialLoadingExit] = useState(false);
     const [skipAnimation, setSkipAnimation] = useState(false);
@@ -58,17 +65,21 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     const isReadyToAnimate = isLoading ? isInitialLoadingExit : phase === 'reveal' || phase === 'done';
     const showBlog = content.showBlogPosts && posts.length > 0;
     const showProjects = content.showProjects && projects.length > 0;
-    const projectsFirst = orderReady && orderVariant === 'B';
-    const showHeroCtas = heroReady && heroVariant === 'B' && isReadyToAnimate;
-    const loaderDuration = loaderReady && loaderVariant === 'B' ? 1800 : 2500;
+    const projectsFirst = experimentVariants['home-section-order'] === 'B';
+    const showHeroCtas = experimentVariants['hero-micro-cta'] === 'B' && isReadyToAnimate;
+    const loaderDuration = experimentVariants['niko-loader-duration'] === 'B' ? 1800 : 2500;
 
     useEffect(() => {
-        if (isFirstVisit === true && loaderReady) trackLoader('exposure');
-    }, [isFirstVisit, loaderReady, trackLoader]);
+        trackExperiment('hero-micro-cta', 'exposure');
+    }, [trackExperiment]);
 
     useEffect(() => {
-        if (showBlog && showProjects && orderReady) trackOrder('exposure');
-    }, [orderReady, showBlog, showProjects, trackOrder]);
+        if (showBlog && showProjects) trackExperiment('home-section-order', 'exposure');
+    }, [showBlog, showProjects, trackExperiment]);
+
+    useEffect(() => {
+        if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'exposure');
+    }, [isFirstVisit, trackExperiment]);
 
     const handleLoadingComplete = () => {
         setIsLoading(false);
@@ -77,9 +88,9 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     };
 
     useEffect(() => {
-        if (isLoading || isFirstVisit !== true || !loaderReady) return;
+        if (isLoading || isFirstVisit !== true) return;
 
-        const markEngaged = () => trackLoader('engaged');
+        const markEngaged = () => trackExperiment('niko-loader-duration', 'engaged');
         const timer = window.setTimeout(markEngaged, 10000);
         window.addEventListener('pointerdown', markEngaged, { once: true, passive: true });
         window.addEventListener('wheel', markEngaged, { once: true, passive: true });
@@ -91,7 +102,7 @@ export default function HomeClient({ content, identity, posts, projects }: { con
             window.removeEventListener('wheel', markEngaged);
             window.removeEventListener('keydown', markEngaged);
         };
-    }, [isFirstVisit, isLoading, loaderReady, trackLoader]);
+    }, [isFirstVisit, isLoading, trackExperiment]);
 
     useEffect(() => {
         if (isLoading || !showProjects) return;
@@ -100,15 +111,15 @@ export default function HomeClient({ content, identity, posts, projects }: { con
 
         const observer = new IntersectionObserver((entries) => {
             if (!entries.some((entry) => entry.isIntersecting)) return;
-            trackLoader('projects_seen');
-            trackOrder('projects_seen');
-            trackHero('projects_seen');
+            trackExperiment('niko-loader-duration', 'projects_seen');
+            trackExperiment('home-section-order', 'projects_seen');
+            trackExperiment('hero-micro-cta', 'projects_seen');
             observer.disconnect();
         }, { threshold: 0.25 });
 
         observer.observe(section);
         return () => observer.disconnect();
-    }, [isLoading, showProjects, trackHero, trackLoader, trackOrder]);
+    }, [isLoading, showProjects, trackExperiment]);
 
     useEffect(() => {
         if (isLoading || !showBlog || !showProjects) return;
@@ -174,15 +185,15 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     }, [isLoading, projectsFirst, showBlog, showProjects]);
 
     const handleProjectOpen = () => {
-        trackLoader('project_open');
-        trackOrder('project_open');
-        trackHero('project_open');
+        trackExperiment('niko-loader-duration', 'project_open');
+        trackExperiment('home-section-order', 'project_open');
+        trackExperiment('hero-micro-cta', 'project_open');
     };
 
     const handleBlogOpen = () => {
-        trackLoader('blog_open');
-        trackOrder('blog_open');
-        trackHero('blog_open');
+        trackExperiment('niko-loader-duration', 'blog_open');
+        trackExperiment('home-section-order', 'blog_open');
+        trackExperiment('hero-micro-cta', 'blog_open');
     };
 
     const journalSection = showBlog ? <HomeBlogSection posts={posts} onPostOpen={handleBlogOpen} /> : null;
@@ -204,13 +215,13 @@ export default function HomeClient({ content, identity, posts, projects }: { con
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.55, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                        className="absolute bottom-7 left-1/2 z-40 flex -translate-x-1/2 items-center gap-5 rounded-full border border-foreground/10 bg-background/55 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/70 shadow-lg backdrop-blur-xl sm:bottom-9 sm:text-[11px]"
+                        className="absolute bottom-7 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-5 whitespace-nowrap rounded-full border border-foreground/10 bg-background/55 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/70 shadow-lg backdrop-blur-xl sm:bottom-9 sm:text-[11px]"
                     >
                         <Link href="/projects" onClick={handleProjectOpen} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                             View projects <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
                         <span className="h-3 w-px bg-foreground/15" aria-hidden />
-                        <Link href="/gallery" onClick={() => { trackHero('gallery_open'); trackLoader('gallery_open'); }} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        <Link href="/gallery" onClick={() => { trackExperiment('hero-micro-cta', 'gallery_open'); trackExperiment('niko-loader-duration', 'gallery_open'); }} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                             Explore gallery <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
                     </motion.div>
