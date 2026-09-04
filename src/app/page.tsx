@@ -8,6 +8,8 @@ import HomeClient from './HomeClient';
 
 export const dynamic = 'force-dynamic';
 
+const HOME_SECTION_LIMIT = 5;
+
 export default async function HomePage() {
     let rawContent: unknown = null;
     let identity = defaultPublicIdentity;
@@ -31,7 +33,7 @@ export default async function HomePage() {
                     categoryRef: { select: { name: true, slug: true } },
                 },
                 orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-                take: homepage.homeBlogPostLimit,
+                take: Math.min(HOME_SECTION_LIMIT, homepage.homeBlogPostLimit),
             });
             posts = cmsPosts.map((post) => cmsPostToPublicPost(post));
         }
@@ -39,8 +41,8 @@ export default async function HomePage() {
         if (homepage.showProjects) {
             const cmsProjects = await prisma.project.findMany({
                 where: { status: { not: 'ARCHIVED' } },
-                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-                take: homepage.homeProjectLimit,
+                orderBy: [{ createdAt: 'desc' }, { sortOrder: 'asc' }],
+                take: Math.min(HOME_SECTION_LIMIT, homepage.homeProjectLimit),
             });
             projects = cmsProjects.map(cmsProjectToPortfolioProject);
         }
