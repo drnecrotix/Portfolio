@@ -1,11 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingBag } from 'lucide-react';
+import { Download, ShoppingBag, ShoppingCart } from 'lucide-react';
+import { addStoreCartItem } from '@/lib/store-cart';
 
-export function BuyButton({ slug, label = 'Buy now' }: { slug: string; label?: string }) {
+export function BuyButton({
+    slug,
+    title,
+    priceCents,
+    currency,
+    coverImageUrl,
+    label = 'Buy now',
+}: {
+    slug: string;
+    title: string;
+    priceCents: number;
+    currency: string;
+    coverImageUrl?: string | null;
+    label?: string;
+}) {
     const [loading, setLoading] = useState(false);
+    const [added, setAdded] = useState(false);
     const [error, setError] = useState('');
+    const isFree = priceCents === 0;
 
     async function startCheckout() {
         if (loading) return;
@@ -26,17 +43,33 @@ export function BuyButton({ slug, label = 'Buy now' }: { slug: string; label?: s
         }
     }
 
+    function addToCart() {
+        addStoreCartItem({ slug, title, priceCents, currency, coverImageUrl });
+        setAdded(true);
+        window.setTimeout(() => setAdded(false), 1800);
+    }
+
     return (
         <div className="space-y-2">
-            <button
-                type="button"
-                onClick={startCheckout}
-                disabled={loading}
-                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
-            >
-                <ShoppingBag className="h-4 w-4" />
-                {loading ? 'Opening checkout...' : label}
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                    type="button"
+                    onClick={startCheckout}
+                    disabled={loading}
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+                >
+                    {isFree ? <Download className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
+                    {loading ? (isFree ? 'Preparing download...' : 'Opening checkout...') : label}
+                </button>
+                <button
+                    type="button"
+                    onClick={addToCart}
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-background px-5 py-3 text-sm font-bold text-foreground transition hover:bg-muted sm:w-auto"
+                >
+                    <ShoppingCart className="h-4 w-4" />
+                    {added ? 'Added' : 'Add to cart'}
+                </button>
+            </div>
             {error ? <p role="alert" className="text-sm text-red-500">{error}</p> : null}
         </div>
     );
