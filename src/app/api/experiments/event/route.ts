@@ -7,8 +7,13 @@ export const dynamic = 'force-dynamic';
 function isSameOrigin(request: NextRequest) {
     const origin = request.headers.get('origin');
     if (!origin) return true;
+
+    const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+    const host = forwardedHost || request.headers.get('host')?.split(',')[0]?.trim() || request.nextUrl.host;
+    if (!host) return false;
+
     try {
-        return new URL(origin).host === request.nextUrl.host;
+        return new URL(origin).host === host;
     } catch {
         return false;
     }
