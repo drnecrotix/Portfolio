@@ -17,6 +17,7 @@ type StoreCatalogProduct = {
     coverImageUrl: string | null;
     featured: boolean;
     fileCount: number;
+    createdAt: string;
 };
 
 function money(cents: number, currency: string) {
@@ -36,10 +37,10 @@ export function StoreCatalogClient({ products, categories }: { products: StoreCa
             return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery));
         });
         return [...filtered].sort((a, b) => {
-            if (sort === 'price-low') return a.priceCents - b.priceCents;
-            if (sort === 'price-high') return b.priceCents - a.priceCents;
-            if (sort === 'featured') return Number(b.featured) - Number(a.featured);
-            return 0;
+            if (sort === 'price-low') return a.priceCents - b.priceCents || Date.parse(b.createdAt) - Date.parse(a.createdAt);
+            if (sort === 'price-high') return b.priceCents - a.priceCents || Date.parse(b.createdAt) - Date.parse(a.createdAt);
+            if (sort === 'featured') return Number(b.featured) - Number(a.featured) || Date.parse(b.createdAt) - Date.parse(a.createdAt);
+            return Date.parse(b.createdAt) - Date.parse(a.createdAt);
         });
     }, [category, products, query, sort]);
 
