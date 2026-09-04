@@ -18,7 +18,6 @@ const rows = [
     ['portfolioLoaded', 'Session storage', 'Prevents the first-visit Niko intro from repeating during the same browser session.', 'Browser session', 'Presentation preference'],
     ['necrotix:blog-view:*', 'Session storage', 'Prevents duplicate Blog view-count requests in the same browser session.', 'Browser session', 'Aggregate engagement'],
     ['necrotix:gallery-view:*', 'Session storage', 'Prevents duplicate Gallery view-count requests in the same browser session.', 'Browser session', 'Aggregate engagement'],
-    ['necrotix:experiment:*', 'Session storage', 'Keeps a visitor in the same A/B variant during the current session and prevents duplicate experiment events. No persistent experiment identifier is created.', 'Browser session', 'Aggregate product improvement'],
     ['portfolio-chat-messages-v2', 'Session storage', 'Keeps the visible AI assistant conversation in the current browser tab/session.', 'Browser session', 'Requested chat functionality'],
     ['portfolio-theme', 'Local storage', 'Remembers the selected visual theme where supported.', 'Until changed or cleared', 'Preference'],
 ];
@@ -62,7 +61,7 @@ export default function CookiesPage() {
             <section>
                 <h2>3. Essential, functional and aggregate measurement storage</h2>
                 <p className="mt-4">Storage that is strictly necessary to provide a feature explicitly requested by you, authenticate authorised administrators, remember a security choice or maintain essential site operation may be used without a separate advertising-style consent banner. Functional identifiers such as Like cookies are created only when the corresponding interactive feature is used.</p>
-                <p className="mt-3">NecrotixLab also runs limited first-party A/B tests to compare interface variants. Experiment assignment is stored only in sessionStorage, expires with the browser session and is not linked to a name, email address or persistent experiment profile. The server stores only aggregate counters such as exposures, project opens and section visibility.</p>
+                <p className="mt-3">NecrotixLab also runs limited first-party A/B tests to compare interface variants. The experiment variant is assigned for each homepage request and is not stored in cookies, local storage or session storage. The server stores only aggregate counters such as exposures, project opens and section visibility; it does not create an experiment visitor profile.</p>
                 <p className="mt-3">The current application code does not intentionally set first-party advertising or cross-site behavioural advertising cookies.</p>
             </section>
 
@@ -74,7 +73,7 @@ export default function CookiesPage() {
 
             <section>
                 <h2>5. Managing storage</h2>
-                <p className="mt-4">You can delete cookies, local storage and session storage through your browser settings. Deleting functional storage can reset language, theme, Like state, view-session markers, experiment assignment, chat history or private-access state.</p>
+                <p className="mt-4">You can delete cookies, local storage and session storage through your browser settings. Deleting functional storage can reset language, theme, Like state, view-session markers, chat history or private-access state.</p>
                 <p className="mt-3">Blocking all cookies may prevent authentication, Private mode and some interactive features from working correctly.</p>
             </section>
 
