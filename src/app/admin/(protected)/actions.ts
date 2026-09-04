@@ -4,7 +4,6 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { installedPortfolioVersion } from '@/lib/installed-version';
 
@@ -58,7 +57,6 @@ async function latestPortfolioVersion() {
 }
 
 export async function purgeApplicationCache() {
-    let destination = '/admin?cache=purged';
     try {
         await requireAdmin();
         revalidatePath('/', 'layout');
@@ -76,10 +74,13 @@ export async function purgeApplicationCache() {
             '/robots.txt',
             '/admin',
         ]) revalidatePath(path);
+        return { ok: true, message: 'Public cache revalidated successfully.' } as const;
     } catch (error) {
-        destination = `/admin?error=${encodeURIComponent(error instanceof Error ? error.message : 'Cache purge failed.')}`;
+        return {
+            ok: false,
+            message: error instanceof Error ? error.message : 'Cache purge failed.',
+        } as const;
     }
-    redirect(destination);
 }
 
 export async function checkForPortfolioUpdate() {
