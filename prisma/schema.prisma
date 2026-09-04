@@ -51,6 +51,11 @@ enum StoreProductStatus {
   ARCHIVED
 }
 
+enum StorePaymentProvider {
+  LEMON_SQUEEZY
+  CREEM
+}
+
 enum StoreOrderStatus {
   PENDING
   PAID
@@ -364,7 +369,9 @@ model StoreProduct {
   compareAtPriceCents   Int?
   currency              String                 @default("EUR")
   coverImageUrl         String?
+  paymentProvider       StorePaymentProvider   @default(LEMON_SQUEEZY)
   lemonSqueezyVariantId String?
+  creemProductId        String?
   status                StoreProductStatus     @default(DRAFT)
   featured              Boolean                @default(false)
   downloadLimit         Int                    @default(5)
@@ -381,6 +388,7 @@ model StoreProduct {
   @@index([status, publishedAt])
   @@index([category, status])
   @@index([featured, status])
+  @@index([paymentProvider, status])
 }
 
 model StoreProductFile {
