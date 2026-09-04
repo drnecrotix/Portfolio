@@ -26,7 +26,11 @@ async function gotoWithTheme(page: Page, route: string, theme: (typeof themes)[n
     localStorage.setItem('portfolio-theme', selectedTheme);
     sessionStorage.setItem('portfolioLoaded', 'true');
   }, theme);
-  return page.goto(route, { waitUntil: 'networkidle' });
+
+  // Do not wait for networkidle here. Some public pages intentionally perform
+  // background/external requests after rendering, so network activity is not a
+  // reliable readiness signal and can make the smoke suite time out on CI.
+  return page.goto(route, { waitUntil: 'domcontentloaded' });
 }
 
 for (const theme of themes) {
