@@ -47,11 +47,11 @@ export const defaultHomepageContent: HomepageContent = {
     showBlogPosts: true,
     homeBlogTitle: 'Latest from the blog',
     homeBlogSubtitle: 'Recent publications, notes and ideas.',
-    homeBlogPostLimit: 6,
+    homeBlogPostLimit: 5,
     showProjects: true,
     homeProjectsTitle: 'Selected projects',
     homeProjectsSubtitle: 'Current and completed work from the lab.',
-    homeProjectLimit: 6,
+    homeProjectLimit: 5,
     socialImage: '',
     openGraphImage: '',
     twitterImage: '',
@@ -66,9 +66,9 @@ export function normalizeHomepageContent(value: unknown): HomepageContent {
         ...defaultHomepageContent,
         ...source,
         showBlogPosts: source.showBlogPosts !== false,
-        homeBlogPostLimit: Number.isFinite(blogLimit) ? Math.max(1, Math.min(12, Math.round(blogLimit))) : defaultHomepageContent.homeBlogPostLimit,
+        homeBlogPostLimit: Number.isFinite(blogLimit) ? Math.max(1, Math.min(5, Math.round(blogLimit))) : defaultHomepageContent.homeBlogPostLimit,
         showProjects: source.showProjects !== false,
-        homeProjectLimit: Number.isFinite(projectLimit) ? Math.max(1, Math.min(12, Math.round(projectLimit))) : defaultHomepageContent.homeProjectLimit,
+        homeProjectLimit: Number.isFinite(projectLimit) ? Math.max(1, Math.min(5, Math.round(projectLimit))) : defaultHomepageContent.homeProjectLimit,
     };
 }
 
