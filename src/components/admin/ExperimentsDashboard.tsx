@@ -67,7 +67,7 @@ export function ExperimentsDashboard() {
                     <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Measurement</p>
                     <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Experiments</h1>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-                        Privacy-friendly A/B tests. Variant assignment and event de-duplication stay in sessionStorage; the database stores aggregate counters only.
+                        Privacy-friendly A/B tests. Variants are assigned independently for each homepage request; no experiment cookie, localStorage entry, sessionStorage entry or visitor ID is created. The database stores aggregate counters only.
                     </p>
                 </div>
                 <button
@@ -82,7 +82,7 @@ export function ExperimentsDashboard() {
             </div>
 
             <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3 text-xs text-muted-foreground sm:px-5">
-                <span className="font-medium text-foreground">Live mode:</span> auto-refresh every 5 seconds. A visitor is counted at most once per event, per experiment, per browser session.
+                <span className="font-medium text-foreground">Live mode:</span> auto-refresh every 5 seconds. Each homepage render is one experiment exposure opportunity and each event is de-duplicated within that page view.
                 {data?.updatedAt ? <span className="ml-2">Last update: {new Date(data.updatedAt).toLocaleTimeString()}</span> : null}
             </div>
 
@@ -103,7 +103,7 @@ export function ExperimentsDashboard() {
                                     <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{experiment.id}</p>
                                     <h2 className="mt-2 text-xl font-semibold">{experiment.name}</h2>
                                 </div>
-                                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/8 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Live</span>
+                                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Live</span>
                             </div>
 
                             <p className="mt-3 text-sm leading-6 text-muted-foreground">{experiment.hypothesis}</p>
