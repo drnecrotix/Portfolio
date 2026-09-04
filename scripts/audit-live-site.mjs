@@ -9,58 +9,35 @@ const profiles = [
   { name: 'desktop', viewport: { width: 1440, height: 1000 }, isMobile: false },
   { name: 'mobile', viewport: { width: 390, height: 844 }, isMobile: true },
 ];
+const ignoredPrefixes = ['/admin', '/api', '/auth', '/_next', '/store/download', '/store/thanks', '/store/cancel'];
 
-const ignoredPathPrefixes = [
-  '/admin', '/api', '/auth', '/_next', '/store/download', '/store/thanks', '/store/cancel',
-];
-
-function canonicalCandidate(raw) {
+function candidate(raw) {
   try {
     const url = new URL(raw, base);
-    if (url.origin !== base.origin) return null;
-    if (!['http:', 'https:'].includes(url.protocol)) return null;
-    if (ignoredPathPrefixes.some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) return null;
+    if (url.origin !== base.origin || !['http:', 'https:'].includes(url.protocol)) return null;
+    if (ignoredPrefixes.some((prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) return null;
     url.hash = '';
     for (const key of [...url.searchParams.keys()]) {
       if (/^(utm_|fbclid|gclid|ref$)/i.test(key)) url.searchParams.delete(key);
     }
     if (url.searchParams.size) return null;
-    const pathname = url.pathname.replace(/\/{2,}/g, '/');
-    url.pathname = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
+    url.pathname = url.pathname.replace(/\/{2,}/g, '/');
+    if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/$/, '');
     return url.toString();
   } catch {
     return null;
   }
 }
 
-function cssPath(element) {
-  if (!(element instanceof Element)) return '';
-  const parts = [];
-  let current = element;
-  while (current && current !== document.body && parts.length < 5) {
-    let part = current.tagName.toLowerCase();
-    if (current.id) {
-      part += `#${CSS.escape(current.id)}`;
-      parts.unshift(part);
-      break;
-    }
-    const classes = [...current.classList].filter(Boolean).slice(0, 2);
-    if (classes.length) part += `.${classes.map((value) => CSS.escape(value)).join('.')}`;
-    parts.unshift(part);
-    current = current.parentElement;
-  }
-  return parts.join(' > ');
-}
-
-async function sitemapSeeds() {
+async function seedsFromSitemap() {
   const seeds = new Set([base.toString()]);
   try {
     const response = await fetch(new URL('/sitemap.xml', base), { redirect: 'follow' });
     if (response.ok) {
       const xml = await response.text();
       for (const match of xml.matchAll(/<loc>([^<]+)<\/loc>/gi)) {
-        const candidate = canonicalCandidate(match[1].replace(/&amp;/g, '&'));
-        if (candidate) seeds.add(candidate);
+        const url = candidate(match[1].replace(/&amp;/g, '&'));
+        if (url) seeds.add(url);
       }
     }
   } catch (error) {
@@ -70,33 +47,31 @@ async function sitemapSeeds() {
 }
 
 async function discoverRoutes(browser) {
-  const queue = [...await sitemapSeeds()];
-  const seen = new Set();
+  const queue = [...await seedsFromSitemap()];
   const discovered = new Set(queue);
+  const visited = new Set();
   const context = await browser.newContext({ viewport: profiles[0].viewport });
   const page = await context.newPage();
-
-  while (queue.length && seen.size < maxRoutes) {
+  while (queue.length && visited.size < maxRoutes) {
     const url = queue.shift();
-    if (!url || seen.has(url)) continue;
-    seen.add(url);
+    if (!url || visited.has(url)) continue;
+    visited.add(url);
     try {
       const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
       if (!response || response.status() >= 400) continue;
-      await page.waitForTimeout(250);
+      await page.waitForTimeout(200);
       const hrefs = await page.locator('a[href]').evaluateAll((anchors) => anchors.map((anchor) => anchor.href));
       for (const href of hrefs) {
-        const candidate = canonicalCandidate(href);
-        if (candidate && !discovered.has(candidate) && discovered.size < maxRoutes) {
-          discovered.add(candidate);
-          queue.push(candidate);
+        const urlToAdd = candidate(href);
+        if (urlToAdd && !discovered.has(urlToAdd) && discovered.size < maxRoutes) {
+          discovered.add(urlToAdd);
+          queue.push(urlToAdd);
         }
       }
     } catch (error) {
       console.warn(`Discovery failed for ${url}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-
   await context.close();
   return [...discovered].slice(0, maxRoutes);
 }
@@ -115,7 +90,7 @@ async function auditRoute(context, url, profile) {
   try {
     const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 45_000 });
     status = response?.status() ?? null;
-    await page.waitForTimeout(350);
+    await page.waitForTimeout(300);
   } catch (error) {
     navigationError = error instanceof Error ? error.message : String(error);
   }
@@ -129,12 +104,17 @@ async function auditRoute(context, url, profile) {
       const rect = element.getBoundingClientRect();
       return rect.width > 0 && rect.height > 0;
     };
+    const selector = (element) => {
+      if (element.id) return `${element.tagName.toLowerCase()}#${element.id}`;
+      const classes = [...element.classList].filter(Boolean).slice(0, 3);
+      return `${element.tagName.toLowerCase()}${classes.length ? `.${classes.join('.')}` : ''}`.slice(0, 220);
+    };
     const overflowElements = [...document.body.querySelectorAll('*')]
-      .filter((element) => visible(element))
+      .filter(visible)
       .map((element) => {
         const rect = element.getBoundingClientRect();
         return {
-          selector: cssPath(element),
+          selector: selector(element),
           left: Math.round(rect.left),
           right: Math.round(rect.right),
           width: Math.round(rect.width),
@@ -143,22 +123,19 @@ async function auditRoute(context, url, profile) {
       })
       .filter((item) => item.right > viewportWidth + 2 || item.left < -2)
       .slice(0, 20);
-
     const brokenImages = [...document.images]
       .filter((image) => image.complete && image.currentSrc && image.naturalWidth === 0)
       .map((image) => ({ src: image.currentSrc, alt: image.alt || '' }))
       .slice(0, 20);
-
-    const emptyInteractive = [...document.querySelectorAll('a[href], button')]
-      .filter((element) => visible(element))
+    const unlabelledControls = [...document.querySelectorAll('a[href], button')]
+      .filter(visible)
       .filter((element) => {
         const label = (element.getAttribute('aria-label') || element.textContent || '').trim();
         const title = (element.getAttribute('title') || '').trim();
-        return !label && !title && !element.querySelector('img[alt], svg[aria-label], [aria-hidden="false"]');
+        return !label && !title && !element.querySelector('img[alt], svg[aria-label]');
       })
-      .map((element) => cssPath(element))
+      .map(selector)
       .slice(0, 20);
-
     return {
       mobile,
       title: document.title,
@@ -169,19 +146,19 @@ async function auditRoute(context, url, profile) {
       scrollHeight: root.scrollHeight,
       overflowElements,
       brokenImages,
-      emptyInteractive,
+      unlabelledControls,
     };
   }, profile.isMobile);
 
   const issues = [];
   if (navigationError) issues.push({ type: 'navigation', severity: 'critical', detail: navigationError });
   if (status != null && status >= 400) issues.push({ type: 'http', severity: 'critical', detail: `HTTP ${status}` });
-  if (metrics?.horizontalOverflow > 2) issues.push({ type: 'horizontal-overflow', severity: 'high', detail: `${metrics.horizontalOverflow}px beyond viewport`, offenders: metrics.overflowElements });
+  if (metrics?.horizontalOverflow > 2) issues.push({ type: 'horizontal-overflow', severity: 'high', detail: `${metrics.horizontalOverflow}px beyond viewport`, items: metrics.overflowElements });
   if (metrics?.brokenImages.length) issues.push({ type: 'broken-image', severity: 'high', detail: `${metrics.brokenImages.length} broken loaded image(s)`, items: metrics.brokenImages });
-  if (pageErrors.length) issues.push({ type: 'page-error', severity: 'high', detail: pageErrors.join(' | ') });
+  if (pageErrors.length) issues.push({ type: 'page-error', severity: 'high', detail: [...new Set(pageErrors)].join(' | ') });
   if (consoleErrors.length) issues.push({ type: 'console-error', severity: 'medium', detail: [...new Set(consoleErrors)].join(' | ') });
   if (metrics && !metrics.title.trim()) issues.push({ type: 'missing-title', severity: 'medium', detail: 'Document title is empty.' });
-  if (metrics?.emptyInteractive.length) issues.push({ type: 'unlabelled-control', severity: 'low', detail: `${metrics.emptyInteractive.length} visible control(s) have no accessible label`, items: metrics.emptyInteractive });
+  if (metrics?.unlabelledControls.length) issues.push({ type: 'unlabelled-control', severity: 'low', detail: `${metrics.unlabelledControls.length} visible control(s) have no accessible label`, items: metrics.unlabelledControls });
 
   await page.close();
   return { url, profile: profile.name, status, metrics, issues };
@@ -207,53 +184,42 @@ for (const profile of profiles) {
   for (const url of routes) {
     const result = await auditRoute(context, url, profile);
     results.push(result);
-    const issueText = result.issues.length ? `ISSUES: ${result.issues.map((issue) => issue.type).join(', ')}` : 'OK';
-    console.log(`[${profile.name}] ${new URL(url).pathname} - ${result.status ?? 'ERR'} - ${issueText}`);
+    console.log(`[${profile.name}] ${new URL(url).pathname} - ${result.status ?? 'ERR'} - ${result.issues.length ? `ISSUES: ${result.issues.map((issue) => issue.type).join(', ')}` : 'OK'}`);
   }
   await context.close();
 }
 await browser.close();
 
 const issueResults = results.filter((result) => result.issues.length);
-const criticalOrHigh = issueResults.flatMap((result) => result.issues.map((issue) => ({ ...issue, url: result.url, profile: result.profile }))).filter((issue) => ['critical', 'high'].includes(issue.severity));
+const serious = issueResults
+  .flatMap((result) => result.issues.map((issue) => ({ ...issue, url: result.url, profile: result.profile })))
+  .filter((issue) => ['critical', 'high'].includes(issue.severity));
 const report = {
   generatedAt: new Date().toISOString(),
   baseUrl: base.origin,
   routes,
-  summary: {
-    routes: routes.length,
-    checks: results.length,
-    checksWithIssues: issueResults.length,
-    criticalOrHigh: criticalOrHigh.length,
-  },
+  summary: { routes: routes.length, checks: results.length, checksWithIssues: issueResults.length, criticalOrHigh: serious.length },
   results,
 };
 await writeFile(path.join(outputDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
-
 const markdown = [
-  '# Necrotix Lab live responsive audit',
-  '',
+  '# Necrotix Lab live responsive audit', '',
   `- Target: ${base.origin}`,
   `- Generated: ${report.generatedAt}`,
   `- Public routes discovered: ${routes.length}`,
   `- Desktop/mobile checks: ${results.length}`,
   `- Checks with findings: ${issueResults.length}`,
-  `- Critical/high findings: ${criticalOrHigh.length}`,
-  '',
-  '## Findings',
-  '',
+  `- Critical/high findings: ${serious.length}`, '', '## Findings', '',
 ];
 if (!issueResults.length) markdown.push('No findings in the audited public routes.');
 for (const result of issueResults) {
-  markdown.push(`### ${result.profile} - ${new URL(result.url).pathname}`);
-  markdown.push('');
+  markdown.push(`### ${result.profile} - ${new URL(result.url).pathname}`, '');
   for (const issue of result.issues) markdown.push(`- **${issue.severity} / ${issue.type}**: ${issue.detail}`);
   markdown.push('');
 }
 await writeFile(path.join(outputDir, 'report.md'), `${markdown.join('\n')}\n`);
 console.log(`Audit report written to ${outputDir}/report.json and report.md`);
-
-if (criticalOrHigh.length) {
-  console.error(`Live audit found ${criticalOrHigh.length} critical/high issue(s).`);
+if (serious.length) {
+  console.error(`Live audit found ${serious.length} critical/high issue(s).`);
   process.exitCode = 2;
 }
