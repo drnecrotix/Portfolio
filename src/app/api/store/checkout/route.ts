@@ -1,13 +1,24 @@
 import { randomBytes } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { createLemonSqueezyCheckout } from '@/lib/lemonsqueezy';
+import { canAccessManagedPage, getManagedPageAccessSettings } from '@/lib/page-access';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
     try {
+        const [pageAccess, session] = await Promise.all([
+            getManagedPageAccessSettings(),
+            auth().catch(() => null),
+        ]);
+        const isAdmin = Boolean(session?.user && ['OWNER', 'ADMIN'].includes(session.user.role));
+        if (!canAccessManagedPage(pageAccess, 'store', isAdmin)) {
+            return NextResponse.json({ error: 'Store is unavailable.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+        }
+
         const contentLength = Number(request.headers.get('content-length') || 0);
         if (contentLength > 8_000) return NextResponse.json({ error: 'Request too large.' }, { status: 413 });
 
