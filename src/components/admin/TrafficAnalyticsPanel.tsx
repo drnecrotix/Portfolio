@@ -12,6 +12,13 @@ type TrafficPayload = {
     chart: Array<{ key: string; label: string; pageViews: number; visits: number }>;
     countries: Array<{ code: string; name: string; pageViews: number; visits: number }>;
     devices: Array<{ device: string; pageViews: number; visits: number }>;
+    attribution: {
+        attributedPageViews: number;
+        unattributedPageViews: number;
+        coverage: number;
+        sessionsWithIp: number;
+        sources: Record<string, number>;
+    };
     retention: { aggregateDays: number; sessionHours: number };
     updatedAt: string;
 };
@@ -53,38 +60,75 @@ function DeviceIcon({ device }: { device: string }) {
 }
 
 function TimelineTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
-    const width = 1000;
-    const height = 250;
-    const paddingX = 34;
-    const paddingY = 28;
-    const plotWidth = width - paddingX * 2;
-    const plotHeight = height - paddingY * 2;
+    const [selectedKey, setSelectedKey] = useState<string | null>(null);
+    const fallback = [...rows].reverse().find((row) => row.pageViews > 0 || row.visits > 0) || rows.at(-1) || null;
+    const selected = rows.find((row) => row.key === selectedKey) || fallback;
+    const peak = rows.reduce<(typeof rows)[number] | null>((best, row) => !best || row.pageViews > best.pageViews ? row : best, null);
     const maxValue = Math.max(1, ...rows.flatMap((row) => [row.pageViews, row.visits]));
-    const points = (key: 'pageViews' | 'visits') => rows.map((row, index) => {
-        const x = paddingX + (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
-        const y = paddingY + plotHeight - (row[key] / maxValue) * plotHeight;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    const labelIndexes = rows.length <= 4 ? rows.map((_, index) => index) : [0, Math.floor((rows.length - 1) / 2), rows.length - 1];
+    const labelStep = Math.max(1, Math.ceil(rows.length / 8));
+    const pagesPerSession = selected?.visits ? selected.pageViews / selected.visits : 0;
 
     return (
-        <div className="mt-5 overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-3 sm:p-4">
-            <div className="mb-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Pages opened</span>
-                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Visitor sessions</span>
+        <div className="mt-5 rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Traffic timeline</p>
+                    <h4 className="mt-1 font-semibold">Activity over time</h4>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">Hover, focus or select a period to inspect exact page opens, browsing sessions and session depth.</p>
+                </div>
+                <div className="flex flex-wrap gap-4 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Pages opened</span>
+                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Sessions</span>
+                </div>
             </div>
-            <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Pages opened and visitor sessions over time" className="h-auto w-full overflow-visible">
-                {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                    const y = paddingY + plotHeight * ratio;
-                    return <line key={ratio} x1={paddingX} x2={width - paddingX} y1={y} y2={y} className="stroke-foreground/10" strokeWidth="1" />;
-                })}
-                <polyline points={points('pageViews')} fill="none" className="stroke-sky-500" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                <polyline points={points('visits')} fill="none" className="stroke-violet-500" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                {labelIndexes.map((index) => {
-                    const x = paddingX + (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
-                    return <text key={`${rows[index]?.key}-${index}`} x={x} y={height - 5} textAnchor={index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'middle'} className="fill-muted-foreground text-[20px]">{rows[index]?.label}</text>;
-                })}
-            </svg>
+
+            <div className="mt-5 overflow-x-auto pb-1">
+                <div className="grid min-w-[680px] items-end gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.max(1, rows.length)}, minmax(18px, 1fr))` }}>
+                    {rows.map((row, index) => {
+                        const active = selected?.key === row.key;
+                        const showLabel = index === 0 || index === rows.length - 1 || index % labelStep === 0;
+                        return (
+                            <button
+                                key={row.key}
+                                type="button"
+                                onClick={() => setSelectedKey(row.key)}
+                                onFocus={() => setSelectedKey(row.key)}
+                                onMouseEnter={() => setSelectedKey(row.key)}
+                                className={cn('group rounded-lg border px-1 pb-1.5 pt-2 transition', active ? 'border-sky-500/30 bg-sky-500/[0.05]' : 'border-transparent hover:border-foreground/10 hover:bg-background/45')}
+                                aria-label={`${row.label}: ${row.pageViews} pages opened, ${row.visits} sessions`}
+                            >
+                                <div className="flex h-32 items-end justify-center gap-1">
+                                    <span className="w-1.5 rounded-t bg-sky-500 transition-[height] duration-300 sm:w-2" style={{ height: `${row.pageViews ? Math.max(5, (row.pageViews / maxValue) * 100) : 2}%` }} />
+                                    <span className="w-1.5 rounded-t bg-violet-500 transition-[height] duration-300 sm:w-2" style={{ height: `${row.visits ? Math.max(5, (row.visits / maxValue) * 100) : 2}%` }} />
+                                </div>
+                                <span className={cn('mt-2 block h-4 whitespace-nowrap text-[9px]', showLabel ? active ? 'text-foreground' : 'text-muted-foreground' : 'text-transparent')}>{showLabel ? row.label : '·'}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                <div className="rounded-xl border border-foreground/10 bg-background/55 p-4 sm:col-span-2">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected period</p>
+                    <p className="mt-2 text-lg font-semibold">{selected?.label || 'No activity yet'}</p>
+                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                        <span><strong className="text-foreground">{selected?.pageViews ?? 0}</strong> pages opened</span>
+                        <span><strong className="text-foreground">{selected?.visits ?? 0}</strong> sessions</span>
+                        <span><strong className="text-foreground">{pagesPerSession.toFixed(2)}</strong> pages/session</span>
+                    </div>
+                </div>
+                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Peak period</p>
+                    <p className="mt-2 font-semibold">{peak?.label || 'No data'}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{peak?.pageViews ?? 0} page opens</p>
+                </div>
+                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Reading</p>
+                    <p className="mt-2 font-semibold">{selected?.visits ? 'Active period' : 'Low activity'}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">Sessions estimate distinct browsing periods, while page opens count every public page load.</p>
+                </div>
+            </div>
         </div>
     );
 }
@@ -167,14 +211,16 @@ export function TrafficAnalyticsPanel({
     description = 'Short-retention, country and device level analytics.',
     chartMode = 'timeline',
     refreshIntervalMs = 15000,
+    initialRange,
 }: {
     showMap?: boolean;
     title?: string;
     description?: string;
     chartMode?: ChartMode;
     refreshIntervalMs?: number;
+    initialRange?: TrafficRange;
 }) {
-    const [range, setRange] = useState<TrafficRange>(chartMode === 'weekday' ? '7d' : '24h');
+    const [range, setRange] = useState<TrafficRange>(initialRange || (chartMode === 'weekday' ? '7d' : '24h'));
     const [data, setData] = useState<TrafficPayload | null>(null);
     const [error, setError] = useState('');
     const [refreshing, setRefreshing] = useState(false);
@@ -211,6 +257,7 @@ export function TrafficAnalyticsPanel({
     const selectedCountryShare = selectedCountry && data?.summary.pageViews ? selectedCountry.pageViews / data.summary.pageViews : 0;
     const liveVisitors = data?.summary.liveVisitors ?? 0;
     const hasLiveVisitors = liveVisitors > 0;
+    const coverage = data?.attribution.coverage ?? 0;
 
     return (
         <section className="rounded-3xl border border-foreground/10 bg-foreground/[0.018] p-5 sm:p-6">
@@ -236,9 +283,9 @@ export function TrafficAnalyticsPanel({
                     <p className="mt-3 text-2xl font-semibold tabular-nums">{liveVisitors}</p>
                     <p className="mt-1 text-[10px] leading-4 text-muted-foreground">Active visitors in the last 5 minutes</p>
                 </div>
-                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Visitor sessions</span><Users className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.visits ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Anonymous browsing sessions in this period</p></div>
-                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Pages opened</span><Monitor className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.pageViews ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Total public page loads in this period</p></div>
-                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Countries</span><Globe2 className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.countries ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Countries attributed by hosting headers</p></div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Visitor sessions</span><Users className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.visits ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Distinct anonymous browsing sessions in this period</p></div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Pages opened</span><Monitor className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.pageViews ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Every recorded public page load in this period</p></div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Countries identified</span><Globe2 className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.countries ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">{(coverage * 100).toFixed(0)}% of page opens currently have country attribution</p></div>
             </div>
 
             {chartMode === 'weekday' ? <WeekdayTrafficChart rows={data?.chart || []} /> : <TimelineTrafficChart rows={data?.chart || []} />}
@@ -253,25 +300,27 @@ export function TrafficAnalyticsPanel({
                                 <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected country</p><p className="mt-1 font-semibold">{selectedCountry.name}</p></div><p className="font-mono text-xs text-muted-foreground">{(selectedCountryShare * 100).toFixed(1)}% of page opens</p></div>
                                 <div className="mt-3 flex gap-5 text-xs text-muted-foreground"><span><strong className="text-foreground">{selectedCountry.pageViews}</strong> pages opened</span><span><strong className="text-foreground">{selectedCountry.visits}</strong> sessions</span></div>
                             </div>
-                        ) : null}
+                        ) : (
+                            <div className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/[0.045] p-4 text-xs leading-5 text-muted-foreground">No attributed country is available yet. New traffic first uses hosting country headers and then falls back to a short-lived IP-to-country lookup.</div>
+                        )}
                     </div>
                 ) : null}
 
                 <div className={cn('grid gap-4 sm:grid-cols-2', showMap && 'xl:grid-cols-1')}>
                     <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4">
-                        <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Top countries</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Pages / sessions</span></div>
+                        <div className="flex items-center justify-between gap-3"><h4 className="text-sm font-semibold">Top countries</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{(coverage * 100).toFixed(0)}% attributed</span></div>
                         <div className="mt-3 space-y-2.5">
                             {topCountries.length ? topCountries.map((country) => {
                                 const max = Math.max(1, topCountries[0]?.pageViews || 1);
                                 const active = selectedCountry?.code === country.code;
                                 return (
                                     <button key={country.code} type="button" onClick={() => setSelectedCountryCode(country.code)} className={cn('block w-full rounded-xl border px-3 py-2.5 text-left transition', active ? 'border-sky-500/25 bg-sky-500/[0.04]' : 'border-transparent hover:border-foreground/10 hover:bg-foreground/[0.025]')}>
-                                        <div className="flex items-center justify-between gap-3 text-xs"><span className="truncate">{country.name}</span><span className="font-mono text-muted-foreground">{country.pageViews} / {country.visits}</span></div>
+                                        <div className="flex items-center justify-between gap-3 text-xs"><span className="truncate">{country.name}</span><span className="font-mono text-muted-foreground">{country.pageViews} pages · {country.visits} sessions</span></div>
                                         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.max(4, (country.pageViews / max) * 100)}%` }} /></div>
                                     </button>
                                 );
-                            }) : <p className="py-4 text-xs leading-5 text-muted-foreground">Country attribution is not available yet. The app checks common CDN and hosting country headers without storing raw IP addresses.</p>}
-                            {unknownCountry?.pageViews ? <p className="pt-1 text-[10px] leading-5 text-amber-600 dark:text-amber-300">Unattributed traffic: {unknownCountry.pageViews} pages opened / {unknownCountry.visits} sessions. The hosting request did not include a recognised country header.</p> : null}
+                            }) : <p className="py-4 text-xs leading-5 text-muted-foreground">No country has been identified yet. New sessions now store the request IP for up to about 24 hours and use it only to resolve a country when hosting headers are missing.</p>}
+                            {unknownCountry?.pageViews ? <p className="pt-1 text-[10px] leading-5 text-amber-600 dark:text-amber-300">Unattributed: {unknownCountry.pageViews} pages opened / {unknownCountry.visits} sessions. These can include older records created before IP fallback or lookups that could not resolve.</p> : null}
                         </div>
                     </div>
 
@@ -287,7 +336,7 @@ export function TrafficAnalyticsPanel({
                 </div>
             </div>
 
-            <p className="mt-5 border-t border-foreground/10 pt-4 text-[10px] leading-5 text-muted-foreground">Privacy retention: aggregated country/device traffic is kept for up to {data?.retention.aggregateDays ?? 31} days. Anonymous session hashes are removed after about {data?.retention.sessionHours ?? 24} hours. Raw IP addresses, city and precise location are not stored.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}</p>
+            <p className="mt-5 border-t border-foreground/10 pt-4 text-[10px] leading-5 text-muted-foreground">Privacy retention: aggregated country/device traffic is kept for up to {data?.retention.aggregateDays ?? 31} days. Anonymous traffic-session records, including a raw request IP used only for country resolution when needed, are removed after about {data?.retention.sessionHours ?? 24} hours. City and precise location are not collected.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}</p>
         </section>
     );
 }
