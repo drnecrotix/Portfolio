@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import {
     LIVE_VISITOR_WINDOW_MINUTES,
+    TRAFFIC_IP_RETENTION_HOURS,
     TRAFFIC_METRIC_RETENTION_DAYS,
     TRAFFIC_SESSION_RETENTION_HOURS,
     countryName,
@@ -110,6 +111,9 @@ export async function GET(request: NextRequest) {
     const devices = [...deviceTotals.entries()]
         .map(([device, value]) => ({ device, ...value }))
         .sort((a, b) => b.pageViews - a.pageViews || b.visits - a.visits);
+    const unattributedPageViews = countryTotals.get('XX')?.pageViews || 0;
+    const attributedPageViews = Math.max(0, pageViews - unattributedPageViews);
+    const countryCoverage = pageViews > 0 ? attributedPageViews / pageViews : 0;
 
     return NextResponse.json({
         range,
@@ -118,6 +122,8 @@ export async function GET(request: NextRequest) {
             pageViews,
             visits,
             countries: countries.filter((item) => item.code !== 'XX').length,
+            countryCoverage,
+            unattributedPageViews,
         },
         chart,
         countries,
@@ -125,6 +131,7 @@ export async function GET(request: NextRequest) {
         retention: {
             aggregateDays: TRAFFIC_METRIC_RETENTION_DAYS,
             sessionHours: TRAFFIC_SESSION_RETENTION_HOURS,
+            ipHours: TRAFFIC_IP_RETENTION_HOURS,
         },
         updatedAt: now.toISOString(),
     }, {
