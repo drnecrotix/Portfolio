@@ -14,7 +14,13 @@ import {
 import { getRuntimeR2Config } from '@/lib/integration-runtime';
 import { listLemonSqueezyVariants } from '@/lib/lemonsqueezy';
 import { prisma } from '@/lib/prisma';
-import { deleteDigitalProductFile, uploadDigitalProductFile, validateDigitalProductFile } from '@/lib/store-storage';
+import {
+    deleteDigitalProductFile,
+    externalDigitalProductStorageKey,
+    normalizeExternalDigitalProductUrl,
+    uploadDigitalProductFile,
+    validateDigitalProductFile,
+} from '@/lib/store-storage';
 
 const STATUSES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
 const PROVIDERS = ['LEMON_SQUEEZY', 'CREEM'] as const;
@@ -31,6 +37,10 @@ export type StoreProviderCatalogOption = {
 };
 export type StoreProviderCatalogResult = { ok: true; options: StoreProviderCatalogOption[] } | { ok: false; error: string };
 export type StoreStorageSetupResult = { ok: true; bucket: string; created: boolean; message: string } | { ok: false; error: string };
+
+type StoreDelivery =
+    | { kind: 'upload'; file: File }
+    | { kind: 'external'; url: string; fileName: string };
 
 async function requireEditor() {
     const session = await auth();
@@ -149,6 +159,68 @@ function safeName(name: string) {
     return name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 140) || 'download.bin';
 }
 
+function externalName(url: string, preferred: string) {
+    if (preferred) return preferred.slice(0, 220);
+    try {
+        const pathname = new URL(url).pathname;
+        const candidate = decodeURIComponent(pathname.split('/').filter(Boolean).pop() || 'digital-download');
+        return candidate.replace(/[\r\n"\\]/g, '_').slice(0, 220) || 'digital-download';
+    } catch {
+        return 'digital-download';
+    }
+}
+
+function deliveryFrom(formData: FormData): StoreDelivery | null {
+    const mode = value(formData, 'deliveryType', 16) || 'UPLOAD';
+    if (!['UPLOAD', 'LINK'].includes(mode)) throw new Error('Invalid digital product delivery type.');
+
+    if (mode === 'LINK') {
+        const raw = value(formData, 'externalFileUrl', 4000);
+        if (!raw) return null;
+        const url = normalizeExternalDigitalProductUrl(raw);
+        return { kind: 'external', url, fileName: externalName(url, value(formData, 'externalFileName', 220)) };
+    }
+
+    const file = uploadFrom(formData);
+    if (!file) return null;
+    validateDigitalProductFile(file);
+    return { kind: 'upload', file };
+}
+
+async function createDelivery(productId: string, delivery: StoreDelivery, sortOrder = 0) {
+    if (delivery.kind === 'external') {
+        await prisma.storeProductFile.create({
+            data: {
+                productId,
+                fileName: delivery.fileName,
+                storageKey: externalDigitalProductStorageKey(delivery.url),
+                mimeType: 'application/octet-stream',
+                size: 0,
+                sortOrder,
+            },
+        });
+        return;
+    }
+
+    const storageKey = `store/products/${productId}/${randomUUID()}-${safeName(delivery.file.name)}`;
+    await uploadDigitalProductFile(productId, delivery.file, storageKey);
+    try {
+        await prisma.storeProductFile.create({
+            data: {
+                productId,
+                fileName: delivery.file.name.slice(0, 220),
+                storageKey,
+                mimeType: delivery.file.type || 'application/octet-stream',
+                size: delivery.file.size,
+                sortOrder,
+            },
+        });
+    } catch (error) {
+        await deleteDigitalProductFile(storageKey).catch(() => null);
+        throw error;
+    }
+}
+
 function invalidate(slug?: string) {
     revalidatePath('/store');
     if (slug) revalidatePath(`/store/${slug}`);
@@ -162,7 +234,7 @@ function saveError(error: unknown): StoreProductSaveResult {
     }
     if (error instanceof Error) {
         const message = error.message;
-        if (/^(title|slug|description|price|compareAtPrice|Lemon Squeezy|Creem|Invalid product|Invalid payment|Digital product|Cloudflare R2|coverImageUrl|seoTitle|seoDescription|category|tags|Choose a Lemon|CREEM_|LEMON_)/.test(message)) {
+        if (/^(title|slug|description|price|compareAtPrice|Lemon Squeezy|Creem|Invalid product|Invalid payment|Invalid digital|Digital product|External file|Cloudflare R2|coverImageUrl|seoTitle|seoDescription|category|tags|Choose a Lemon|CREEM_|LEMON_)/.test(message)) {
             return { ok: false, error: message };
         }
     }
@@ -273,21 +345,14 @@ export async function createStoreProduct(_previous: StoreProductSaveResult | nul
         await requireEditor();
         const baseData = readForm(formData);
         const data = await resolveProviderMapping(baseData, formData);
-        const file = uploadFrom(formData);
-        if (data.status === 'PUBLISHED' && !file) throw new Error('Digital product file is required before publishing.');
-        if (file) validateDigitalProductFile(file);
+        const delivery = deliveryFrom(formData);
+        if (data.status === 'PUBLISHED' && !delivery) throw new Error('Digital product delivery is required before publishing. Upload a file or add a masked external link.');
 
         const product = await prisma.storeProduct.create({ data });
         productId = product.id;
-        if (file) {
-            const storageKey = `store/products/${product.id}/${randomUUID()}-${safeName(file.name)}`;
-            await uploadDigitalProductFile(product.id, file, storageKey);
-            await prisma.storeProductFile.create({
-                data: { productId: product.id, fileName: file.name.slice(0, 220), storageKey, mimeType: file.type || 'application/octet-stream', size: file.size },
-            });
-        }
+        if (delivery) await createDelivery(product.id, delivery);
         invalidate(product.slug);
-        return { ok: true, id: product.id, created: true, message: data.priceCents === 0 ? 'Free product created.' : 'Product created.' };
+        return { ok: true, id: product.id, created: true, message: data.priceCents === 0 ? 'Free product created and saved.' : 'Product created and saved.' };
     } catch (error) {
         if (productId) await prisma.storeProduct.delete({ where: { id: productId } }).catch(() => null);
         return saveError(error);
@@ -301,18 +366,13 @@ export async function updateStoreProduct(productId: string, _previous: StoreProd
         if (!current) return { ok: false, error: 'Product not found.' };
         const baseData = readForm(formData);
         const data = await resolveProviderMapping(baseData, formData);
-        const file = uploadFrom(formData);
-        if (file) validateDigitalProductFile(file);
-        if (data.status === 'PUBLISHED' && current._count.files === 0 && !file) throw new Error('Digital product file is required before publishing.');
+        const delivery = deliveryFrom(formData);
+        if (data.status === 'PUBLISHED' && current._count.files === 0 && !delivery) {
+            throw new Error('Digital product delivery is required before publishing. Upload a file or add a masked external link.');
+        }
 
         await prisma.storeProduct.update({ where: { id: productId }, data });
-        if (file) {
-            const storageKey = `store/products/${productId}/${randomUUID()}-${safeName(file.name)}`;
-            await uploadDigitalProductFile(productId, file, storageKey);
-            await prisma.storeProductFile.create({
-                data: { productId, fileName: file.name.slice(0, 220), storageKey, mimeType: file.type || 'application/octet-stream', size: file.size, sortOrder: current._count.files },
-            });
-        }
+        if (delivery) await createDelivery(productId, delivery, current._count.files);
         invalidate(current.slug);
         if (current.slug !== data.slug) invalidate(data.slug);
         revalidatePath(`/admin/store/${productId}`);
