@@ -229,19 +229,19 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
 
     return (
         <>
-            <div className="h-full rounded-2xl border border-foreground/10 bg-foreground/[0.025] p-5 sm:p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.025] p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Portfolio updates</p>
-                        <h3 className="mt-2 text-xl font-semibold">GitHub updater</h3>
+                        <h3 className="mt-1.5 text-xl font-semibold">GitHub updater</h3>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-lg border border-foreground/10 bg-background/45 px-3 py-2"><span className="text-muted-foreground">Installed </span><strong className="font-mono">v{currentVersion}</strong></span>
-                        {targetVersion && targetVersion !== currentVersion ? <span className="rounded-lg border border-sky-500/20 bg-sky-500/[0.055] px-3 py-2"><span className="text-muted-foreground">Available </span><strong className="font-mono">v{targetVersion}</strong></span> : null}
+                        <span className="rounded-lg border border-foreground/10 bg-background/45 px-3 py-1.5"><span className="text-muted-foreground">Installed </span><strong className="font-mono">v{currentVersion}</strong></span>
+                        {targetVersion && targetVersion !== currentVersion ? <span className="rounded-lg border border-sky-500/20 bg-sky-500/[0.055] px-3 py-1.5"><span className="text-muted-foreground">Available </span><strong className="font-mono">v{targetVersion}</strong></span> : null}
                     </div>
                 </div>
 
-                <div className={cn('mt-5 rounded-2xl border p-4 transition-colors duration-300', failed ? 'border-red-500/20 bg-red-500/[0.045]' : complete ? 'border-emerald-500/20 bg-emerald-500/[0.04]' : animated ? 'border-sky-500/20 bg-sky-500/[0.035]' : 'border-foreground/10 bg-background/40')}>
+                <div className={cn('mt-4 rounded-xl border p-3.5 transition-colors duration-300', failed ? 'border-red-500/20 bg-red-500/[0.045]' : complete ? 'border-emerald-500/20 bg-emerald-500/[0.04]' : animated ? 'border-sky-500/20 bg-sky-500/[0.035]' : 'border-foreground/10 bg-background/40')}>
                     <div className="flex items-start gap-3">
                         <span className="relative mt-0.5 flex size-3 shrink-0">
                             {animated && <span className="absolute inline-flex size-full animate-ping rounded-full bg-sky-500/25" />}
@@ -249,12 +249,12 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
                         </span>
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/75">{statusLabel(displayStatus.state)}</span>
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/75">{statusLabel(displayStatus.state)}</span>
                                 {displayStatus.updatedAt ? <span className="text-[10px] text-muted-foreground">{new Date(displayStatus.updatedAt).toLocaleTimeString()}</span> : null}
                             </div>
                             <p className="mt-1 break-words text-sm leading-5 text-foreground/80">{displayStatus.message}</p>
                             {isUpdating ? (
-                                <div className="mt-4">
+                                <div className="mt-3">
                                     <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground"><span>Deployment progress</span><span>{progress}%</span></div>
                                     <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full rounded-full bg-sky-500 transition-[width] duration-500 ease-out" style={{ width: `${Math.max(3, progress)}%` }} /></div>
                                 </div>
@@ -263,27 +263,25 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
                     </div>
                 </div>
 
-                <div className="mt-5">
-                    <div className="flex items-center justify-between gap-3"><p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Update pipeline</p><span className="text-[10px] text-muted-foreground">GitHub main → N0C production</span></div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                <div className="mt-4">
+                    <div className="flex items-center justify-between gap-3"><p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Update pipeline</p><span className="text-[10px] text-muted-foreground">GitHub main → N0C</span></div>
+                    <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
                         {updateSteps.map((step, index) => {
                             const StepIcon = step.icon;
                             const done = displayStatus.state === 'success' || currentStepIndex > index;
                             const active = isUpdating && currentStepIndex === index;
                             return (
-                                <div key={step.id} className={cn('rounded-xl border px-3 py-3 transition-colors duration-300', done ? 'border-emerald-500/20 bg-emerald-500/[0.035]' : active ? 'border-sky-500/25 bg-sky-500/[0.045]' : 'border-foreground/10 bg-background/35')}>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <StepIcon className={cn('size-4', done ? 'text-emerald-500' : active ? 'text-sky-500' : 'text-muted-foreground')} />
-                                        {done ? <Check className="size-3.5 text-emerald-500" /> : active ? <Circle className="size-3.5 animate-pulse fill-sky-500/20 text-sky-500" /> : <Circle className="size-3.5 text-foreground/15" />}
-                                    </div>
-                                    <p className="mt-2 text-[11px] font-medium">{step.label}</p>
+                                <div key={step.id} className={cn('flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors duration-300', done ? 'border-emerald-500/20 bg-emerald-500/[0.035]' : active ? 'border-sky-500/25 bg-sky-500/[0.045]' : 'border-foreground/10 bg-background/35')}>
+                                    <StepIcon className={cn('size-3.5 shrink-0', done ? 'text-emerald-500' : active ? 'text-sky-500' : 'text-muted-foreground')} />
+                                    <p className="min-w-0 flex-1 truncate text-[10px] font-medium">{step.label}</p>
+                                    {done ? <Check className="size-3 text-emerald-500" /> : active ? <Circle className="size-3 animate-pulse fill-sky-500/20 text-sky-500" /> : <Circle className="size-3 text-foreground/15" />}
                                 </div>
                             );
                         })}
                     </div>
                 </div>
 
-                <div className="mt-5 flex flex-col gap-2 border-t border-foreground/10 pt-5 sm:flex-row sm:flex-wrap">
+                <div className="mt-4 flex flex-col gap-2 border-t border-foreground/10 pt-4 sm:flex-row sm:flex-wrap">
                     <button type="button" onClick={handleCheck} disabled={isChecking || isUpdating} className="rounded-xl border border-foreground/15 px-4 py-2.5 text-sm font-medium transition hover:bg-foreground/[0.05] disabled:cursor-not-allowed disabled:opacity-40">{isChecking ? 'Checking…' : 'Check for update'}</button>
                     {isCurrent ? <span aria-disabled="true" className="inline-flex items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">Up to date</span> : <button type="button" onClick={handleInstall} disabled={!canInstall} className="rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">{installLabel}</button>}
                 </div>
