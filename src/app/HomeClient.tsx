@@ -53,50 +53,70 @@ export default function HomeClient({ content, identity, posts, projects }: { con
         writePortfolioLoaded();
     };
 
-    const smoothTo = (id: string) => {
-        const section = document.getElementById(id);
-        if (!section || autoScrollInProgress.current) return;
-        autoScrollInProgress.current = true;
-        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        window.setTimeout(() => { autoScrollInProgress.current = false; }, 850);
-    };
-
     useEffect(() => {
-        if (isLoading) return;
+        if (isLoading || !showBlog || !showProjects) return;
 
-        const sectionIds = ['home-hero'];
-        if (showBlog) sectionIds.push('home-blog');
-        if (showProjects) sectionIds.push('home-projects');
+        const desktopPointer = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        let unlockTimer: number | null = null;
+
+        const smoothTo = (section: HTMLElement, block: ScrollLogicalPosition) => {
+            if (autoScrollInProgress.current) return;
+            autoScrollInProgress.current = true;
+            section.scrollIntoView({ behavior: 'smooth', block });
+            if (unlockTimer !== null) window.clearTimeout(unlockTimer);
+            unlockTimer = window.setTimeout(() => { autoScrollInProgress.current = false; }, 680);
+        };
 
         const handleWheel = (event: WheelEvent) => {
-            if (Math.abs(event.deltaY) < 14 || autoScrollInProgress.current || event.ctrlKey) return;
+            if (
+                !desktopPointer.matches
+                || reducedMotion.matches
+                || event.defaultPrevented
+                || event.ctrlKey
+                || autoScrollInProgress.current
+                || Math.abs(event.deltaY) < 18
+            ) return;
 
-            const viewportCenter = window.scrollY + window.innerHeight / 2;
-            let currentIndex = 0;
-            let closestDistance = Number.POSITIVE_INFINITY;
+            const journal = document.getElementById('home-blog');
+            const projectSection = document.getElementById('home-projects');
+            if (!journal || !projectSection) return;
 
-            sectionIds.forEach((id, index) => {
-                const section = document.getElementById(id);
-                if (!section) return;
-                const rect = section.getBoundingClientRect();
-                const sectionCenter = window.scrollY + rect.top + rect.height / 2;
-                const distance = Math.abs(sectionCenter - viewportCenter);
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    currentIndex = index;
-                }
-            });
+            const journalRect = journal.getBoundingClientRect();
+            const projectRect = projectSection.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
 
-            const nextIndex = event.deltaY > 0 ? currentIndex + 1 : currentIndex - 1;
-            const targetId = sectionIds[nextIndex];
-            if (!targetId) return;
+            // Assist only at the Journal -> Projects boundary. This avoids the
+            // visually empty in-between stop without turning the whole homepage
+            // into a forced full-page slider.
+            if (
+                event.deltaY > 0
+                && projectRect.top > viewportHeight * 0.14
+                && projectRect.top < viewportHeight * 0.72
+                && journalRect.bottom < viewportHeight * 0.82
+            ) {
+                event.preventDefault();
+                smoothTo(projectSection, 'start');
+                return;
+            }
 
-            event.preventDefault();
-            smoothTo(targetId);
+            if (
+                event.deltaY < 0
+                && journalRect.bottom > viewportHeight * 0.28
+                && journalRect.bottom < viewportHeight * 0.86
+                && projectRect.top > viewportHeight * 0.18
+            ) {
+                event.preventDefault();
+                smoothTo(journal, 'end');
+            }
         };
 
         window.addEventListener('wheel', handleWheel, { passive: false });
-        return () => window.removeEventListener('wheel', handleWheel);
+        return () => {
+            if (unlockTimer !== null) window.clearTimeout(unlockTimer);
+            autoScrollInProgress.current = false;
+            window.removeEventListener('wheel', handleWheel);
+        };
     }, [isLoading, showBlog, showProjects]);
 
     return (

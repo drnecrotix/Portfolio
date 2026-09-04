@@ -53,9 +53,9 @@ export default async function HomepageAdminPage() {
                         <label className="mt-4 flex items-center gap-3 text-sm text-white/70"><input type="checkbox" name="showBlogPosts" defaultChecked={content.showBlogPosts} className="size-4" /> Show blog posts on homepage</label>
                     </div>
                     <label className="text-sm text-white/60">Section title<input name="homeBlogTitle" defaultValue={content.homeBlogTitle} className={input} /></label>
-                    <label className="text-sm text-white/60">Posts to show<input type="number" min={1} max={12} name="homeBlogPostLimit" defaultValue={content.homeBlogPostLimit} className={input} /></label>
+                    <label className="text-sm text-white/60">Posts to show<input type="number" min={1} max={5} name="homeBlogPostLimit" defaultValue={content.homeBlogPostLimit} className={input} /></label>
                     <label className="text-sm text-white/60 md:col-span-2">Section subtitle<textarea name="homeBlogSubtitle" defaultValue={content.homeBlogSubtitle} rows={2} className={input} /></label>
-                    <p className="text-xs leading-relaxed text-white/35 md:col-span-2">When enabled, scrolling down from the hero smoothly moves to the Blog section.</p>
+                    <p className="text-xs leading-relaxed text-white/35 md:col-span-2">Shows up to 5 newest Journal posts on the homepage. The full publication archive remains available on the Blog page.</p>
                 </section>
 
                 <section className={`${section} grid gap-5 md:grid-cols-2`}>
@@ -64,9 +64,9 @@ export default async function HomepageAdminPage() {
                         <label className="mt-4 flex items-center gap-3 text-sm text-white/70"><input type="checkbox" name="showProjects" defaultChecked={content.showProjects} className="size-4" /> Show projects on homepage</label>
                     </div>
                     <label className="text-sm text-white/60">Section title<input name="homeProjectsTitle" defaultValue={content.homeProjectsTitle} className={input} /></label>
-                    <label className="text-sm text-white/60">Projects to show<input type="number" min={1} max={12} name="homeProjectLimit" defaultValue={content.homeProjectLimit} className={input} /></label>
+                    <label className="text-sm text-white/60">Projects to show<input type="number" min={1} max={5} name="homeProjectLimit" defaultValue={content.homeProjectLimit} className={input} /></label>
                     <label className="text-sm text-white/60 md:col-span-2">Section subtitle<textarea name="homeProjectsSubtitle" defaultValue={content.homeProjectsSubtitle} rows={2} className={input} /></label>
-                    <p className="text-xs leading-relaxed text-white/35 md:col-span-2">Projects are rendered as a compact list. Scrolling past the Blog section transitions smoothly into Projects; if Blog is hidden, the hero transitions directly to Projects.</p>
+                    <p className="text-xs leading-relaxed text-white/35 md:col-span-2">Shows up to 5 newest projects on the homepage. Desktop scrolling is gently assisted at the Journal / Projects boundary while mobile and touch scrolling remain native.</p>
                 </section>
 
                 <button className="rounded-xl bg-white px-5 py-3 font-semibold text-black">Save homepage</button>
