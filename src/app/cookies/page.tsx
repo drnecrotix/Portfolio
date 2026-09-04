@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const rows = [
     ['locale', 'Cookie', 'Remembers a language selected by the visitor.', 'Up to 1 year', 'Preference / requested functionality'],
     ['necrotix_experiment_variants', 'Session cookie', 'Keeps the randomly assigned homepage A/B variants stable for the current browser session so repeated refreshes do not move the same session between variants.', 'Browser session', 'First-party measurement'],
-    ['necrotix_traffic_session', 'HTTP-only session cookie', 'Random first-party session identifier used to estimate visits and live traffic. The server hashes the value before storing the short-lived session record.', 'Browser session; server session record about 24 hours', 'First-party measurement'],
+    ['necrotix_traffic_session', 'HTTP-only session cookie', 'Random first-party session identifier used to estimate visits and live traffic. The server hashes the cookie value before storing the short-lived session record.', 'Browser session; server session record about 24 hours', 'First-party measurement'],
     ['necrotix_blog_like_id', 'Cookie', 'Pseudonymous identifier created when Blog Like functionality is used, so the site can remember and toggle that interaction.', 'Up to 2 years', 'Functional interaction'],
     ['necrotix_gallery_like_id', 'Cookie', 'Pseudonymous identifier created when Gallery Like functionality is used.', 'Up to 2 years', 'Functional interaction'],
     ['portfolio-private-access', 'Cookie', 'Temporary access token when the site owner enables Private mode and a visitor successfully enters the access password.', 'About 12 hours', 'Strictly necessary'],
@@ -64,7 +64,7 @@ export default function CookiesPage() {
                 <h2>3. First-party functional and measurement storage</h2>
                 <p className="mt-4">Storage used for requested functionality includes language, theme, authentication, private-site access, Likes and session-level view markers. These entries are separate from advertising and cross-site behavioural tracking.</p>
                 <p className="mt-3">NecrotixLab also runs limited first-party A/B tests. A small session cookie stores only the current A/B variant letters so a browser session stays in the same variants across refreshes. Experiment event data is kept as aggregate counters such as exposures, project opens and section visibility rather than as a named visitor profile.</p>
-                <p className="mt-3">Short-retention traffic analytics uses a random HTTP-only session cookie to estimate visits and live traffic. The server hashes that random value before storing the temporary session record. The analytics database stores only country code, broad device class and hourly aggregate traffic totals. It does not store city, precise coordinates or raw IP addresses for analytics. Country/device aggregates are intended to be removed after about 31 days, and anonymous session hashes after about 24 hours of inactivity.</p>
+                <p className="mt-3">Short-retention traffic analytics uses a random HTTP-only session cookie to estimate visits and live traffic. The server hashes the random cookie value before storing it. Country headers supplied by the hosting/CDN are preferred; if no supported country header is available, the server may also store the raw client IP address in the same short-lived traffic-session record and use it only to resolve an ISO country code. Raw IP is not copied into the longer-lived aggregate traffic table. Traffic-session rows are intended to expire after about 24 hours of inactivity, while country/device aggregates are intended to expire after about 31 days.</p>
                 <p className="mt-3">When a browser sends the Do Not Track signal, the public page-view tracker does not submit traffic analytics events.</p>
                 <p className="mt-3">The current application code does not intentionally set first-party advertising or cross-site behavioural advertising cookies.</p>
             </section>
@@ -83,7 +83,7 @@ export default function CookiesPage() {
 
             <section>
                 <h2>6. Personal data and your rights</h2>
-                <p className="mt-4">A cookie ID or similar online identifier can be personal data when it can relate to an identifiable person. For more information about purposes, legal bases, retention, recipients and your rights, read the <Link href="/privacy">Privacy & GDPR Policy</Link>.</p>
+                <p className="mt-4">A cookie ID, IP address or similar online identifier can be personal data when it can relate to an identifiable person. For more information about purposes, legal bases, retention, recipients and your rights, read the <Link href="/privacy">Privacy & GDPR Policy</Link>.</p>
             </section>
         </LegalDocument>
     );
