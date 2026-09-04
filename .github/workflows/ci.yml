@@ -144,6 +144,17 @@ jobs:
         run: |
           rm -rf .next
           npm run build:n0c
+      - name: Staged updater build with stale route types
+        run: |
+          set -euo pipefail
+          rm -rf .next-update
+          mkdir -p .next/types/app/retired-route
+          cat > .next/types/app/retired-route/page.ts <<'EOF'
+          import * as entry from '../../../../src/app/retired-route/page.js';
+          void entry;
+          EOF
+          NEXT_DIST_DIR=.next-update NEXT_N0C_WASM_SWC=1 NODE_OPTIONS='--max-old-space-size=6144' npx next build --webpack
+          test -d .next-update
 
   visual-smoke:
     name: Frontend visual smoke
