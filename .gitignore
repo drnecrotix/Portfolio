@@ -14,6 +14,9 @@ build
 # Production
 dist
 
+# Private runtime storage
+storage/store-private/
+
 # Misc
 .DS_Store
 *.pem
