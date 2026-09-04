@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { normalizeAssistantSettings } from '@/lib/assistant-settings';
+import { resolveCreemEnvironment } from '@/lib/creem';
 import {
     getStoredAssistantApiKeys,
     toAssistantSettingsJson,
@@ -19,7 +20,7 @@ import {
     type IntegrationTestRecord,
 } from '@/lib/integration-credentials';
 
-export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2' | 'lemonsqueezy';
+export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2' | 'lemonsqueezy' | 'creem';
 export type ApiActionResult = { ok: boolean; message: string; testedAt?: string; latencyMs?: number };
 
 const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
@@ -31,6 +32,7 @@ const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
     openrouter: ['openrouter.apiKey'],
     r2: ['r2.accountId', 'r2.accessKeyId', 'r2.secretAccessKey', 'r2.bucket', 'r2.storeBucket', 'r2.publicBaseUrl'],
     lemonsqueezy: ['lemonsqueezy.apiKey', 'lemonsqueezy.storeId', 'lemonsqueezy.webhookSecret'],
+    creem: ['creem.apiKey', 'creem.webhookSecret'],
 };
 
 const envNames: Record<string, string> = {
@@ -50,6 +52,8 @@ const envNames: Record<string, string> = {
     'lemonsqueezy.apiKey': 'LEMON_SQUEEZY_API_KEY',
     'lemonsqueezy.storeId': 'LEMON_SQUEEZY_STORE_ID',
     'lemonsqueezy.webhookSecret': 'LEMON_SQUEEZY_WEBHOOK_SECRET',
+    'creem.apiKey': 'CREEM_API_KEY',
+    'creem.webhookSecret': 'CREEM_WEBHOOK_SECRET',
 };
 
 const aiProviders = new Set<ApiIntegrationId>(['openai', 'groq', 'gemini', 'openrouter']);
@@ -137,6 +141,14 @@ export async function saveApiIntegration(input: {
                 } catch {
                     return { ok: false, message: 'R2 public base URL must be a valid http(s) URL.' };
                 }
+            }
+        }
+
+        if (input.id === 'creem' && typeof changes['creem.apiKey'] === 'string') {
+            try {
+                resolveCreemEnvironment(changes['creem.apiKey']);
+            } catch (error) {
+                return { ok: false, message: error instanceof Error ? error.message : 'Invalid Creem API key.' };
             }
         }
 
@@ -288,6 +300,19 @@ async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, s
         if (!apiKey) throw new Error('No OpenRouter API key is configured.');
         await fetchChecked('https://openrouter.ai/api/v1/auth/key', { headers: { Authorization: `Bearer ${apiKey}` } });
         return 'OpenRouter API key is valid.';
+    }
+
+    if (id === 'creem') {
+        const apiKey = values['creem.apiKey'];
+        if (!apiKey) throw new Error('No Creem API key is configured.');
+        const environment = resolveCreemEnvironment(apiKey);
+        const response = await fetchChecked(`${environment.baseUrl}/v1/products/search?page_number=1&page_size=1`, {
+            headers: { 'x-api-key': apiKey, Accept: 'application/json' },
+        });
+        const data = await response.json();
+        const count = Number(data?.pagination?.total_records ?? 0);
+        const webhookNote = values['creem.webhookSecret'] ? ' Webhook secret is configured.' : ' Add the webhook secret before testing paid delivery.';
+        return `Connected to Creem ${environment.mode} mode. ${count} product${count === 1 ? '' : 's'} available.${webhookNote}`;
     }
 
     if (id === 'lemonsqueezy') {
