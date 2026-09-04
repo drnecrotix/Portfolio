@@ -9,6 +9,12 @@ import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 export type AdminNavItem = readonly [label: string, href: string];
 export type AdminNavGroup = readonly [label: string, items: readonly AdminNavItem[]];
 
+function isItemActive(pathname: string, href: string, items: readonly AdminNavItem[]) {
+    if (pathname === href) return true;
+    if (href === '/admin' || !pathname.startsWith(`${href}/`)) return false;
+    return !items.some(([, siblingHref]) => siblingHref !== href && siblingHref.startsWith(`${href}/`) && (pathname === siblingHref || pathname.startsWith(`${siblingHref}/`)));
+}
+
 export function AdminMobileNavigation({
     siteName,
     role,
@@ -59,7 +65,7 @@ export function AdminMobileNavigation({
                             <Link href={dashboardItem[1]} onClick={closeMenu} className={linkClass(pathname === dashboardItem[1])}>{dashboardItem[0]}</Link>
 
                             {navGroups.map(([groupLabel, items]) => {
-                                const groupActive = items.some(([, href]) => pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`)));
+                                const groupActive = items.some(([, href]) => isItemActive(pathname, href, items));
                                 return (
                                     <details key={groupLabel} className="group/nav rounded-xl border border-foreground/10 bg-foreground/[0.018]" open={groupActive || undefined}>
                                         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground [&::-webkit-details-marker]:hidden">
@@ -68,7 +74,7 @@ export function AdminMobileNavigation({
                                         </summary>
                                         <div className="grid gap-1 border-t border-foreground/10 p-2">
                                             {items.map(([label, href]) => (
-                                                <Link key={href} href={href} onClick={closeMenu} className={linkClass(pathname === href)}>{label}</Link>
+                                                <Link key={href} href={href} onClick={closeMenu} className={linkClass(isItemActive(pathname, href, items))}>{label}</Link>
                                             ))}
                                         </div>
                                     </details>
