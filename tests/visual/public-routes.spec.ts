@@ -10,7 +10,6 @@ const routes = [
   '/wiki',
   '/wiki/articles',
   '/wiki/faq',
-  '/achievements',
   '/resume',
   '/contact',
   '/store',
