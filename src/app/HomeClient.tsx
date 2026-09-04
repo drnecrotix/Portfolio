@@ -34,9 +34,9 @@ function writePortfolioLoaded() {
 
 export default function HomeClient({ content, identity, posts, projects }: { content: HomepageContent; identity: PublicIdentity; posts: PublicPost[]; projects: Project[] }) {
     const { phase } = usePreloadState();
-    const loaderExperiment = useExperiment('niko-loader-duration', false);
-    const orderExperiment = useExperiment('home-section-order');
-    const heroExperiment = useExperiment('hero-micro-cta');
+    const { variant: loaderVariant, ready: loaderReady, track: trackLoader } = useExperiment('niko-loader-duration', false);
+    const { variant: orderVariant, ready: orderReady, track: trackOrder } = useExperiment('home-section-order', false);
+    const { variant: heroVariant, ready: heroReady, track: trackHero } = useExperiment('hero-micro-cta');
     const [isLoading, setIsLoading] = useState(true);
     const [isInitialLoadingExit, setIsInitialLoadingExit] = useState(false);
     const [skipAnimation, setSkipAnimation] = useState(false);
@@ -54,16 +54,20 @@ export default function HomeClient({ content, identity, posts, projects }: { con
         return () => window.cancelAnimationFrame(frame);
     }, []);
 
-    useEffect(() => {
-        if (isFirstVisit === true && loaderExperiment.ready) loaderExperiment.track('exposure');
-    }, [isFirstVisit, loaderExperiment]);
-
     const isReadyToAnimate = isLoading ? isInitialLoadingExit : phase === 'reveal' || phase === 'done';
     const showBlog = content.showBlogPosts && posts.length > 0;
     const showProjects = content.showProjects && projects.length > 0;
-    const projectsFirst = orderExperiment.ready && orderExperiment.variant === 'B';
-    const showHeroCtas = heroExperiment.ready && heroExperiment.variant === 'B' && isReadyToAnimate;
-    const loaderDuration = loaderExperiment.ready && loaderExperiment.variant === 'B' ? 1800 : 2500;
+    const projectsFirst = orderReady && orderVariant === 'B';
+    const showHeroCtas = heroReady && heroVariant === 'B' && isReadyToAnimate;
+    const loaderDuration = loaderReady && loaderVariant === 'B' ? 1800 : 2500;
+
+    useEffect(() => {
+        if (isFirstVisit === true && loaderReady) trackLoader('exposure');
+    }, [isFirstVisit, loaderReady, trackLoader]);
+
+    useEffect(() => {
+        if (showBlog && showProjects && orderReady) trackOrder('exposure');
+    }, [orderReady, showBlog, showProjects, trackOrder]);
 
     const handleLoadingComplete = () => {
         setIsLoading(false);
@@ -72,9 +76,9 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     };
 
     useEffect(() => {
-        if (isLoading || isFirstVisit !== true || !loaderExperiment.ready) return;
+        if (isLoading || isFirstVisit !== true || !loaderReady) return;
 
-        const markEngaged = () => loaderExperiment.track('engaged');
+        const markEngaged = () => trackLoader('engaged');
         const timer = window.setTimeout(markEngaged, 10000);
         window.addEventListener('pointerdown', markEngaged, { once: true, passive: true });
         window.addEventListener('wheel', markEngaged, { once: true, passive: true });
@@ -86,7 +90,7 @@ export default function HomeClient({ content, identity, posts, projects }: { con
             window.removeEventListener('wheel', markEngaged);
             window.removeEventListener('keydown', markEngaged);
         };
-    }, [isFirstVisit, isLoading, loaderExperiment]);
+    }, [isFirstVisit, isLoading, loaderReady, trackLoader]);
 
     useEffect(() => {
         if (isLoading || !showProjects) return;
@@ -95,15 +99,15 @@ export default function HomeClient({ content, identity, posts, projects }: { con
 
         const observer = new IntersectionObserver((entries) => {
             if (!entries.some((entry) => entry.isIntersecting)) return;
-            loaderExperiment.track('projects_seen');
-            orderExperiment.track('projects_seen');
-            heroExperiment.track('projects_seen');
+            trackLoader('projects_seen');
+            trackOrder('projects_seen');
+            trackHero('projects_seen');
             observer.disconnect();
         }, { threshold: 0.25 });
 
         observer.observe(section);
         return () => observer.disconnect();
-    }, [heroExperiment, isLoading, loaderExperiment, orderExperiment, showProjects]);
+    }, [isLoading, showProjects, trackHero, trackLoader, trackOrder]);
 
     useEffect(() => {
         if (isLoading || !showBlog || !showProjects) return;
@@ -169,15 +173,15 @@ export default function HomeClient({ content, identity, posts, projects }: { con
     }, [isLoading, projectsFirst, showBlog, showProjects]);
 
     const handleProjectOpen = () => {
-        loaderExperiment.track('project_open');
-        orderExperiment.track('project_open');
-        heroExperiment.track('project_open');
+        trackLoader('project_open');
+        trackOrder('project_open');
+        trackHero('project_open');
     };
 
     const handleBlogOpen = () => {
-        loaderExperiment.track('blog_open');
-        orderExperiment.track('blog_open');
-        heroExperiment.track('blog_open');
+        trackLoader('blog_open');
+        trackOrder('blog_open');
+        trackHero('blog_open');
     };
 
     const journalSection = showBlog ? <HomeBlogSection posts={posts} onPostOpen={handleBlogOpen} /> : null;
@@ -205,7 +209,7 @@ export default function HomeClient({ content, identity, posts, projects }: { con
                             View projects <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
                         <span className="h-3 w-px bg-foreground/15" aria-hidden />
-                        <Link href="/gallery" onClick={() => { heroExperiment.track('gallery_open'); loaderExperiment.track('gallery_open'); }} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        <Link href="/gallery" onClick={() => { trackHero('gallery_open'); trackLoader('gallery_open'); }} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                             Explore gallery <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
                     </motion.div>
