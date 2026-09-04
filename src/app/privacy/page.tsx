@@ -24,9 +24,8 @@ export default async function PrivacyPage() {
         >
             <section>
                 <h2>1. Data controller</h2>
-                <p className="mt-4"><strong>{identity.siteName}</strong>, operator of <a href={identity.siteUrl}>{identity.siteUrl}</a>, is responsible for the processing described in this policy.</p>
+                <p className="mt-4"><strong>{identity.controllerName}</strong>, operator of <strong>{identity.siteName}</strong> at <a href={identity.siteUrl}>{identity.siteUrl}</a>, is responsible for the processing described in this policy.</p>
                 <p className="mt-3"><strong>Location:</strong> {identity.location}. <strong>Privacy contact:</strong> <ContactLine email={identity.contactEmail} />.</p>
-                <p className="mt-3">If a legal identity or dedicated data-protection contact is published separately on this website, that information takes precedence over the display name above.</p>
             </section>
 
             <section>
