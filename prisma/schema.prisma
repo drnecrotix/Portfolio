@@ -98,7 +98,7 @@ model Post {
   categoryRef    BlogCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags           String[]
   authorName     String
-  seoTitle       String?
+  seoTitle        String?
   seoDescription String?
   publishedAt    DateTime?
   scheduledAt    DateTime?
@@ -246,11 +246,14 @@ model TrafficMetric {
 }
 
 model TrafficSession {
-  sessionHash String   @id
-  countryCode String
-  deviceType  String
-  startedAt   DateTime @default(now())
-  lastSeenAt  DateTime @default(now())
+  sessionHash     String    @id
+  countryCode     String
+  deviceType      String
+  ipAddress       String?
+  countrySource   String    @default("unknown")
+  countryLookupAt DateTime?
+  startedAt       DateTime  @default(now())
+  lastSeenAt      DateTime  @default(now())
 
   @@index([lastSeenAt])
 }
