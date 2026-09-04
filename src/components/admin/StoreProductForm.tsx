@@ -55,13 +55,13 @@ export function StoreProductForm({ product, action }: { product?: ProductInput |
             </section>
 
             <section className="grid gap-5 rounded-2xl border border-foreground/10 bg-foreground/[0.015] p-5 sm:p-6 md:grid-cols-2">
-                <label className={labelClass}>Price (EUR)<input className={inputClass} name="price" inputMode="decimal" required pattern="\d+(?:[.,]\d{1,2})?" defaultValue={product ? (product.priceCents / 100).toFixed(2) : ''} /></label>
+                <label className={labelClass}>Price (EUR)<input className={inputClass} name="price" inputMode="decimal" pattern="\d+(?:[.,]\d{1,2})?" placeholder="Leave empty or enter 0 for Free download" defaultValue={product ? (product.priceCents > 0 ? (product.priceCents / 100).toFixed(2) : '') : ''} /></label>
                 <label className={labelClass}>Compare-at price (EUR)<input className={inputClass} name="compareAtPrice" inputMode="decimal" pattern="\d+(?:[.,]\d{1,2})?" defaultValue={product?.compareAtPriceCents != null ? (product.compareAtPriceCents / 100).toFixed(2) : ''} /></label>
                 <label className={labelClass}>Payment provider<select className={inputClass} name="paymentProvider" defaultValue={product?.paymentProvider ?? 'CREEM'}><option value="CREEM">Creem</option><option value="LEMON_SQUEEZY">Lemon Squeezy</option></select></label>
                 <label className={labelClass}>Download limit<input className={inputClass} type="number" name="downloadLimit" min={1} max={100} defaultValue={product?.downloadLimit ?? 5} /></label>
                 <label className={labelClass}>Creem Product ID<input className={inputClass} name="creemProductId" maxLength={160} placeholder="prod_..." defaultValue={product?.creemProductId ?? ''} /></label>
                 <label className={labelClass}>Lemon Squeezy Variant ID<input className={inputClass} name="lemonSqueezyVariantId" maxLength={120} placeholder="123456" defaultValue={product?.lemonSqueezyVariantId ?? ''} /></label>
-                <p className="text-xs leading-5 text-muted-foreground md:col-span-2">Only the identifier for the selected payment provider is required when publishing. Creem uses a Product ID beginning with <code>prod_</code>; Lemon Squeezy uses a Variant ID.</p>
+                <p className="text-xs leading-5 text-muted-foreground md:col-span-2">Leave Price empty or set it to 0 to publish a <strong>Free download</strong>. Free products do not require Creem or Lemon Squeezy IDs. For paid products, only the identifier for the selected payment provider is required.</p>
                 <label className={labelClass}>Status<select className={inputClass} name="status" defaultValue={product?.status ?? 'DRAFT'}><option value="DRAFT">Draft</option><option value="PUBLISHED">Published</option><option value="ARCHIVED">Archived</option></select></label>
                 <label className="flex items-center gap-3 self-end rounded-xl border border-foreground/10 px-4 py-3 text-sm font-semibold"><input type="checkbox" name="featured" defaultChecked={product?.featured ?? false} /> Featured product</label>
             </section>
