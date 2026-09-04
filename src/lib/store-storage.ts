@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getRuntimeR2Config } from '@/lib/integration-runtime';
 
 const MAX_DIGITAL_FILE_BYTES = 250 * 1024 * 1024;
@@ -13,7 +13,7 @@ function required(value: string | undefined, name: string) {
 async function config() {
     const value = await getRuntimeR2Config();
     if (!value.accountId || !value.accessKeyId || !value.secretAccessKey || !value.bucket) {
-        throw new Error('Cloudflare R2 must be configured before digital product files can be uploaded.');
+        throw new Error('Cloudflare R2 must be configured before digital product files can be managed.');
     }
     return value;
 }
@@ -29,6 +29,10 @@ function client(value: Awaited<ReturnType<typeof config>>) {
     });
 }
 
+function validStoreKey(storageKey: string) {
+    if (!storageKey.startsWith('store/products/')) throw new Error('Invalid digital product storage key.');
+}
+
 export function validateDigitalProductFile(file: File) {
     if (!file.name.trim()) throw new Error('Digital product file name is required.');
     if (!file.size) throw new Error('Digital product file is empty.');
@@ -37,6 +41,7 @@ export function validateDigitalProductFile(file: File) {
 
 export async function uploadDigitalProductFile(productId: string, file: File, storageKey: string) {
     validateDigitalProductFile(file);
+    validStoreKey(storageKey);
     const runtime = await config();
     const s3 = client(runtime);
     try {
@@ -54,7 +59,7 @@ export async function uploadDigitalProductFile(productId: string, file: File, st
 }
 
 export async function readDigitalProductFile(storageKey: string) {
-    if (!storageKey.startsWith('store/products/')) throw new Error('Invalid digital product storage key.');
+    validStoreKey(storageKey);
     const runtime = await config();
     const s3 = client(runtime);
     try {
@@ -67,6 +72,17 @@ export async function readDigitalProductFile(storageKey: string) {
             bytes: await result.Body.transformToByteArray(),
             contentType: result.ContentType || 'application/octet-stream',
         };
+    } finally {
+        s3.destroy();
+    }
+}
+
+export async function deleteDigitalProductFile(storageKey: string) {
+    validStoreKey(storageKey);
+    const runtime = await config();
+    const s3 = client(runtime);
+    try {
+        await s3.send(new DeleteObjectCommand({ Bucket: required(runtime.bucket, 'R2_BUCKET'), Key: storageKey }));
     } finally {
         s3.destroy();
     }
