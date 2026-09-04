@@ -6,6 +6,7 @@ import { getPublicSiteUrl } from '@/lib/social-metadata';
 
 export type LegalIdentity = {
     siteName: string;
+    controllerName: string;
     siteUrl: string;
     contactEmail: string;
     location: string;
@@ -20,10 +21,12 @@ export async function getLegalIdentity(): Promise<LegalIdentity> {
     }
 
     const settings = normalizeGeneralSiteSettings(site);
+    const siteName = settings.siteName || 'NecrotixLab';
     return {
-        siteName: settings.siteName || 'NecrotixLab',
+        siteName,
+        controllerName: process.env.LEGAL_CONTROLLER_NAME?.trim() || siteName,
         siteUrl: settings.contactDetails.website || getPublicSiteUrl(),
-        contactEmail: settings.contactDetails.email,
-        location: settings.contactDetails.location || 'Bulgaria',
+        contactEmail: process.env.PRIVACY_CONTACT_EMAIL?.trim() || settings.contactDetails.email,
+        location: process.env.LEGAL_CONTROLLER_LOCATION?.trim() || settings.contactDetails.location || 'Bulgaria',
     };
 }
