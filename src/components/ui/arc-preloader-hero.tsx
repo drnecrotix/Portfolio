@@ -55,28 +55,41 @@ export function ArcRevealHero({
   }, [phase, children]);
 
   React.useEffect(() => {
+    let finishTimer: number | null = null;
+    const finishWithoutRouteLoader = () => {
+      finishTimer = window.setTimeout(() => setPhase("done"), 0);
+    };
+
     if (pathname === "/" && typeof window !== "undefined") {
       try {
         const isLoaded = window.sessionStorage.getItem("portfolioLoaded");
         if (!isLoaded) {
-          setPhase("done");
-          return;
+          finishWithoutRouteLoader();
+          return () => {
+            if (finishTimer !== null) window.clearTimeout(finishTimer);
+          };
         }
       } catch {
-        setPhase("done");
-        return;
+        finishWithoutRouteLoader();
+        return () => {
+          if (finishTimer !== null) window.clearTimeout(finishTimer);
+        };
       }
     }
 
     if (storageKey && typeof window !== "undefined") {
       try {
         if (window.sessionStorage.getItem(storageKey) === "done") {
-          setPhase("done");
+          finishWithoutRouteLoader();
         }
       } catch {
         // Ignore restricted storage and keep the lightweight route loader available.
       }
     }
+
+    return () => {
+      if (finishTimer !== null) window.clearTimeout(finishTimer);
+    };
   }, [pathname, storageKey]);
 
   React.useEffect(() => {
