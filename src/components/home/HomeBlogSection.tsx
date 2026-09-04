@@ -10,10 +10,11 @@ type Props = {
 };
 
 export function HomeBlogSection({ posts }: Props) {
-    if (!posts.length) return null;
+    const visiblePosts = posts.slice(0, 5);
+    if (!visiblePosts.length) return null;
 
     return (
-        <section id="home-blog" className="flex min-h-[100svh] scroll-mt-0 items-center border-t border-foreground/10 bg-background px-6 py-10 md:px-16 md:py-12 lg:px-24">
+        <section id="home-blog" className="scroll-mt-24 border-t border-foreground/10 bg-background px-6 py-12 md:px-16 md:py-14 lg:scroll-mt-28 lg:px-24 lg:py-16">
             <div className="mx-auto w-full max-w-[1400px]">
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
@@ -25,7 +26,7 @@ export function HomeBlogSection({ posts }: Props) {
                     <div className="flex flex-wrap items-center gap-3">
                         <span className="h-2.5 w-2.5 rounded-full bg-foreground/70" />
                         <p className="font-mono text-sm font-semibold uppercase tracking-[0.28em] text-foreground/80">Journal</p>
-                        <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[10px] text-muted-foreground">{posts.length}</span>
+                        <span className="rounded-md border border-foreground/10 px-2 py-1 font-mono text-[10px] text-muted-foreground">{visiblePosts.length}</span>
                     </div>
                     <Link href="/blog" className="group inline-flex items-center gap-2 text-sm font-medium text-foreground/65 transition hover:text-foreground">
                         View all posts <ArrowUpRight className="size-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
@@ -33,7 +34,7 @@ export function HomeBlogSection({ posts }: Props) {
                 </motion.div>
 
                 <div className="border-t border-foreground/10">
-                    {posts.map((post, index) => (
+                    {visiblePosts.map((post, index) => (
                         <motion.div
                             key={post.id}
                             initial={{ opacity: 0, y: 18 }}
