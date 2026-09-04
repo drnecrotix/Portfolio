@@ -53,7 +53,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     if (!product || product.status !== 'PUBLISHED' || (product.publishedAt && product.publishedAt > new Date())) notFound();
 
     const baseUrl = getPublicSiteUrl().replace(/\/$/, '');
-    const available = Boolean(product.files.length && product.lemonSqueezyVariantId);
+    const freeDownload = product.priceCents === 0;
+    const providerReady = freeDownload || (product.paymentProvider === 'CREEM' ? Boolean(product.creemProductId) : Boolean(product.lemonSqueezyVariantId));
+    const available = Boolean(product.files.length && providerReady);
     const productSchema = {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -118,17 +120,26 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
                             <div className="mt-7 border-y border-foreground/10 py-5">
                                 {product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents ? <p className="text-sm text-muted-foreground line-through">{money(product.compareAtPriceCents, product.currency)}</p> : null}
-                                <p className="text-3xl font-black">{product.priceCents === 0 ? 'Free' : money(product.priceCents, product.currency)}</p>
+                                <p className="text-3xl font-black">{freeDownload ? 'Free download' : money(product.priceCents, product.currency)}</p>
                             </div>
 
                             <div className="mt-6">
-                                {available ? <BuyButton slug={product.slug} /> : <p className="rounded-xl border border-foreground/10 bg-foreground/[0.03] p-4 text-sm text-muted-foreground">This product is not available for checkout yet.</p>}
+                                {available ? (
+                                    <BuyButton
+                                        slug={product.slug}
+                                        title={product.title}
+                                        priceCents={product.priceCents}
+                                        currency={product.currency}
+                                        coverImageUrl={product.coverImageUrl}
+                                        label={freeDownload ? 'Free download' : 'Buy now'}
+                                    />
+                                ) : <p className="rounded-xl border border-foreground/10 bg-foreground/[0.03] p-4 text-sm text-muted-foreground">This product is not available for checkout yet.</p>}
                             </div>
 
                             <div className="mt-6 space-y-3 text-sm text-muted-foreground">
-                                <p className="flex gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0" /> Instant digital delivery after confirmed payment.</p>
-                                <p className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> Downloads use private, purchase-linked access instead of public file URLs.</p>
-                                <p className="flex gap-2"><FileArchive className="mt-0.5 h-4 w-4 shrink-0" /> Up to {product.downloadLimit} download{product.downloadLimit === 1 ? '' : 's'} per purchase.</p>
+                                <p className="flex gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0" /> {freeDownload ? 'Instant digital download - no payment required.' : 'Instant digital delivery after confirmed payment.'}</p>
+                                <p className="flex gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" /> Downloads use private, access-linked delivery instead of public file URLs.</p>
+                                <p className="flex gap-2"><FileArchive className="mt-0.5 h-4 w-4 shrink-0" /> Up to {product.downloadLimit} download{product.downloadLimit === 1 ? '' : 's'} per access grant.</p>
                             </div>
                         </div>
                     </aside>

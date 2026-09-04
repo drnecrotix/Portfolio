@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LibraryBig, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import CardNav, { type DropdownStyle } from '@/components/ui/CardNav';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { usePreloadState } from '@/components/ui/arc-preloader-hero';
+import { StoreCartMenu } from '@/components/store/StoreCartMenu';
 
 type NavigationItem = {
     id: string;
@@ -52,6 +53,7 @@ export function Navbar() {
     const { scrollY } = useScroll();
     const { isPreloading } = usePreloadState();
     const [items, setItems] = useState<NavigationItem[]>(fallbackItems);
+    const [storeCartVisible, setStoreCartVisible] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isVisible, setIsVisible] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -62,6 +64,11 @@ export function Navbar() {
             .then((response) => response.ok ? response.json() : fallbackItems)
             .then((data) => Array.isArray(data) && data.length ? setItems(data) : setItems(fallbackItems))
             .catch(() => setItems(fallbackItems));
+
+        fetch('/api/store/status', { cache: 'no-store' })
+            .then((response) => response.ok ? response.json() : { visible: false })
+            .then((data) => setStoreCartVisible(Boolean(data?.visible)))
+            .catch(() => setStoreCartVisible(false));
     }, []);
 
     useEffect(() => {
@@ -148,19 +155,7 @@ export function Navbar() {
                         </div>
 
                         <div className="flex items-center gap-2 md:gap-3">
-                            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link
-                                    href="/wiki/articles"
-                                    className={cn(
-                                        'flex rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5',
-                                        pathname === '/wiki/articles' || pathname.startsWith('/wiki/') ? 'text-sky-500 dark:text-sky-300' : 'text-foreground',
-                                    )}
-                                    aria-label="Open Wiki index"
-                                    title="Wiki index"
-                                >
-                                    <LibraryBig className="h-4 w-4" />
-                                </Link>
-                            </motion.div>
+                            {storeCartVisible ? <StoreCartMenu /> : null}
                             <AnimatedThemeToggler />
                             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsMenuOpen((value) => !value)} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5 lg:hidden" aria-label="Toggle menu">
                                 <AnimatePresence mode="wait" initial={false}>

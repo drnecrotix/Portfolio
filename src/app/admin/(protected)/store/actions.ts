@@ -8,7 +8,9 @@ import { prisma } from '@/lib/prisma';
 import { deleteDigitalProductFile, uploadDigitalProductFile, validateDigitalProductFile } from '@/lib/store-storage';
 
 const STATUSES = ['DRAFT', 'PUBLISHED', 'ARCHIVED'] as const;
+const PROVIDERS = ['LEMON_SQUEEZY', 'CREEM'] as const;
 type ProductStatus = (typeof STATUSES)[number];
+type PaymentProvider = (typeof PROVIDERS)[number];
 
 export type StoreProductSaveResult = { ok: true; id: string; created: boolean } | { ok: false; error: string; field?: string };
 
@@ -50,11 +52,18 @@ function readForm(formData: FormData) {
     const rawStatus = value(formData, 'status', 20) || 'DRAFT';
     if (!STATUSES.includes(rawStatus as ProductStatus)) throw new Error('Invalid product status.');
     const status = rawStatus as ProductStatus;
-    const priceCents = cents(formData, 'price', true)!;
+    const rawProvider = value(formData, 'paymentProvider', 32) || 'LEMON_SQUEEZY';
+    if (!PROVIDERS.includes(rawProvider as PaymentProvider)) throw new Error('Invalid payment provider.');
+    const paymentProvider = rawProvider as PaymentProvider;
+    const priceCents = cents(formData, 'price') ?? 0;
     const compareAtPriceCents = cents(formData, 'compareAtPrice');
     const downloadLimit = Math.max(1, Math.min(100, Math.trunc(Number(formData.get('downloadLimit') || 5) || 5)));
     const lemonSqueezyVariantId = value(formData, 'lemonSqueezyVariantId', 120) || null;
-    if (status === 'PUBLISHED' && !lemonSqueezyVariantId) throw new Error('Lemon Squeezy variant ID is required before publishing.');
+    const creemProductId = value(formData, 'creemProductId', 160) || null;
+    const freeDownload = priceCents === 0;
+    if (!freeDownload && status === 'PUBLISHED' && paymentProvider === 'LEMON_SQUEEZY' && !lemonSqueezyVariantId) throw new Error('Lemon Squeezy variant ID is required before publishing a paid product.');
+    if (!freeDownload && status === 'PUBLISHED' && paymentProvider === 'CREEM' && !creemProductId) throw new Error('Creem Product ID is required before publishing a paid product.');
+    if (creemProductId && !/^prod_[A-Za-z0-9]+$/.test(creemProductId)) throw new Error('Creem Product ID must start with prod_.');
 
     return {
         title,
@@ -67,7 +76,9 @@ function readForm(formData: FormData) {
         compareAtPriceCents,
         currency: 'EUR',
         coverImageUrl: optionalUrl(formData, 'coverImageUrl'),
+        paymentProvider,
         lemonSqueezyVariantId,
+        creemProductId,
         status,
         featured: formData.get('featured') === 'on',
         downloadLimit,
@@ -99,7 +110,7 @@ function saveError(error: unknown): StoreProductSaveResult {
     }
     if (error instanceof Error) {
         const message = error.message;
-        if (/^(title|slug|description|price|compareAtPrice|Lemon Squeezy|Invalid product|Digital product|Cloudflare R2|coverImageUrl|seoTitle|seoDescription|category|tags)/.test(message)) {
+        if (/^(title|slug|description|price|compareAtPrice|Lemon Squeezy|Creem|Invalid product|Invalid payment|Digital product|Cloudflare R2|coverImageUrl|seoTitle|seoDescription|category|tags)/.test(message)) {
             return { ok: false, error: message };
         }
     }
