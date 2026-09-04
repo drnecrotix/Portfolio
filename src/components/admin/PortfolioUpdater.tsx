@@ -61,6 +61,35 @@ function rejectedActionMessage(error: unknown, fallback: string) {
     return fallback;
 }
 
+function inferStage(status: PortfolioUpdateStatus) {
+    if (status.stage) return status.stage;
+    if (status.state === 'success') return 'complete';
+    const message = (status.message || '').toLowerCase();
+    if (message.includes('downloading')) return 'download';
+    if (message.includes('installing portfolio') || message.includes('syncing')) return 'sync';
+    if (message.includes('dependenc')) return 'dependencies';
+    if (message.includes('prisma') || message.includes('migration')) return 'database';
+    if (message.includes('build') || message.includes('browser chunks')) return 'build';
+    if (message.includes('activating')) return 'activate';
+    return status.state === 'starting' ? 'start' : undefined;
+}
+
+function inferProgress(status: PortfolioUpdateStatus, stage?: string) {
+    if (typeof status.progress === 'number') return status.progress;
+    if (status.state === 'success') return 100;
+    switch (stage) {
+        case 'download': return 12;
+        case 'sync': return 24;
+        case 'dependencies': return 38;
+        case 'database': return 52;
+        case 'build': return 72;
+        case 'activate': return 90;
+        case 'complete': return 100;
+        case 'start': return 3;
+        default: return 0;
+    }
+}
+
 function stepIndex(stage?: string) {
     if (!stage) return -1;
     if (stage === 'start') return -1;
@@ -193,8 +222,9 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     const failed = displayStatus.state === 'error';
     const complete = displayStatus.state === 'success' || displayStatus.state === 'current';
     const installLabel = isUpdating ? 'Update running…' : isStarting ? 'Starting…' : checkResult?.state === 'available' ? 'Install update' : 'Check update first';
-    const progress = Math.max(0, Math.min(100, displayStatus.progress ?? (displayStatus.state === 'success' ? 100 : 0)));
-    const currentStepIndex = stepIndex(displayStatus.stage);
+    const inferredStage = inferStage(displayStatus);
+    const progress = Math.max(0, Math.min(100, inferProgress(displayStatus, inferredStage)));
+    const currentStepIndex = stepIndex(inferredStage);
     const targetVersion = displayStatus.targetVersion || checkResult?.remoteVersion || null;
 
     return (
