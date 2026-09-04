@@ -231,6 +231,7 @@ export async function seedDefaultNavigationAjax() {
             ] as const) {
                 await tx.navigationItem.create({ data: { label, href, sortOrder, parentId: about.id } });
             }
+            await tx.navigationItem.create({ data: { label: 'Store', href: '/store', sortOrder: 25 } });
             await tx.navigationItem.create({ data: { label: 'Contact', href: '/contact', sortOrder: 30 } });
         });
         refreshNavigation();
