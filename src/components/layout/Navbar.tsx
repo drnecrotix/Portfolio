@@ -155,7 +155,7 @@ export function Navbar() {
                         </div>
 
                         <div className="flex items-center gap-2 md:gap-3">
-                            <StoreCartMenu visible={storeCartVisible} />
+                            {storeCartVisible ? <StoreCartMenu /> : null}
                             <AnimatedThemeToggler />
                             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setIsMenuOpen((value) => !value)} className="rounded-full bg-muted/80 p-2 transition-colors hover:bg-muted md:p-2.5 lg:hidden" aria-label="Toggle menu">
                                 <AnimatePresence mode="wait" initial={false}>
