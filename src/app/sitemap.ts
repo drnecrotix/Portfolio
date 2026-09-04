@@ -67,7 +67,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             { url: `${baseUrl}/wiki/articles`, changeFrequency: 'weekly' as const, priority: 0.7 },
             ...(faqEnabled && faqIndexable ? [{ url: `${baseUrl}/wiki/faq`, changeFrequency: 'monthly' as const, priority: 0.75 }] : []),
         ] : []),
-        { url: `${baseUrl}/achievements`, changeFrequency: 'monthly', priority: 0.6 },
         { url: `${baseUrl}/resume`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/contact`, changeFrequency: 'monthly', priority: 0.5 },
         { url: `${baseUrl}/legal`, changeFrequency: 'yearly', priority: 0.35 },
