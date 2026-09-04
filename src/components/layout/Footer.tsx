@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Bot, Check, ChevronUp, Copy, Focus, Github, Instagram, Linkedin, X } from 'lucide-react';
+import { Bot, Check, ChevronUp, Copy, Github, Instagram, Linkedin, X } from 'lucide-react';
 import { Spotlight } from '@/components/ui/spotlight-new';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -120,7 +120,6 @@ export function Footer() {
         settings.githubUrl ? { label: 'GitHub', href: settings.githubUrl, Icon: Github } : null,
         settings.linkedinUrl ? { label: 'LinkedIn', href: settings.linkedinUrl, Icon: Linkedin } : null,
         settings.instagramUrl ? { label: 'Instagram', href: settings.instagramUrl, Icon: Instagram } : null,
-        settings.workspaceUrl ? { label: 'Workspace', href: settings.workspaceUrl, Icon: Focus } : null,
     ].filter(Boolean) as Array<{ label: string; href: string; Icon: typeof Github }>;
 
     const expandedMenu = typeof document !== 'undefined' ? createPortal(
