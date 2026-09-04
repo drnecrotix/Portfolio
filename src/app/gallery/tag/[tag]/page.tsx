@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { GalleryPageClient } from '@/components/sections/gallery/GalleryPageClient';
 import { prisma } from '@/lib/prisma';
+import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from '@/lib/content-watermark';
 import { normalizeGallerySettings } from '@/lib/gallery-settings';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
 
@@ -12,10 +13,16 @@ function normalizeTag(value: string) {
 }
 
 async function loadTaggedGallery(tag: string) {
-  const settings = await prisma.siteSettings.findUnique({
-    where: { id: 'default' },
-    select: { siteName: true, galleryContent: true },
-  }).catch(() => null);
+  const [settings, watermarkPage] = await Promise.all([
+    prisma.siteSettings.findUnique({
+      where: { id: 'default' },
+      select: { siteName: true, galleryContent: true },
+    }).catch(() => null),
+    prisma.page.findUnique({
+      where: { slug: CONTENT_WATERMARK_CONFIG_SLUG },
+      select: { content: true },
+    }).catch(() => null),
+  ]);
 
   const normalizedTag = normalizeTag(tag);
   const needle = normalizedTag.toLocaleLowerCase('en');
@@ -25,6 +32,7 @@ async function loadTaggedGallery(tag: string) {
   return {
     siteName: settings?.siteName || 'NecrotixLab',
     tag: normalizedTag,
+    watermark: normalizeContentWatermarkSettings(watermarkPage?.content),
     content: {
       ...content,
       sectionEyebrow: 'Filtered by tag',
@@ -52,6 +60,6 @@ export async function generateMetadata({ params }: { params: Promise<{ tag: stri
 
 export default async function GalleryTagPage({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params;
-  const { content } = await loadTaggedGallery(tag);
-  return <GalleryPageClient content={content} />;
+  const { content, watermark } = await loadTaggedGallery(tag);
+  return <GalleryPageClient content={content} watermark={watermark} />;
 }
