@@ -23,6 +23,8 @@ export type ExperimentDefinition = {
     variants: Record<ExperimentVariant, string>;
 };
 
+export const EXPERIMENT_VARIANT_COOKIE = 'necrotix_experiment_variants';
+
 export const experimentDefinitions: readonly ExperimentDefinition[] = [
     {
         id: 'niko-loader-duration',
@@ -69,5 +71,27 @@ export function assignHomepageExperimentVariants(): ExperimentVariantMap {
         'niko-loader-duration': pick(),
         'home-section-order': pick(),
         'hero-micro-cta': pick(),
+    };
+}
+
+export function serializeExperimentVariants(variants: ExperimentVariantMap) {
+    return [
+        `n:${variants['niko-loader-duration']}`,
+        `o:${variants['home-section-order']}`,
+        `h:${variants['hero-micro-cta']}`,
+    ].join(',');
+}
+
+export function parseExperimentVariants(value: string | null | undefined): ExperimentVariantMap | null {
+    if (!value) return null;
+    const entries = new Map(value.split(',').map((entry) => entry.split(':', 2) as [string, string]));
+    const niko = entries.get('n');
+    const order = entries.get('o');
+    const hero = entries.get('h');
+    if (![niko, order, hero].every((variant) => variant === 'A' || variant === 'B')) return null;
+    return {
+        'niko-loader-duration': niko as ExperimentVariant,
+        'home-section-order': order as ExperimentVariant,
+        'hero-micro-cta': hero as ExperimentVariant,
     };
 }
