@@ -23,7 +23,7 @@ function featureCode(feature: GeoFeature) {
     return typeof raw === 'string' ? raw.toUpperCase() : '';
 }
 
-function AudienceGlobe({ countries }: { countries: AudienceCountry[] }) {
+function AudienceGlobe({ countries, selectedCode }: { countries: AudienceCountry[]; selectedCode?: string | null }) {
     const groupRef = useRef<Group | null>(null);
     const globeRef = useRef<ThreeGlobe | null>(null);
     const [features, setFeatures] = useState<GeoFeature[]>([]);
@@ -75,25 +75,32 @@ function AudienceGlobe({ countries }: { countries: AudienceCountry[] }) {
             .hexPolygonColor((rawFeature: object) => {
                 const code = featureCode(rawFeature as GeoFeature);
                 const value = values.get(code) || 0;
+                if (selectedCode && code === selectedCode) return 'rgba(125,211,252,0.98)';
                 if (!value) return 'rgba(148,163,184,0.10)';
                 const strength = Math.sqrt(value / maxValue);
-                return `rgba(56,189,248,${0.26 + strength * 0.66})`;
+                return `rgba(56,189,248,${0.24 + strength * 0.62})`;
             })
             .showAtmosphere(true)
             .atmosphereColor('#38bdf8')
             .atmosphereAltitude(0.08);
-    }, [features, maxValue, values]);
+    }, [features, maxValue, selectedCode, values]);
 
     return <group ref={groupRef} />;
 }
 
-export default function AudienceWorldMapCanvas({ countries }: { countries: AudienceCountry[] }) {
+export default function AudienceWorldMapCanvas({
+    countries,
+    selectedCode,
+}: {
+    countries: AudienceCountry[];
+    selectedCode?: string | null;
+}) {
     return (
         <Canvas camera={{ position: [0, 0, 300], fov: 50 }} dpr={[1, 1.5]}>
             <ambientLight color="#dbeafe" intensity={0.55} />
             <directionalLight color="#ffffff" position={[-300, 160, 300]} intensity={1.1} />
             <pointLight color="#38bdf8" position={[180, 180, 250]} intensity={1.2} />
-            <AudienceGlobe countries={countries} />
+            <AudienceGlobe countries={countries} selectedCode={selectedCode} />
             <OrbitControls
                 enablePan={false}
                 enableZoom={false}
