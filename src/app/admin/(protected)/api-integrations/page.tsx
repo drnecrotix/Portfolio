@@ -83,6 +83,19 @@ export default async function ApiIntegrationsPage() {
             lastTest: tests.wakatime ?? null,
         },
         {
+            id: 'creem',
+            name: 'Creem',
+            category: 'Commerce & payments',
+            description: 'Creates Creem checkout sessions for one-time digital products and grants secure downloads only after signed payment webhooks.',
+            usedBy: ['Digital Store checkout', 'Test payments', 'Order verification', 'Secure download grants'],
+            docsHint: 'Test keys beginning with creem_test_ automatically use https://test-api.creem.io. Configure the webhook URL as /api/store/webhook/creem and subscribe to checkout.completed, refund.created and dispute.created. The API key never reaches the browser.',
+            fields: [
+                field('creem.apiKey', 'API Key', 'CREEM_API_KEY', true, 'Use a creem_test_ key while testing. The environment is detected from the key prefix.'),
+                field('creem.webhookSecret', 'Webhook Secret', 'CREEM_WEBHOOK_SECRET', true, 'Found in Creem Developers > Webhooks. Required before paid downloads can be granted.'),
+            ],
+            lastTest: tests.creem ?? null,
+        },
+        {
             id: 'lemonsqueezy',
             name: 'Lemon Squeezy',
             category: 'Commerce & payments',
