@@ -127,7 +127,8 @@ ALTER TABLE "StoreDownloadGrant" ADD CONSTRAINT "StoreDownloadGrant_orderId_fkey
 ALTER TABLE "StoreDownloadGrant" ADD CONSTRAINT "StoreDownloadGrant_productId_fkey" FOREIGN KEY ("productId") REFERENCES "StoreProduct"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "StoreCheckoutSession" ADD CONSTRAINT "StoreCheckoutSession_productId_fkey" FOREIGN KEY ("productId") REFERENCES "StoreProduct"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Add Store to existing primary navigation without replacing user customizations.
+-- Add Store only when the site already has customized navigation. Fresh installs keep the empty state so the normal default-navigation bootstrap can run.
 INSERT INTO "NavigationItem" ("id", "label", "href", "location", "sortOrder", "isVisible", "isExternal", "isDropdown", "dropdownStyle", "parentId", "createdAt", "updatedAt")
 SELECT 'store', 'Store', '/store', 'primary', 25, true, false, false, 'auto', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-WHERE NOT EXISTS (SELECT 1 FROM "NavigationItem" WHERE "href" = '/store');
+WHERE EXISTS (SELECT 1 FROM "NavigationItem")
+  AND NOT EXISTS (SELECT 1 FROM "NavigationItem" WHERE "href" = '/store');
