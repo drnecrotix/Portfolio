@@ -66,7 +66,6 @@ export async function purgeApplicationCache() {
             '/blog',
             '/gallery',
             '/experience',
-            '/achievements',
             '/resume',
             '/contact',
             '/sitemap.xml',

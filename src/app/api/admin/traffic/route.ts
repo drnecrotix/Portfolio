@@ -58,14 +58,10 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const cutoff = new Date(now.getTime() - trafficRangeHours(range) * 60 * 60 * 1000);
     const liveCutoff = new Date(now.getTime() - LIVE_VISITOR_WINDOW_MINUTES * 60 * 1000);
-    const staleSession = new Date(now.getTime() - TRAFFIC_SESSION_RETENTION_HOURS * 60 * 60 * 1000);
-    const staleMetric = new Date(now.getTime() - TRAFFIC_METRIC_RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
-    await Promise.all([
-        prisma.trafficSession.deleteMany({ where: { lastSeenAt: { lt: staleSession } } }).catch(() => undefined),
-        prisma.trafficMetric.deleteMany({ where: { bucketStart: { lt: staleMetric } } }).catch(() => undefined),
-    ]);
-
+    // Retention cleanup is handled by the page-view ingestion path. Keeping this
+    // endpoint read-only prevents every open admin dashboard from issuing delete
+    // queries on each analytics refresh.
     const [rows, liveVisitors] = await Promise.all([
         prisma.trafficMetric.findMany({
             where: { bucketStart: { gte: cutoff } },

@@ -21,7 +21,6 @@ type PublicNavigationItem = {
 const fallback: PublicNavigationItem[] = [
     { id: 'home', label: 'Home', href: '/', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: null },
     { id: 'about', label: 'About', href: '#', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: true, dropdownStyle: 'auto', parentId: null },
-    { id: 'achievements', label: 'Achievements', href: '/achievements', location: 'primary', sortOrder: 10, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'lab', label: 'Lab', href: '/lab', location: 'primary', sortOrder: 20, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'experience', label: 'Journey', href: '/journey', location: 'primary', sortOrder: 30, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
     { id: 'projects', label: 'Projects', href: '/projects', location: 'primary', sortOrder: 40, isVisible: true, isExternal: false, isDropdown: false, dropdownStyle: 'auto', parentId: 'about' },
@@ -48,6 +47,7 @@ export async function GET() {
     ]);
     const isAdmin = Boolean(session?.user && ['OWNER', 'ADMIN'].includes(session.user.role));
     const allowed = (item: PublicNavigationItem) => {
+        if (item.href === '/achievements') return false;
         const key = managedKeyFromHref(item.href);
         return !key || canAccessManagedPage(pageAccess, key, isAdmin);
     };
