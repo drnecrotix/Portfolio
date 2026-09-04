@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { createCreemCheckout } from '@/lib/creem';
 import { createLemonSqueezyCheckout } from '@/lib/lemonsqueezy';
 import { canAccessManagedPage, getManagedPageAccessSettings } from '@/lib/page-access';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
@@ -32,7 +33,10 @@ export async function POST(request: Request) {
             where: { slug },
             include: { files: { select: { id: true }, take: 1 } },
         });
-        if (!product || product.status !== 'PUBLISHED' || !product.files.length || !product.lemonSqueezyVariantId) {
+        const providerReady = product?.paymentProvider === 'CREEM'
+            ? Boolean(product.creemProductId)
+            : Boolean(product?.lemonSqueezyVariantId);
+        if (!product || product.status !== 'PUBLISHED' || !product.files.length || !providerReady) {
             return NextResponse.json({ error: 'This product is not available for purchase.' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
         }
 
@@ -44,12 +48,20 @@ export async function POST(request: Request) {
 
         try {
             const baseUrl = getPublicSiteUrl().replace(/\/$/, '');
-            const checkoutUrl = await createLemonSqueezyCheckout({
-                variantId: product.lemonSqueezyVariantId,
-                productId: product.id,
-                sessionToken,
-                redirectUrl: `${baseUrl}/store/thanks?session=${encodeURIComponent(sessionToken)}`,
-            });
+            const redirectUrl = `${baseUrl}/store/thanks?session=${encodeURIComponent(sessionToken)}`;
+            const checkoutUrl = product.paymentProvider === 'CREEM'
+                ? await createCreemCheckout({
+                    creemProductId: product.creemProductId!,
+                    productId: product.id,
+                    sessionToken,
+                    redirectUrl,
+                })
+                : await createLemonSqueezyCheckout({
+                    variantId: product.lemonSqueezyVariantId!,
+                    productId: product.id,
+                    sessionToken,
+                    redirectUrl,
+                });
             return NextResponse.json({ url: checkoutUrl }, { headers: { 'Cache-Control': 'no-store' } });
         } catch (error) {
             await prisma.storeCheckoutSession.delete({ where: { token: sessionToken } }).catch(() => null);
