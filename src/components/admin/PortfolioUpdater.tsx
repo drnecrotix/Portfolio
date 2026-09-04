@@ -1,13 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Check, Circle, DownloadCloud, Package, RefreshCw, Rocket, ServerCog, ShieldCheck } from 'lucide-react';
 import { installPortfolioUpdate } from '@/app/admin/(protected)/actions';
+import { cn } from '@/lib/utils';
 
 export type PortfolioUpdateStatus = {
     state?: string;
     message?: string;
     updatedAt?: string;
     targetVersion?: string | null;
+    stage?: string;
+    progress?: number;
 };
 
 type CheckResult = {
@@ -26,6 +30,14 @@ type StartResult = {
 
 const activeStates = new Set(['starting', 'running']);
 const transientCheckMessage = 'Update check was interrupted. Please try again.';
+const updateSteps = [
+    { id: 'download', label: 'Download', icon: DownloadCloud },
+    { id: 'sync', label: 'Sync files', icon: RefreshCw },
+    { id: 'dependencies', label: 'Dependencies', icon: Package },
+    { id: 'database', label: 'Database', icon: ServerCog },
+    { id: 'build', label: 'Build', icon: ShieldCheck },
+    { id: 'activate', label: 'Activate', icon: Rocket },
+] as const;
 
 function statusLabel(state?: string) {
     switch (state) {
@@ -35,7 +47,7 @@ function statusLabel(state?: string) {
         case 'error': return 'Failed';
         case 'available': return 'Update available';
         case 'current': return 'Up to date';
-        case 'checking': return 'Checking';
+        case 'checking': return 'Checking GitHub';
         default: return 'Ready';
     }
 }
@@ -47,6 +59,43 @@ function wait(ms: number) {
 function rejectedActionMessage(error: unknown, fallback: string) {
     if (error instanceof Error && error.message && !/server action|failed to fetch|network/i.test(error.message)) return error.message;
     return fallback;
+}
+
+function inferStage(status: PortfolioUpdateStatus) {
+    if (status.stage) return status.stage;
+    if (status.state === 'success') return 'complete';
+    const message = (status.message || '').toLowerCase();
+    if (message.includes('downloading')) return 'download';
+    if (message.includes('installing portfolio') || message.includes('syncing')) return 'sync';
+    if (message.includes('dependenc')) return 'dependencies';
+    if (message.includes('prisma') || message.includes('migration')) return 'database';
+    if (message.includes('build') || message.includes('browser chunks')) return 'build';
+    if (message.includes('activating')) return 'activate';
+    return status.state === 'starting' ? 'start' : undefined;
+}
+
+function inferProgress(status: PortfolioUpdateStatus, stage?: string) {
+    if (typeof status.progress === 'number') return status.progress;
+    if (status.state === 'success') return 100;
+    switch (stage) {
+        case 'download': return 12;
+        case 'sync': return 24;
+        case 'dependencies': return 38;
+        case 'database': return 52;
+        case 'build': return 72;
+        case 'activate': return 90;
+        case 'complete': return 100;
+        case 'start': return 3;
+        default: return 0;
+    }
+}
+
+function stepIndex(stage?: string) {
+    if (!stage) return -1;
+    if (stage === 'start') return -1;
+    if (stage === 'prisma') return 3;
+    if (stage === 'complete' || stage === 'restart') return updateSteps.length;
+    return updateSteps.findIndex((step) => step.id === stage);
 }
 
 async function requestUpdateCheck() {
@@ -81,7 +130,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
             setStatus(payload.status);
             if (payload.status?.state === 'success' || payload.status?.state === 'error') showNotice();
         } catch {
-            // Keep the last known status if Passenger is restarting between requests.
+            // Keep the last known status while Passenger restarts between requests.
         }
     }, [showNotice]);
 
@@ -120,7 +169,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     useEffect(() => {
         if (!isUpdating) return;
         const firstPoll = setTimeout(() => void pollStatus(), 0);
-        const timer = setInterval(() => void pollStatus(), 2000);
+        const timer = setInterval(() => void pollStatus(), 1500);
         return () => {
             clearTimeout(firstPoll);
             clearInterval(timer);
@@ -130,7 +179,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     useEffect(() => {
         if (autoCheckStarted.current || isUpdating) return;
         autoCheckStarted.current = true;
-        const timer = setTimeout(() => runCheck(false), 750);
+        const timer = setTimeout(() => runCheck(false), 500);
         return () => clearTimeout(timer);
     }, [isUpdating, runCheck]);
 
@@ -139,9 +188,9 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     }, []);
 
     const displayStatus = useMemo<PortfolioUpdateStatus>(() => {
-        if (isChecking) return { state: 'checking', message: 'Checking GitHub for a newer Portfolio release…' };
+        if (isChecking) return { state: 'checking', message: 'Comparing the installed version with GitHub main…' };
         if (checkResult) return { state: checkResult.state, message: checkResult.message, targetVersion: checkResult.remoteVersion };
-        return status || { state: 'ready', message: 'Updater is ready.' };
+        return status || { state: 'ready', message: 'Ready to check for a newer release.' };
     }, [checkResult, isChecking, status]);
 
     const isCurrent = checkResult?.ok === true && checkResult.state === 'current';
@@ -155,7 +204,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
         startInstall(async () => {
             try {
                 const result = await installPortfolioUpdate() as StartResult;
-                setStatus({ state: result.state, message: result.message, updatedAt: new Date().toISOString() });
+                setStatus({ state: result.state, message: result.message, updatedAt: new Date().toISOString(), stage: result.state === 'starting' ? 'start' : undefined, progress: result.state === 'starting' ? 3 : undefined });
                 if (result.state === 'current') setCheckResult({ ok: true, state: 'current', message: result.message, localVersion: currentVersion, remoteVersion: currentVersion });
             } catch (error) {
                 setStatus({
@@ -173,33 +222,69 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
     const failed = displayStatus.state === 'error';
     const complete = displayStatus.state === 'success' || displayStatus.state === 'current';
     const installLabel = isUpdating ? 'Update running…' : isStarting ? 'Starting…' : checkResult?.state === 'available' ? 'Install update' : 'Check update first';
+    const inferredStage = inferStage(displayStatus);
+    const progress = Math.max(0, Math.min(100, inferProgress(displayStatus, inferredStage)));
+    const currentStepIndex = stepIndex(inferredStage);
+    const targetVersion = displayStatus.targetVersion || checkResult?.remoteVersion || null;
 
     return (
         <>
             <div className="h-full rounded-2xl border border-foreground/10 bg-foreground/[0.025] p-5 sm:p-6">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Portfolio updates</p>
-                <h3 className="mt-2 text-lg font-semibold sm:text-xl">GitHub updater</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">Installed v{currentVersion}. The dashboard checks GitHub automatically and can deploy a newer main-branch version on N0C while preserving secrets and Passenger configuration.</p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Portfolio updates</p>
+                        <h3 className="mt-2 text-xl font-semibold">GitHub updater</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-lg border border-foreground/10 bg-background/45 px-3 py-2"><span className="text-muted-foreground">Installed </span><strong className="font-mono">v{currentVersion}</strong></span>
+                        {targetVersion && targetVersion !== currentVersion ? <span className="rounded-lg border border-sky-500/20 bg-sky-500/[0.055] px-3 py-2"><span className="text-muted-foreground">Available </span><strong className="font-mono">v{targetVersion}</strong></span> : null}
+                    </div>
+                </div>
 
-                <div className="mt-4 overflow-hidden rounded-xl border border-foreground/10 bg-foreground/[0.03]">
-                    <div className="flex items-start gap-3 p-4">
+                <div className={cn('mt-5 rounded-2xl border p-4 transition-colors duration-300', failed ? 'border-red-500/20 bg-red-500/[0.045]' : complete ? 'border-emerald-500/20 bg-emerald-500/[0.04]' : animated ? 'border-sky-500/20 bg-sky-500/[0.035]' : 'border-foreground/10 bg-background/40')}>
+                    <div className="flex items-start gap-3">
                         <span className="relative mt-0.5 flex size-3 shrink-0">
-                            {animated && <span className="absolute inline-flex size-full animate-ping rounded-full bg-foreground/25" />}
-                            <span className={`relative inline-flex size-3 rounded-full ${failed ? 'bg-red-500' : complete ? 'bg-emerald-500' : animated ? 'bg-foreground' : 'bg-muted-foreground/40'}`} />
+                            {animated && <span className="absolute inline-flex size-full animate-ping rounded-full bg-sky-500/25" />}
+                            <span className={cn('relative inline-flex size-3 rounded-full', failed ? 'bg-red-500' : complete ? 'bg-emerald-500' : animated ? 'bg-sky-500' : 'bg-muted-foreground/40')} />
                         </span>
                         <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="text-xs font-medium uppercase tracking-[0.16em] text-foreground/70">{statusLabel(displayStatus.state)}</span>
-                                {displayStatus.targetVersion && <span className="text-[11px] text-muted-foreground">v{displayStatus.targetVersion}</span>}
+                                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground/75">{statusLabel(displayStatus.state)}</span>
+                                {displayStatus.updatedAt ? <span className="text-[10px] text-muted-foreground">{new Date(displayStatus.updatedAt).toLocaleTimeString()}</span> : null}
                             </div>
-                            <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">{displayStatus.message}</p>
-                            {isUpdating && <div className="mt-3 h-1 overflow-hidden rounded-full bg-foreground/10"><div className="h-full w-1/3 animate-[pulse_1.2s_ease-in-out_infinite] rounded-full bg-foreground/55" /></div>}
+                            <p className="mt-1 break-words text-sm leading-5 text-foreground/80">{displayStatus.message}</p>
+                            {isUpdating ? (
+                                <div className="mt-4">
+                                    <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground"><span>Deployment progress</span><span>{progress}%</span></div>
+                                    <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full rounded-full bg-sky-500 transition-[width] duration-500 ease-out" style={{ width: `${Math.max(3, progress)}%` }} /></div>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <button type="button" onClick={handleCheck} disabled={isChecking || isUpdating} className="rounded-xl border border-foreground/15 px-4 py-2.5 text-sm transition hover:bg-foreground/[0.05] disabled:cursor-not-allowed disabled:opacity-40">{isChecking ? 'Checking…' : 'Check update'}</button>
+                <div className="mt-5">
+                    <div className="flex items-center justify-between gap-3"><p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Update pipeline</p><span className="text-[10px] text-muted-foreground">GitHub main → N0C production</span></div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                        {updateSteps.map((step, index) => {
+                            const StepIcon = step.icon;
+                            const done = displayStatus.state === 'success' || currentStepIndex > index;
+                            const active = isUpdating && currentStepIndex === index;
+                            return (
+                                <div key={step.id} className={cn('rounded-xl border px-3 py-3 transition-colors duration-300', done ? 'border-emerald-500/20 bg-emerald-500/[0.035]' : active ? 'border-sky-500/25 bg-sky-500/[0.045]' : 'border-foreground/10 bg-background/35')}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <StepIcon className={cn('size-4', done ? 'text-emerald-500' : active ? 'text-sky-500' : 'text-muted-foreground')} />
+                                        {done ? <Check className="size-3.5 text-emerald-500" /> : active ? <Circle className="size-3.5 animate-pulse fill-sky-500/20 text-sky-500" /> : <Circle className="size-3.5 text-foreground/15" />}
+                                    </div>
+                                    <p className="mt-2 text-[11px] font-medium">{step.label}</p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-2 border-t border-foreground/10 pt-5 sm:flex-row sm:flex-wrap">
+                    <button type="button" onClick={handleCheck} disabled={isChecking || isUpdating} className="rounded-xl border border-foreground/15 px-4 py-2.5 text-sm font-medium transition hover:bg-foreground/[0.05] disabled:cursor-not-allowed disabled:opacity-40">{isChecking ? 'Checking…' : 'Check for update'}</button>
                     {isCurrent ? <span aria-disabled="true" className="inline-flex items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">Up to date</span> : <button type="button" onClick={handleInstall} disabled={!canInstall} className="rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">{installLabel}</button>}
                 </div>
             </div>
@@ -207,7 +292,7 @@ export function PortfolioUpdater({ currentVersion, initialStatus }: { currentVer
             {noticeVisible && (
                 <div className="fixed bottom-4 left-4 right-4 z-[100] rounded-2xl border border-foreground/15 bg-background/95 p-4 text-foreground shadow-2xl backdrop-blur-xl sm:bottom-5 sm:left-auto sm:right-5 sm:w-[min(92vw,380px)]" role="status" aria-live="polite">
                     <div className="flex items-start gap-3">
-                        <span className={`mt-1 size-2.5 shrink-0 rounded-full ${failed ? 'bg-red-500' : complete ? 'bg-emerald-500' : 'bg-foreground animate-pulse'}`} />
+                        <span className={cn('mt-1 size-2.5 shrink-0 rounded-full', failed ? 'bg-red-500' : complete ? 'bg-emerald-500' : 'bg-sky-500 animate-pulse')} />
                         <div className="min-w-0"><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">{statusLabel(displayStatus.state)}</p><p className="mt-1 break-words text-sm text-foreground/80">{displayStatus.message}</p></div>
                         <button type="button" onClick={() => setNoticeVisible(false)} className="ml-auto text-sm text-muted-foreground transition hover:text-foreground" aria-label="Dismiss update notification">×</button>
                     </div>

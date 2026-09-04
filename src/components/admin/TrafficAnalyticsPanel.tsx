@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Monitor, RefreshCw, Smartphone, Tablet, Users } from 'lucide-react';
+import { Activity, Globe2, Monitor, RefreshCw, Smartphone, Tablet, Users } from 'lucide-react';
 import { AudienceWorldMap } from './AudienceWorldMap';
 import { cn } from '@/lib/utils';
 import type { TrafficRange } from '@/lib/traffic-analytics';
@@ -70,10 +70,10 @@ function TimelineTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
     return (
         <div className="mt-5 overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-3 sm:p-4">
             <div className="mb-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Page views</span>
-                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Visits</span>
+                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Pages opened</span>
+                <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Visitor sessions</span>
             </div>
-            <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Traffic over time" className="h-auto w-full overflow-visible">
+            <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Pages opened and visitor sessions over time" className="h-auto w-full overflow-visible">
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                     const y = paddingY + plotHeight * ratio;
                     return <line key={ratio} x1={paddingX} x2={width - paddingX} y1={y} y2={y} className="stroke-foreground/10" strokeWidth="1" />;
@@ -113,19 +113,19 @@ function WeekdayTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
     const maxValue = Math.max(1, ...buckets.flatMap((item) => [item.averageViews, item.averageVisits]));
     const totalViews = buckets.reduce((sum, item) => sum + item.pageViews, 0);
     const totalVisits = buckets.reduce((sum, item) => sum + item.visits, 0);
-    const pagesPerVisit = totalVisits ? totalViews / totalVisits : 0;
+    const pagesPerSession = totalVisits ? totalViews / totalVisits : 0;
 
     return (
         <div className="mt-5 rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Weekday pattern</p>
-                    <h4 className="mt-1 font-semibold">Traffic by day of week</h4>
-                    <p className="mt-1 text-xs text-muted-foreground">Hover, focus or select a day to inspect its average activity.</p>
+                    <h4 className="mt-1 font-semibold">Average activity by weekday</h4>
+                    <p className="mt-1 text-xs text-muted-foreground">Select a day to compare average page opens and anonymous browsing sessions.</p>
                 </div>
-                <div className="flex gap-4 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Views</span>
-                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Visits</span>
+                <div className="flex flex-wrap gap-4 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Pages opened</span>
+                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Sessions</span>
                 </div>
             </div>
 
@@ -133,10 +133,10 @@ function WeekdayTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
                 {buckets.map((item) => {
                     const active = selected.key === item.key;
                     return (
-                        <button key={item.key} type="button" onClick={() => setSelectedKey(item.key)} onFocus={() => setSelectedKey(item.key)} onMouseEnter={() => setSelectedKey(item.key)} className={cn('rounded-xl border px-1.5 pb-2 pt-3 transition sm:px-2', active ? 'border-sky-500/30 bg-sky-500/[0.05]' : 'border-transparent hover:border-foreground/10 hover:bg-background/50')}>
+                        <button key={item.key} type="button" onClick={() => setSelectedKey(item.key)} onFocus={() => setSelectedKey(item.key)} onMouseEnter={() => setSelectedKey(item.key)} className={cn('rounded-xl border px-1.5 pb-2 pt-3 transition duration-300 sm:px-2', active ? 'border-sky-500/30 bg-sky-500/[0.05]' : 'border-transparent hover:border-foreground/10 hover:bg-background/50')}>
                             <div className="mx-auto flex h-28 items-end justify-center gap-1 sm:h-36 sm:gap-1.5">
-                                <span className="w-2.5 rounded-t bg-sky-500 sm:w-3.5" style={{ height: `${item.averageViews ? Math.max(7, (item.averageViews / maxValue) * 100) : 2}%` }} />
-                                <span className="w-2.5 rounded-t bg-violet-500 sm:w-3.5" style={{ height: `${item.averageVisits ? Math.max(7, (item.averageVisits / maxValue) * 100) : 2}%` }} />
+                                <span className="w-2.5 rounded-t bg-sky-500 transition-[height] duration-500 sm:w-3.5" style={{ height: `${item.averageViews ? Math.max(7, (item.averageViews / maxValue) * 100) : 2}%` }} />
+                                <span className="w-2.5 rounded-t bg-violet-500 transition-[height] duration-500 sm:w-3.5" style={{ height: `${item.averageVisits ? Math.max(7, (item.averageVisits / maxValue) * 100) : 2}%` }} />
                             </div>
                             <span className={cn('mt-2 block text-[10px] font-semibold sm:text-xs', active ? 'text-foreground' : 'text-muted-foreground')}>{item.short}</span>
                         </button>
@@ -146,16 +146,16 @@ function WeekdayTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
 
             <div className="mt-4 grid gap-3 sm:grid-cols-4">
                 <div className="rounded-xl border border-foreground/10 bg-background/55 p-4 sm:col-span-2">
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected</p>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected day</p>
                     <p className="mt-2 text-lg font-semibold">{selected.long}</p>
                     <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                        <span><strong className="text-foreground">{selected.averageViews.toFixed(1)}</strong> avg views</span>
-                        <span><strong className="text-foreground">{selected.averageVisits.toFixed(1)}</strong> avg visits</span>
-                        <span><strong className="text-foreground">{selected.visits ? (selected.pageViews / selected.visits).toFixed(2) : '0.00'}</strong> pages/visit</span>
+                        <span><strong className="text-foreground">{selected.averageViews.toFixed(1)}</strong> avg page opens</span>
+                        <span><strong className="text-foreground">{selected.averageVisits.toFixed(1)}</strong> avg sessions</span>
+                        <span><strong className="text-foreground">{selected.visits ? (selected.pageViews / selected.visits).toFixed(2) : '0.00'}</strong> pages/session</span>
                     </div>
                 </div>
-                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Peak day</p><p className="mt-2 font-semibold">{peak.long}</p><p className="mt-1 text-xs text-muted-foreground">{peak.averageViews.toFixed(1)} avg views</p></div>
-                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Overall</p><p className="mt-2 font-semibold">{pagesPerVisit.toFixed(2)}</p><p className="mt-1 text-xs text-muted-foreground">pages per visit</p></div>
+                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Busiest weekday</p><p className="mt-2 font-semibold">{peak.long}</p><p className="mt-1 text-xs text-muted-foreground">{peak.averageViews.toFixed(1)} avg page opens</p></div>
+                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Session depth</p><p className="mt-2 font-semibold">{pagesPerSession.toFixed(2)}</p><p className="mt-1 text-xs text-muted-foreground">pages per session</p></div>
             </div>
         </div>
     );
@@ -166,11 +166,13 @@ export function TrafficAnalyticsPanel({
     title = 'Traffic',
     description = 'Short-retention, country and device level analytics.',
     chartMode = 'timeline',
+    refreshIntervalMs = 15000,
 }: {
     showMap?: boolean;
     title?: string;
     description?: string;
     chartMode?: ChartMode;
+    refreshIntervalMs?: number;
 }) {
     const [range, setRange] = useState<TrafficRange>(chartMode === 'weekday' ? '7d' : '24h');
     const [data, setData] = useState<TrafficPayload | null>(null);
@@ -195,18 +197,20 @@ export function TrafficAnalyticsPanel({
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => void refresh());
-        const timer = window.setInterval(() => void refresh(), 15000);
+        const timer = window.setInterval(() => void refresh(), Math.max(3000, refreshIntervalMs));
         return () => {
             window.cancelAnimationFrame(frame);
             window.clearInterval(timer);
         };
-    }, [refresh]);
+    }, [refresh, refreshIntervalMs]);
 
     const topCountries = useMemo(() => data?.countries.filter((country) => country.code !== 'XX').slice(0, 8) || [], [data]);
     const unknownCountry = data?.countries.find((country) => country.code === 'XX');
     const selectedCountry = topCountries.find((country) => country.code === selectedCountryCode) || topCountries[0] || null;
     const totalDeviceViews = data?.devices.reduce((sum, device) => sum + device.pageViews, 0) || 0;
     const selectedCountryShare = selectedCountry && data?.summary.pageViews ? selectedCountry.pageViews / data.summary.pageViews : 0;
+    const liveVisitors = data?.summary.liveVisitors ?? 0;
+    const hasLiveVisitors = liveVisitors > 0;
 
     return (
         <section className="rounded-3xl border border-foreground/10 bg-foreground/[0.018] p-5 sm:p-6">
@@ -227,12 +231,14 @@ export function TrafficAnalyticsPanel({
             {error ? <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-300">{error}</div> : null}
 
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                {[
-                    ['Live now', data?.summary.liveVisitors ?? 0, <Activity key="live" className="size-4" />],
-                    ['Visits', data?.summary.visits ?? 0, <Users key="visits" className="size-4" />],
-                    ['Page views', data?.summary.pageViews ?? 0, <Monitor key="views" className="size-4" />],
-                    ['Countries', data?.summary.countries ?? 0, <span key="countries" className="text-xs font-bold">ISO</span>],
-                ].map(([label, value, icon]) => <div key={String(label)} className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">{label}</span>{icon}</div><p className="mt-3 text-2xl font-semibold tabular-nums">{String(value)}</p></div>)}
+                <div aria-live="polite" className={cn('rounded-2xl border p-4 transition-colors duration-500', hasLiveVisitors ? 'border-emerald-500/25 bg-emerald-500/[0.07]' : 'border-rose-500/20 bg-rose-500/[0.045]')}>
+                    <div className={cn('flex items-center justify-between gap-3', hasLiveVisitors ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}><span className="text-[10px] uppercase tracking-[0.15em]">Live now</span><span className="relative flex size-4 items-center justify-center"><span className={cn('absolute size-3 rounded-full opacity-30 animate-[pulse_1.1s_ease-in-out_infinite]', hasLiveVisitors ? 'bg-emerald-500' : 'bg-rose-500')} /><Activity className="relative size-4" /></span></div>
+                    <p className="mt-3 text-2xl font-semibold tabular-nums">{liveVisitors}</p>
+                    <p className="mt-1 text-[10px] leading-4 text-muted-foreground">Active visitors in the last 5 minutes</p>
+                </div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Visitor sessions</span><Users className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.visits ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Anonymous browsing sessions in this period</p></div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Pages opened</span><Monitor className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.pageViews ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Total public page loads in this period</p></div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Countries</span><Globe2 className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.countries ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Countries attributed by hosting headers</p></div>
             </div>
 
             {chartMode === 'weekday' ? <WeekdayTrafficChart rows={data?.chart || []} /> : <TimelineTrafficChart rows={data?.chart || []} />}
@@ -240,12 +246,12 @@ export function TrafficAnalyticsPanel({
             <div className={cn('mt-5 grid gap-4', showMap && 'xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]')}>
                 {showMap ? (
                     <div>
-                        <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Audience map</p><h4 className="mt-1 font-semibold">Countries by page views</h4></div><span className="text-xs text-muted-foreground">Country level only</span></div>
+                        <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Audience map</p><h4 className="mt-1 font-semibold">Countries by pages opened</h4></div><span className="text-xs text-muted-foreground">Country level only</span></div>
                         <AudienceWorldMap countries={data?.countries || []} selectedCode={selectedCountry?.code} />
                         {selectedCountry ? (
                             <div className="mt-3 rounded-xl border border-foreground/10 bg-background/45 p-4">
-                                <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected country</p><p className="mt-1 font-semibold">{selectedCountry.name}</p></div><p className="font-mono text-xs text-muted-foreground">{(selectedCountryShare * 100).toFixed(1)}% of all views</p></div>
-                                <div className="mt-3 flex gap-5 text-xs text-muted-foreground"><span><strong className="text-foreground">{selectedCountry.pageViews}</strong> page views</span><span><strong className="text-foreground">{selectedCountry.visits}</strong> visits</span></div>
+                                <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected country</p><p className="mt-1 font-semibold">{selectedCountry.name}</p></div><p className="font-mono text-xs text-muted-foreground">{(selectedCountryShare * 100).toFixed(1)}% of page opens</p></div>
+                                <div className="mt-3 flex gap-5 text-xs text-muted-foreground"><span><strong className="text-foreground">{selectedCountry.pageViews}</strong> pages opened</span><span><strong className="text-foreground">{selectedCountry.visits}</strong> sessions</span></div>
                             </div>
                         ) : null}
                     </div>
@@ -253,7 +259,7 @@ export function TrafficAnalyticsPanel({
 
                 <div className={cn('grid gap-4 sm:grid-cols-2', showMap && 'xl:grid-cols-1')}>
                     <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4">
-                        <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Top countries</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Views / visits</span></div>
+                        <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Top countries</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Pages / sessions</span></div>
                         <div className="mt-3 space-y-2.5">
                             {topCountries.length ? topCountries.map((country) => {
                                 const max = Math.max(1, topCountries[0]?.pageViews || 1);
@@ -264,13 +270,13 @@ export function TrafficAnalyticsPanel({
                                         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.max(4, (country.pageViews / max) * 100)}%` }} /></div>
                                     </button>
                                 );
-                            }) : <p className="py-4 text-xs leading-5 text-muted-foreground">No country attribution yet. If page views exist, the hosting proxy is not forwarding a supported country header.</p>}
-                            {unknownCountry?.pageViews ? <p className="pt-1 text-[10px] leading-5 text-amber-600 dark:text-amber-300">Unattributed: {unknownCountry.pageViews} page views / {unknownCountry.visits} visits. Country headers were missing for those requests.</p> : null}
+                            }) : <p className="py-4 text-xs leading-5 text-muted-foreground">Country attribution is not available yet. The app checks common CDN and hosting country headers without storing raw IP addresses.</p>}
+                            {unknownCountry?.pageViews ? <p className="pt-1 text-[10px] leading-5 text-amber-600 dark:text-amber-300">Unattributed traffic: {unknownCountry.pageViews} pages opened / {unknownCountry.visits} sessions. The hosting request did not include a recognised country header.</p> : null}
                         </div>
                     </div>
 
                     <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4">
-                        <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Devices</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Share</span></div>
+                        <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Devices</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Page share</span></div>
                         <div className="mt-3 space-y-3">
                             {data?.devices.length ? data.devices.map((device) => {
                                 const share = totalDeviceViews > 0 ? device.pageViews / totalDeviceViews : 0;
@@ -281,7 +287,7 @@ export function TrafficAnalyticsPanel({
                 </div>
             </div>
 
-            <p className="mt-5 border-t border-foreground/10 pt-4 text-[10px] leading-5 text-muted-foreground">Privacy retention: aggregated country/device traffic is kept for up to {data?.retention.aggregateDays ?? 31} days. Anonymous session hashes are removed after about {data?.retention.sessionHours ?? 24} hours. Raw IP addresses, city and precise location are not stored.{data?.updatedAt ? ` Last update ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}</p>
+            <p className="mt-5 border-t border-foreground/10 pt-4 text-[10px] leading-5 text-muted-foreground">Privacy retention: aggregated country/device traffic is kept for up to {data?.retention.aggregateDays ?? 31} days. Anonymous session hashes are removed after about {data?.retention.sessionHours ?? 24} hours. Raw IP addresses, city and precise location are not stored.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}</p>
         </section>
     );
 }
