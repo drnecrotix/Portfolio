@@ -33,20 +33,28 @@ export function startOfUtcDay(value: Date) {
 }
 
 export function countryCodeFromHeaders(headers: Headers) {
-    const raw = [
+    const direct = [
         headers.get('cf-ipcountry'),
         headers.get('x-vercel-ip-country'),
         headers.get('cloudfront-viewer-country'),
         headers.get('x-country-code'),
+        headers.get('x-country'),
         headers.get('x-geo-country'),
+        headers.get('x-geoip-country'),
         headers.get('x-geoip-country-code'),
         headers.get('x-forwarded-country'),
         headers.get('x-client-country'),
         headers.get('geoip-country-code'),
+        headers.get('fastly-client-country'),
+        headers.get('fly-client-country'),
         headers.get('x-appengine-country'),
     ].find((value) => value?.trim())?.trim().toUpperCase();
 
-    return raw && /^[A-Z]{2}$/.test(raw) ? raw : 'XX';
+    if (direct && /^[A-Z]{2}$/.test(direct)) return direct;
+
+    const edgeScape = headers.get('x-akamai-edgescape');
+    const edgeCountry = edgeScape?.match(/(?:^|,)\s*country_code=([A-Za-z]{2})(?:,|$)/i)?.[1]?.toUpperCase();
+    return edgeCountry && /^[A-Z]{2}$/.test(edgeCountry) ? edgeCountry : 'XX';
 }
 
 export function deviceFromUserAgent(userAgent: string | null | undefined): TrafficDevice {
