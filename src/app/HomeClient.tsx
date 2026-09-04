@@ -10,7 +10,11 @@ import { HomeBlogSection } from '@/components/home/HomeBlogSection';
 import { HomeProjectsSection } from '@/components/home/HomeProjectsSection';
 import { usePreloadState } from '@/components/ui/arc-preloader-hero';
 import { useExperimentTelemetry } from '@/lib/experiments-client';
-import type { ExperimentVariantMap } from '@/lib/experiments';
+import {
+    EXPERIMENT_VARIANT_COOKIE,
+    serializeExperimentVariants,
+    type ExperimentVariantMap,
+} from '@/lib/experiments';
 import type { HomepageContent } from '@/lib/homepage-content';
 import type { PublicIdentity } from '@/lib/public-identity';
 import type { PublicPost } from '@/lib/cms-posts';
@@ -61,6 +65,12 @@ export default function HomeClient({ content, identity, posts, projects, experim
         });
         return () => window.cancelAnimationFrame(frame);
     }, []);
+
+    useEffect(() => {
+        const serialized = serializeExperimentVariants(experimentVariants);
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `${EXPERIMENT_VARIANT_COOKIE}=${serialized}; Path=/; SameSite=Lax${secure}`;
+    }, [experimentVariants]);
 
     const isReadyToAnimate = isLoading ? isInitialLoadingExit : phase === 'reveal' || phase === 'done';
     const showBlog = content.showBlogPosts && posts.length > 0;
