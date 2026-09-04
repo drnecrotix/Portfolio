@@ -65,17 +65,18 @@ export default function HomeClient({ content, identity, posts, projects, experim
     const isReadyToAnimate = isLoading ? isInitialLoadingExit : phase === 'reveal' || phase === 'done';
     const showBlog = content.showBlogPosts && posts.length > 0;
     const showProjects = content.showProjects && projects.length > 0;
-    const projectsFirst = experimentVariants['home-section-order'] === 'B';
+    const orderExperimentApplies = showBlog && showProjects;
+    const projectsFirst = orderExperimentApplies && experimentVariants['home-section-order'] === 'B';
     const showHeroCtas = experimentVariants['hero-micro-cta'] === 'B' && isReadyToAnimate;
-    const loaderDuration = experimentVariants['niko-loader-duration'] === 'B' ? 1800 : 2500;
+    const loaderDuration = experimentVariants['niko-loader-duration'] === 'B' ? 2000 : 2500;
 
     useEffect(() => {
         trackExperiment('hero-micro-cta', 'exposure');
     }, [trackExperiment]);
 
     useEffect(() => {
-        if (showBlog && showProjects) trackExperiment('home-section-order', 'exposure');
-    }, [showBlog, showProjects, trackExperiment]);
+        if (orderExperimentApplies) trackExperiment('home-section-order', 'exposure');
+    }, [orderExperimentApplies, trackExperiment]);
 
     useEffect(() => {
         if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'exposure');
@@ -111,18 +112,18 @@ export default function HomeClient({ content, identity, posts, projects, experim
 
         const observer = new IntersectionObserver((entries) => {
             if (!entries.some((entry) => entry.isIntersecting)) return;
-            trackExperiment('niko-loader-duration', 'projects_seen');
-            trackExperiment('home-section-order', 'projects_seen');
+            if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'projects_seen');
+            if (orderExperimentApplies) trackExperiment('home-section-order', 'projects_seen');
             trackExperiment('hero-micro-cta', 'projects_seen');
             observer.disconnect();
         }, { threshold: 0.25 });
 
         observer.observe(section);
         return () => observer.disconnect();
-    }, [isLoading, showProjects, trackExperiment]);
+    }, [isFirstVisit, isLoading, orderExperimentApplies, showProjects, trackExperiment]);
 
     useEffect(() => {
-        if (isLoading || !showBlog || !showProjects) return;
+        if (isLoading || !orderExperimentApplies) return;
 
         const desktopPointer = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -182,17 +183,17 @@ export default function HomeClient({ content, identity, posts, projects, experim
             autoScrollInProgress.current = false;
             window.removeEventListener('wheel', handleWheel);
         };
-    }, [isLoading, projectsFirst, showBlog, showProjects]);
+    }, [isLoading, orderExperimentApplies, projectsFirst]);
 
     const handleProjectOpen = () => {
-        trackExperiment('niko-loader-duration', 'project_open');
-        trackExperiment('home-section-order', 'project_open');
+        if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'project_open');
+        if (orderExperimentApplies) trackExperiment('home-section-order', 'project_open');
         trackExperiment('hero-micro-cta', 'project_open');
     };
 
     const handleBlogOpen = () => {
-        trackExperiment('niko-loader-duration', 'blog_open');
-        trackExperiment('home-section-order', 'blog_open');
+        if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'blog_open');
+        if (orderExperimentApplies) trackExperiment('home-section-order', 'blog_open');
         trackExperiment('hero-micro-cta', 'blog_open');
     };
 
@@ -221,7 +222,10 @@ export default function HomeClient({ content, identity, posts, projects, experim
                             View projects <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
                         <span className="h-3 w-px bg-foreground/15" aria-hidden />
-                        <Link href="/gallery" onClick={() => { trackExperiment('hero-micro-cta', 'gallery_open'); trackExperiment('niko-loader-duration', 'gallery_open'); }} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+                        <Link href="/gallery" onClick={() => {
+                            trackExperiment('hero-micro-cta', 'gallery_open');
+                            if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'gallery_open');
+                        }} className="group inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
                             Explore gallery <ArrowUpRight className="size-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
                     </motion.div>
