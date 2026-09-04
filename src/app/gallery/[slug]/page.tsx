@@ -334,15 +334,27 @@ export default async function GalleryWorkPage({ params }: { params: Promise<{ sl
 
         <div className="mx-auto mt-12 grid max-w-[1180px] gap-8 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
           <div>
-            {item.story && (
-              <section>
-                <div className="mb-4 flex items-center gap-3"><Palette className="h-5 w-5 text-muted-foreground" /><h2 className="font-serif text-2xl sm:text-3xl">About this work</h2></div>
-                <div className="max-w-3xl space-y-5 text-sm leading-7 text-foreground/75 sm:text-base sm:leading-8">{item.story.split(/\n{2,}/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
-              </section>
-            )}
+            <section className="rounded-[1.25rem] border border-foreground/10 bg-foreground/[0.012] p-5 shadow-[0_12px_36px_rgba(0,0,0,0.035)] sm:p-6 lg:min-h-[280px]">
+              <div className="flex items-center gap-3">
+                <Palette className="h-5 w-5 text-muted-foreground" />
+                <h2 className="font-serif text-2xl sm:text-3xl">About this work</h2>
+              </div>
+              {item.story ? (
+                <div className="mt-5 max-w-3xl space-y-5 text-sm leading-7 text-foreground/75 sm:text-base sm:leading-8">
+                  {item.story.split(/\n{2,}/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+                </div>
+              ) : (
+                <div className="mt-5 flex min-h-36 items-center rounded-xl border border-dashed border-foreground/10 bg-foreground/[0.018] px-5 py-6">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/70">No content</p>
+                    <p className="mt-2 max-w-xl text-sm leading-7 text-foreground/55">No additional story has been added for this work yet.</p>
+                  </div>
+                </div>
+              )}
+            </section>
 
             {item.tags.length > 0 && (
-              <section className={item.story ? 'mt-10' : ''}>
+              <section className="mt-6 rounded-[1.25rem] border border-foreground/10 bg-foreground/[0.012] p-5 sm:p-6">
                 <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"><Tag className="h-4 w-4" />Tags</div>
                 <div className="flex flex-wrap gap-2">{item.tags.map((tag) => <Link key={tag} href={galleryTagHref(tag)} className="rounded-full border border-foreground/10 bg-foreground/[0.025] px-3 py-1.5 text-xs text-foreground/70 transition hover:border-foreground/20 hover:bg-foreground/[0.06] hover:text-foreground">#{tag}</Link>)}</div>
               </section>
