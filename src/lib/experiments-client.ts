@@ -41,38 +41,36 @@ async function sendMetric(id: ExperimentId, variant: ExperimentVariant, event: E
     }
 }
 
-export function useExperiment(id: ExperimentId) {
+export function useExperiment(id: ExperimentId, autoExpose = true) {
     const [variant, setVariant] = useState<ExperimentVariant>('A');
     const [ready, setReady] = useState(false);
+
+    const sendOnce = useCallback((assigned: ExperimentVariant, event: ExperimentEvent) => {
+        try {
+            const key = eventKey(id, assigned, event);
+            if (window.sessionStorage.getItem(key)) return;
+            window.sessionStorage.setItem(key, '1');
+        } catch {
+            // Continue without browser-side de-duplication when storage is unavailable.
+        }
+        void sendMetric(id, assigned, event);
+    }, [id]);
 
     useEffect(() => {
         const assigned = assignVariant(id);
         setVariant(assigned);
         setReady(true);
-
-        try {
-            const key = eventKey(id, assigned, 'exposure');
-            if (window.sessionStorage.getItem(key)) return;
-            window.sessionStorage.setItem(key, '1');
-        } catch {
-            // If storage is unavailable, counting an extra exposure is preferable to breaking the page.
-        }
-        void sendMetric(id, assigned, 'exposure');
-    }, [id]);
+        if (autoExpose) sendOnce(assigned, 'exposure');
+    }, [autoExpose, id, sendOnce]);
 
     const track = useCallback((event: ExperimentEvent, once = true) => {
         if (!ready) return;
         if (once) {
-            try {
-                const key = eventKey(id, variant, event);
-                if (window.sessionStorage.getItem(key)) return;
-                window.sessionStorage.setItem(key, '1');
-            } catch {
-                // Continue without browser-side de-duplication when storage is unavailable.
-            }
+            sendOnce(variant, event);
+            return;
         }
         void sendMetric(id, variant, event);
-    }, [id, ready, variant]);
+    }, [id, ready, sendOnce, variant]);
 
     return { variant, ready, track };
 }
