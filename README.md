@@ -2,13 +2,13 @@
 
 # Necrotix Lab Portfolio CMS
 
-**A production-focused portfolio, publishing platform, knowledge base and digital storefront built around a custom headless-style CMS.**
+**A full-stack portfolio, publishing platform, knowledge base and digital storefront with a custom administration system.**
 
 [![Portfolio CI](https://github.com/drnecrotix/Portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/drnecrotix/Portfolio/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.2.19-111111?style=flat-square)](https://github.com/drnecrotix/Portfolio)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-database-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/license-MIT-0b0b0b?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-111111?style=flat-square)](LICENSE)
 
 [Live website](https://necrotixlab.com/) · [Documentation](docs/wiki/Home.md) · [Admin guide](docs/wiki/Admin-Dashboard.md) · [Updates & CI](docs/wiki/Updates-and-CI.md)
 
@@ -16,147 +16,82 @@
 
 ---
 
-## Overview
+## What this project is
 
-Necrotix Lab Portfolio is more than a portfolio template. It combines a public creative website with a protected administration system for content publishing, digital products, site operations, SEO, analytics, experiments and production updates.
+Necrotix Lab Portfolio CMS is a production-oriented website and administration platform built for a creator, developer or small studio that wants full control over content, presentation, commerce and deployment without relying on WordPress or a hosted page builder.
 
-The project is designed for a single creator, studio or technical portfolio that needs the flexibility of a CMS without depending on WordPress or a third-party page builder.
+The public site and the CMS are part of the same application. Content is stored in PostgreSQL, managed through a protected `/admin` area and rendered through Next.js App Router.
 
-> This repository is a heavily modified derivative of the MIT-licensed **PersonalBlog** project by **Syahril Arfian Almazril (Arfazrll)**. Attribution and redistribution details are documented in [License and Credits](docs/wiki/License-and-Credits.md).
-
-### At a glance
-
-| Area | Capabilities |
+| Area | What it provides |
 | --- | --- |
-| **Public portfolio** | Homepage, Projects, Blog, Gallery, Wiki, FAQ, Journey, Career Dossier, Lab, custom Pages and Contact |
-| **CMS** | Content editing, media management, navigation, footer, revisions, comments, SEO, redirects and user roles |
-| **Commerce** | Digital Store, free/paid products, cart, orders, Creem, Lemon Squeezy and protected delivery |
-| **Operations** | Traffic analytics, Site Mode, A/B experiments, API integrations, health status and GitHub updater |
-| **Quality** | TypeScript, Prisma migration validation, Playwright responsive tests, live-site audit and protected-design guard |
+| **Portfolio** | Homepage, Projects, Blog, Gallery, Wiki, FAQ, Journey, Career Dossier, Lab, custom Pages and Contact |
+| **CMS** | Content editing, media management, comments, navigation, footer, revisions, SEO, redirects and user roles |
+| **Commerce** | Digital Store, free/paid products, cart, orders, Creem, Lemon Squeezy and protected digital delivery |
+| **Operations** | Traffic analytics, Site Mode, A/B experiments, health status, API integrations and GitHub self-updates |
+| **Quality** | TypeScript, Prisma migration checks, Playwright responsive tests, live-site audit and protected-design CI guard |
+
+> The repository is a heavily modified derivative of the MIT-licensed **PersonalBlog** project by **Syahril Arfian Almazril (Arfazrll)**. See [License and Credits](docs/wiki/License-and-Credits.md).
 
 ---
 
 ## Public experience
 
-The public website is built as a responsive, content-driven portfolio rather than a static brochure.
+The public website is designed as a content-driven portfolio rather than a static profile page.
 
 - CMS-managed homepage and identity content
-- Projects archive with category/status filtering and individual project pages
-- Blog/publications with comments, replies, likes, taxonomies and rich content
-- Gallery for artwork, photography and video
+- project archive with category/status filtering and project detail pages
+- blog/publications with taxonomies, comments, replies and likes
+- gallery for artwork, photography and video
 - Wiki knowledge base with article index and FAQ module
-- Journey / experience presentation
-- Career Dossier / resume presentation
+- Journey and Career Dossier sections
 - Lab and standalone CMS pages
-- Contact page
-- Digital Store for downloadable products
-- configurable public navigation and footer
-- light/dark appearance support
+- contact page
+- responsive Digital Store
+- configurable navigation and footer
+- light/dark appearance
 - Open Graph and X/Twitter previews
 - sitemap, RSS and robots support
-- responsive desktop, tablet and mobile layouts
+- desktop, tablet and mobile layouts
 
 ---
 
-# CMS feature reference
+## CMS overview
 
-The protected `/admin` area is organized into focused modules. The navigation structure mirrors the actual CMS: **Content**, **Commerce**, **Appearance**, **Publishing & SEO**, **Tools** and **Administration**.
+The `/admin` area is organized into six groups: **Content**, **Commerce**, **Appearance**, **Publishing & SEO**, **Tools** and **Administration**.
 
-## Dashboard
+### Dashboard
 
-The Dashboard is the operational control center rather than a generic settings page.
-
-**Traffic and audience**
+The Dashboard is the operational control center.
 
 - live traffic activity
 - sessions and page opens
-- country coverage
 - weekday activity comparison
-- page-open/session ratios
 - session depth
-- country distribution
+- country distribution and country coverage
 - device distribution
 - 7-day and 30-day views
-- manual analytics refresh
-
-**Operational status**
-
+- application/database health visibility
 - current Site Mode
-- current application version
-- database/application health visibility
-- installed vs available release state
-- GitHub updater progress and failure reporting
+- installed vs available version
+- GitHub update progress and failure reporting
 
----
+### Content
 
-## Content
+| Module | Main capabilities |
+| --- | --- |
+| **Homepage** | Hero/identity content, homepage sections, Media Library assets, sharing thumbnails and homepage metadata |
+| **Journey** | Timeline/experience content, editable presentation and configurable public page name |
+| **Career Dossier** | Structured professional profile, career information, skills and resume-style presentation |
+| **Wiki** | Main article, additional articles, slugs, categories, summaries, searchable index and FAQ integration |
+| **Projects** | Project CRUD, status/category, descriptions, media, technologies, highlights, repository/demo links, SEO and preview |
+| **Blog** | Rich-text publishing, post type/category, excerpt, author, date, tags, taxonomies, featured image, SEO, preview and draft recovery |
+| **Comments** | Moderation for comments/replies, search, article references, timestamps and deletion controls |
+| **Blog Taxonomies** | Reusable categories and classification values for editorial content |
+| **Gallery** | Photo/video entries, direct upload, Media Library selection, thumbnails, ordering and visibility |
+| **Pages** | General-purpose standalone CMS pages with custom slugs and rich content |
+| **Media** | Shared reusable asset library used across Homepage, Blog, Projects, Gallery and Store |
 
-### Homepage
-
-Controls the public landing page and identity presentation.
-
-- hero/intro content
-- editable homepage copy
-- configurable homepage sections
-- media selection through the shared Media Library
-- social thumbnail defaults
-- Open Graph and X/Twitter image settings
-- custom structured meta tags
-- homepage-specific SEO-related content
-
-### Journey
-
-Manages the public journey/experience presentation.
-
-- customizable Journey page name
-- timeline/experience content
-- editable descriptive entries
-- section visibility and configuration
-- CMS-driven public rendering
-
-### Career Dossier
-
-Dedicated professional profile and career presentation module.
-
-- structured career/resume content
-- professional biography/profile information
-- skills and experience presentation
-- public dossier page management
-
-### Wiki
-
-Structured knowledge-base management for long-form reference content.
-
-- Wiki main article
-- additional Wiki articles
-- titles and slugs
-- categories
-- article summaries/content
-- searchable public index
-- category filtering
-- FAQ integration
-- structured knowledge navigation
-
-### Projects
-
-Full project publishing workflow.
-
-- create, edit and delete projects
-- title and slug
-- project category/status
-- short description
-- rich long-form description
-- cover/media selection
-- technologies/tools
-- highlights
-- repository link
-- demo/live link
-- publication visibility
-- SEO title and description
-- unsaved preview workflow
-- content recovery safeguards
-
-Structured project shortcodes currently include:
+Project content can also use structured shortcodes such as:
 
 ```text
 [[mission]]
@@ -165,217 +100,80 @@ Structured project shortcodes currently include:
 [[installation]]
 ```
 
-### Blog
+### Commerce
 
-Editorial publishing system for articles and other publication types.
+#### Digital Store
 
-- create, edit and delete publications
-- title and slug
-- publication type/category
-- excerpt
-- rich-text editor
-- featured image
-- author
-- publication date
-- draft/published workflow
-- tags and taxonomies
-- SEO title and description
-- editorial SEO health indicators
-- unsaved preview
-- draft recovery / accidental refresh protection
-- shared Media Library integration
-
-### Comments
-
-Moderation interface for public Blog discussion.
-
-- top-level comments and replies
-- author details
-- publication reference
-- timestamps
-- search/filter controls
-- direct article links
-- deletion of unwanted/spam comments
-- reply cascade behavior when a parent comment is removed
-- privileged OWNER/ADMIN access
-
-### Blog Taxonomies
-
-Classification management for editorial content.
-
-- categories/taxonomies used by Blog content
-- reusable classification values
-- structured filtering and organization
-
-### Gallery
-
-Curated visual media management.
-
-- Photo and Video content types
-- existing Media Library selection
-- direct media upload
-- title and description
-- custom video thumbnail override
-- visibility controls
-- manual ordering
-- public **All / Photos / Videos** filtering
-
-### Pages
-
-General-purpose CMS pages for content that does not belong to Blog or Projects.
-
-- standalone page creation
-- title and slug
-- rich content
-- public visibility
-- flexible long-form informational pages
-
-### Media
-
-Shared Media Library used across CMS modules.
-
-- centralized asset selection
-- reusable uploads
-- image/media browsing
-- direct upload from supported editors
-- reuse across Homepage, Blog, Projects, Gallery and Store
-- reduced duplicate uploads
-
----
-
-## Commerce
-
-### Digital Store
-
-Native digital-product management with protected fulfillment.
+The Store is built for downloadable or externally hosted digital products while keeping delivery URLs private.
 
 **Product management**
 
-- create/edit digital products
-- Free or Paid product type
-- title, slug and description
-- cover image through Media Library
-- category and product metadata
-- product visibility
-- price configuration
-- save-state feedback: saved, unsaved, saving and error states
-- in-place/AJAX-style form workflow that avoids destructive page refreshes
-- local draft/form recovery safeguards
+- Free and Paid product types
+- title, slug, description, category, metadata and visibility
+- Media Library cover-image selection
+- price and payment-provider configuration
+- in-place save flow with `Saved`, `Unsaved`, `Saving` and error feedback
+- draft/form recovery safeguards
 
-**Delivery sources**
+**Delivery**
 
-- private uploaded file
-- masked external file URL
-- external delivery URL is never exposed directly to the customer
+- private uploaded files
+- masked external file links
 - protected application download route
-- local private filesystem storage outside `public/`
+- local private storage outside `public/`
 - compatibility with previously stored R2-backed product files
+- protected download grants instead of direct public URLs
 
-**Payment providers**
+**Payments**
 
-- Creem per-product checkout
-- Creem product catalog picker
+- Creem checkout per product
+- Creem catalog picker
 - automatic Creem product creation when configured
 - Lemon Squeezy product/variant picker
-- provider selection per paid product
+- payment provider selected per paid product
 - Free products require no payment-provider ID
 
 **Public Store**
 
-- premium marketplace-style catalog
+- marketplace-style catalog
 - image-first product cards
-- search
-- category filters
-- sorting
-- Free/Featured-style presentation
+- search, category filters and sorting
 - individual product pages
-- responsive mobile layout
-- cart integration
-- per-item cart checkboxes
-- Select all / Clear selection
+- responsive cart
+- per-item cart selection
+- Select all / Clear controls
 - required Terms & Digital Content Policy consent before checkout/download
-- protected download grants
 
-### Orders
+#### Orders
 
-Commerce administration and fulfillment overview.
+Orders are separated from product management and provide purchase/fulfillment context for Store activity.
 
-- order records
-- product/purchase relationship
-- customer/payment context where available
-- fulfillment/download status context
-- dedicated Orders navigation separate from Digital Store
+### Appearance
 
----
+| Module | Main capabilities |
+| --- | --- |
+| **Navigation** | Top-level and nested items, dropdowns, ordering, internal/external links and availability-aware filtering |
+| **Footer** | CMS-managed footer content, links and fallback rendering |
+| **Watermark** | Branding/watermark controls for supported media workflows |
 
-## Appearance
+### Publishing & SEO
 
-### Navigation
+#### Revisions
 
-CMS-controlled public menu system.
+Stores historical snapshots for supported content types to provide editorial history and recovery context.
 
-- top-level items
-- nested parent/child relationships
-- dropdown menus
-- item ordering
-- internal/external destinations
-- CMS fallback navigation
-- page-availability-aware filtering
+#### Site Mode
 
-### Footer
+Controls what visitors see without disabling CMS access.
 
-- CMS-managed footer content
-- configurable links
-- site identity/footer information
-- fallback-safe public rendering
+**Modes:** `NORMAL`, `MAINTENANCE`, `COMING SOON`, `PRIVATE`, `ARCHIVE`
 
-### Watermark
+**Templates:** Hero, Split, Editorial, Signal, Portal
 
-- watermark configuration for supported visual/media workflows
-- branding/presentation controls
+#### SEO
 
----
-
-## Publishing & SEO
-
-### Revisions
-
-Snapshot/history support for enabled content types.
-
-- historical content snapshots
-- revision visibility
-- change/audit context
-- editorial safety layer in addition to database backups and Git history
-
-### Site Mode
-
-Controls what visitors see without disabling the CMS itself.
-
-**Modes**
-
-- `NORMAL`
-- `MAINTENANCE`
-- `COMING SOON`
-- `PRIVATE`
-- `ARCHIVE`
-
-**Presentation templates**
-
-- Hero
-- Split
-- Editorial
-- Signal
-- Portal
-
-Site Mode can therefore separate public availability from administrator/editor access while preserving a designed visitor-facing status page.
-
-### SEO
-
-Centralized technical and editorial SEO controls.
-
-- global title/title template
-- default description
-- keywords
+- global title and title template
+- default description and keywords
 - author/creator metadata
 - Open Graph metadata
 - X/Twitter metadata
@@ -385,64 +183,39 @@ Centralized technical and editorial SEO controls.
 - structured custom meta tags
 - content-level SEO overrides
 - SEO title/description assistance in editors
-- sitemap support
-- RSS support
-- robots.txt support
+- sitemap, RSS and robots.txt support
 
-### Redirects
+#### Redirects
 
-- internal redirects
-- absolute/external destinations
-- validation of reserved/protected routes
-- migration and URL-maintenance workflows
+Supports internal and absolute redirects with validation around protected/reserved routes.
 
----
+### Tools
 
-## Tools
+#### AI Assistant
 
-### AI Assistant
+Optional CMS-integrated AI tooling when a supported provider is configured.
 
-CMS-integrated AI tooling when a supported provider is configured.
+#### Experiments
 
-- internal AI assistant entry point
-- provider-backed assistance
-- optional integration-driven behavior
+Built-in A/B experiment monitoring for design and product decisions.
 
-### Experiments
-
-Built-in A/B experiment monitoring for product/design decisions.
-
-- active experiment overview
 - Variant A / Variant B comparison
-- exposures
-- conversions
+- exposures and conversions
 - conversion rate
 - confidence interval context
-- absolute difference
-- relative lift
+- absolute difference and relative lift
 - sample balance
 - split-health warnings
-- audience and traffic view
-- country/device context
-- focused evaluation state
+- audience/traffic context
+- country and device distribution
 
-### API Integrations
+#### API Integrations
 
-Centralized integration configuration for supported external services.
+Centralized admin-only configuration for supported external services, including commerce providers such as Creem and Lemon Squeezy.
 
-- payment-provider configuration
-- Creem integration settings
-- Lemon Squeezy integration settings
-- runtime integration status/configuration
-- protected admin-only access for sensitive tools
+### Administration
 
----
-
-## Administration
-
-### Users
-
-Role-based CMS user administration.
+#### Users
 
 | Role | Scope |
 | --- | --- |
@@ -450,56 +223,44 @@ Role-based CMS user administration.
 | `ADMIN` | Broad content/site administration and sensitive CMS tools |
 | `EDITOR` | Content-focused access with restricted administrative/destructive operations |
 
-Additional protections include active-user checks and role revalidation for protected admin requests.
+Protected requests revalidate the active user and current role so disabled accounts or role changes take effect without waiting for an old session to expire.
 
-### Settings
+#### Settings
 
-Global CMS/system configuration.
-
-- site-level settings
-- page/section availability controls
-- operational configuration
-- feature visibility controls
-- environment-dependent integration behavior
-
-Supported public sections can be configured independently where enabled, including states such as public, admin-only or disabled.
+Global CMS and operational settings, including section availability and feature visibility where supported.
 
 ---
 
-# Platform operations
+## Platform operations
 
-## Authentication and security
+### Authentication and security
 
 - Auth.js / NextAuth v5 credentials authentication
 - bcrypt password verification
 - OWNER / ADMIN / EDITOR role separation
-- login throttling for repeated failed attempts
-- admin account active-state revalidation
-- role revalidation on protected requests
-- Content Security Policy
-- additional security headers
-- private Store assets kept outside the public web directory
-- protected download grants instead of direct digital-product URLs
+- throttling for repeated failed login attempts
+- active-user and role revalidation
+- Content Security Policy and additional security headers
+- private Store assets outside the public web directory
+- protected download grants for digital products
 
-## GitHub self-updater
+### GitHub self-updater
 
-The CMS can detect a newer release from `main/package.json` and run a staged production update.
+The CMS can detect a newer release from `main/package.json` and perform a staged production update.
 
-Update pipeline:
-
-1. download the latest `main`
-2. synchronize release-controlled files while preserving runtime state/uploads
+1. clone the latest `main`
+2. synchronize release-controlled files while preserving runtime state and uploads
 3. install dependencies only when required
 4. generate Prisma Client
 5. deploy Prisma migrations
 6. build into `.next-update`
 7. activate only after a successful staged build
-8. preserve/restore the previous production build if activation fails
-9. request Passenger restart after successful activation
+8. restore the previous production build if activation fails
+9. request a Passenger restart after successful activation
 
-From **v1.2.19**, the recovery flow also protects updates from stale generated Next.js route types left behind after routes are removed.
+The updater also includes protection against stale generated Next.js route types after routes are removed.
 
-## Store storage
+### Private Store storage
 
 New private Store uploads default to:
 
@@ -507,24 +268,24 @@ New private Store uploads default to:
 <project>/storage/store-private
 ```
 
-For production, use a persistent absolute path whenever possible:
+For production, configure a persistent absolute path when possible:
 
 ```env
 STORE_PRIVATE_STORAGE_PATH="/absolute/private/path/necrotixlab-store"
 ```
 
-Digital Store assets intended to remain private should never be placed directly in `public/`.
+Never place private digital-product assets directly in `public/`.
 
 ---
 
-# Technology stack
+## Technology stack
 
 | Layer | Technologies |
 | --- | --- |
 | **Application** | Next.js 16, React 19, TypeScript |
 | **Database** | PostgreSQL, Prisma 6 |
 | **Authentication** | Auth.js / NextAuth v5, bcrypt |
-| **UI** | Tailwind CSS, Tiptap, Framer Motion, GSAP, Lenis |
+| **UI & content** | Tailwind CSS, Tiptap, Framer Motion, GSAP, Lenis |
 | **Validation** | Zod |
 | **Commerce** | Creem, Lemon Squeezy |
 | **Storage** | Local private filesystem, Cloudflare R2 / S3-compatible workflows |
@@ -534,29 +295,28 @@ Digital Store assets intended to remain private should never be placed directly 
 
 ---
 
-# Quality and CI
+## Quality and CI
 
-Pull Requests are validated by the Portfolio CI workflow.
+Pull Requests are validated by the Portfolio CI workflow with checks for:
 
-- application-release version guard
-- Prisma schema validation
-- clean-database migration deploy/status checks
-- Prisma runtime singleton guard
+- application versioning on deployable changes
+- Prisma schema and migration status
+- Prisma runtime singleton usage
 - TypeScript typecheck
-- lint for changed source files
+- changed-file linting
 - standard Next.js production build
 - N0C / WASM compatibility build
-- staged-updater regression checks
+- staged-updater regression coverage
 - protected public-design guard
 - Playwright visual smoke tests
-- desktop/mobile/small-mobile horizontal-overflow checks
+- desktop/mobile/small-mobile overflow checks
 - live production responsive audit
 
 Intentional changes to protected public visual files may require the `design-approved` PR label.
 
 ---
 
-# Quick start
+## Quick start
 
 ```bash
 git clone https://github.com/drnecrotix/Portfolio.git
@@ -571,7 +331,7 @@ Windows PowerShell:
 Copy-Item .env.example .env.local
 ```
 
-Configure at least the database, Auth secret, owner seed credentials and public site URL, then run:
+Configure the database, Auth secret, owner seed credentials and public site URL, then run:
 
 ```bash
 npm run db:migrate
@@ -584,11 +344,11 @@ Development URLs:
 - Public site: `http://localhost:3000`
 - Admin CMS: `http://localhost:3000/admin`
 
-For production deployment, use the environment-specific installation guides rather than relying on the development Quick Start.
+For production deployment, use the environment-specific installation guides rather than the development Quick Start.
 
 ---
 
-# Useful commands
+## Useful commands
 
 ```bash
 npm run dev             # Development server
@@ -609,7 +369,7 @@ npm run db:studio       # Prisma Studio
 
 ---
 
-# Documentation
+## Documentation
 
 | Guide | Description |
 | --- | --- |
@@ -621,16 +381,14 @@ npm run db:studio       # Prisma Studio
 | [Admin Dashboard](docs/wiki/Admin-Dashboard.md) | CMS modules and administrative workflows |
 | [SEO and Meta Tags](docs/wiki/SEO-and-Meta-Tags.md) | SEO editor, social previews and custom meta tags |
 | [Troubleshooting](docs/wiki/Troubleshooting.md) | Known N0C, Passenger, Prisma, CI and deployment issues |
-| [Updates and CI](docs/wiki/Updates-and-CI.md) | Versioning, updater detection and GitHub Actions |
+| [Updates and CI](docs/wiki/Updates-and-CI.md) | Versioning, updater behavior and GitHub Actions |
 | [License and Credits](docs/wiki/License-and-Credits.md) | Attribution, redistribution and third-party notices |
-
-The documentation under `docs/wiki/` remains version-controlled with the application and is structured to be GitHub-Wiki-ready.
 
 ---
 
-# Contributing
+## Contributing
 
-Use feature/fix branches and Pull Requests. Keep CI green before merge.
+Use feature/fix branches and open Pull Requests against `main`.
 
 ```bash
 git checkout -b feat/my-change
@@ -640,32 +398,25 @@ npm run build
 git push -u origin feat/my-change
 ```
 
-Then open a Pull Request against `main`.
+CI should be green before merge.
 
 ---
 
-# Security
+## Security
 
-Never commit:
+Do not commit production secrets, database credentials, Auth secrets, SMTP credentials, payment-provider keys or private API keys.
 
-- production database credentials
-- Auth secrets
-- payment-provider secrets
-- API keys
-- SMTP credentials
-- private download URLs
-
-Production security also depends on HTTPS, server patching, database/network restrictions, backups, logging and secure environment-variable management.
+Production security also depends on HTTPS, server patching, database/network restrictions, backups and log review.
 
 ---
 
-# License and credits
+## License and credits
 
 This repository is distributed under the MIT License. The original MIT notice for **PersonalBlog** is preserved in [`LICENSE`](LICENSE), together with attribution for the substantially modified Portfolio derivative.
 
 - **Original foundation:** PersonalBlog by Syahril Arfian Almazril (`Arfazrll`)
 - **Current derivative / project-specific development:** Dr Necrotix
-- **Additional contributions:** respective repository contributors
-- **Third-party libraries and services:** subject to their own licenses, terms and trademarks
+- **Additional contributions:** repository contributors
+- **Third-party libraries and services:** remain subject to their own licenses, terms and trademarks
 
-See [License and Credits](docs/wiki/License-and-Credits.md) for full attribution and redistribution guidance.
+See [License and Credits](docs/wiki/License-and-Credits.md) for the full attribution and redistribution notes.
