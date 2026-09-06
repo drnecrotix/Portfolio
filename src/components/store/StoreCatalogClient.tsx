@@ -151,6 +151,7 @@ export function StoreCatalogClient({
                             <span className="sr-only">Search the Store</span>
                             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <input
+                                type="search"
                                 value={query}
                                 onChange={(event) => setQuery(event.target.value)}
                                 placeholder="Search art, resources, templates..."
@@ -199,6 +200,8 @@ export function StoreCatalogClient({
                                     <Link href={`/store/${product.slug}`} className="block min-w-0 max-w-full">
                                         <div className="relative aspect-[4/3] w-full max-w-full overflow-hidden rounded-[0.8rem] border border-foreground/8 bg-foreground/[0.035] shadow-[0_10px_28px_rgba(0,0,0,0.09)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_16px_36px_rgba(0,0,0,0.14)]">
                                             {product.coverImageUrl ? (
+                                                // Store cover URLs can come from user-configured external hosts that are not known to next/image at build time.
+                                                // eslint-disable-next-line @next/next/no-img-element
                                                 <img
                                                     src={product.coverImageUrl}
                                                     alt=""
