@@ -5,6 +5,8 @@ import {
     LIVE_VISITOR_WINDOW_MINUTES,
     TRAFFIC_IP_RETENTION_HOURS,
     TRAFFIC_METRIC_RETENTION_DAYS,
+    TRAFFIC_PAGE_EVENT_ADMIN_LIMIT,
+    TRAFFIC_PAGE_EVENT_RETENTION_DAYS,
     TRAFFIC_SESSION_RETENTION_HOURS,
     TRAFFIC_VISIT_TIMEOUT_MINUTES,
     countryName,
@@ -62,8 +64,9 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const cutoff = new Date(now.getTime() - trafficRangeHours(range) * 60 * 60 * 1000);
     const liveCutoff = new Date(now.getTime() - LIVE_VISITOR_WINDOW_MINUTES * 60 * 1000);
+    const ipCutoff = new Date(now.getTime() - TRAFFIC_IP_RETENTION_HOURS * 60 * 60 * 1000);
 
-    const [rows, liveSessions] = await Promise.all([
+    const [rows, liveSessions, recentActivity, recentActivityTotal, cityRows, recentIpRows] = await Promise.all([
         prisma.trafficMetric.findMany({
             where: { bucketStart: { gte: cutoff } },
             orderBy: { bucketStart: 'asc' },
@@ -77,6 +80,34 @@ export async function GET(request: NextRequest) {
                 lastSeenAt: true,
             },
             orderBy: { lastSeenAt: 'desc' },
+        }),
+        prisma.trafficPageEvent.findMany({
+            where: { occurredAt: { gte: cutoff } },
+            select: {
+                id: true,
+                path: true,
+                countryCode: true,
+                city: true,
+                ipAddress: true,
+                deviceType: true,
+                occurredAt: true,
+            },
+            orderBy: { occurredAt: 'desc' },
+            take: TRAFFIC_PAGE_EVENT_ADMIN_LIMIT,
+        }),
+        prisma.trafficPageEvent.count({ where: { occurredAt: { gte: cutoff } } }),
+        prisma.trafficPageEvent.groupBy({
+            by: ['city', 'countryCode'],
+            where: { occurredAt: { gte: cutoff }, city: { not: null } },
+            _count: { city: true },
+            orderBy: { _count: { city: 'desc' } },
+            take: 100,
+        }),
+        prisma.trafficPageEvent.findMany({
+            where: { occurredAt: { gte: ipCutoff }, ipAddress: { not: null } },
+            select: { deviceType: true, ipAddress: true, occurredAt: true },
+            orderBy: { occurredAt: 'desc' },
+            take: 500,
         }),
     ]);
 
@@ -166,9 +197,52 @@ export async function GET(request: NextRequest) {
             liveVisitors: liveCountryTotals.get(code) || 0,
         }))
         .sort((a, b) => b.visits - a.visits || b.pageViews - a.pageViews);
+
+    const deviceIpMap = new Map<string, string[]>();
+    for (const row of recentIpRows) {
+        if (!row.ipAddress) continue;
+        const addresses = deviceIpMap.get(row.deviceType) || [];
+        if (!addresses.includes(row.ipAddress)) addresses.push(row.ipAddress);
+        deviceIpMap.set(row.deviceType, addresses);
+    }
+
     const devices = [...deviceTotals.entries()]
-        .map(([device, value]) => ({ device, ...value }))
+        .map(([device, value]) => {
+            const ips = deviceIpMap.get(device) || [];
+            return {
+                device,
+                ...value,
+                recentIps: ips.slice(0, 3),
+                recentIpCount: ips.length,
+            };
+        })
         .sort((a, b) => b.visits - a.visits || b.pageViews - a.pageViews);
+
+    const cities = cityRows
+        .filter((row) => Boolean(row.city?.trim()))
+        .map((row) => {
+            const name = row.city!.trim();
+            const liveKey = `${row.countryCode}:${name.toLocaleLowerCase('en')}`;
+            return {
+                name,
+                countryCode: row.countryCode,
+                countryName: countryName(row.countryCode),
+                pageViews: row._count.city,
+                liveVisitors: liveCityTotals.get(liveKey)?.visitors || 0,
+            };
+        });
+
+    const activity = recentActivity.map((item) => ({
+        id: item.id,
+        path: item.path,
+        countryCode: item.countryCode,
+        countryName: countryName(item.countryCode),
+        city: item.city,
+        device: item.deviceType,
+        ipAddress: item.occurredAt >= ipCutoff ? item.ipAddress : null,
+        ipExpired: item.occurredAt < ipCutoff,
+        occurredAt: item.occurredAt.toISOString(),
+    }));
 
     return NextResponse.json({
         range,
@@ -188,9 +262,16 @@ export async function GET(request: NextRequest) {
         },
         chart,
         countries,
+        cities,
         devices,
+        activity: {
+            items: activity,
+            total: recentActivityTotal,
+            limit: TRAFFIC_PAGE_EVENT_ADMIN_LIMIT,
+        },
         retention: {
             aggregateDays: TRAFFIC_METRIC_RETENTION_DAYS,
+            pageActivityDays: TRAFFIC_PAGE_EVENT_RETENTION_DAYS,
             sessionHours: TRAFFIC_SESSION_RETENTION_HOURS,
             ipHours: TRAFFIC_IP_RETENTION_HOURS,
             visitTimeoutMinutes: TRAFFIC_VISIT_TIMEOUT_MINUTES,
