@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, ArrowUpRight, Check, Clock3, Copy, Eye, Heart, Languages, Share2, X } from 'lucide-react';
@@ -33,20 +32,17 @@ type LocalizedPayload = {
 function formatCompactCount(value: number) {
     const count = Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
     if (count < 1_000) return String(count);
-
     const units = [
         { divisor: 1_000_000_000, suffix: 'B' },
         { divisor: 1_000_000, suffix: 'M' },
         { divisor: 1_000, suffix: 'K' },
     ];
-
     for (const unit of units) {
         if (count < unit.divisor) continue;
         const scaled = count / unit.divisor;
         const decimals = scaled < 100 ? 1 : 0;
         return `${scaled.toFixed(decimals).replace(/\.0$/, '').replace('.', ',')}${unit.suffix}`;
     }
-
     return String(count);
 }
 
@@ -91,7 +87,6 @@ export function BlogArticleFrame({
     availableLocales: Array<'en' | 'bg'>;
     comments?: ReactNode;
 }) {
-    const router = useRouter();
     const viewRecordedRef = useRef(false);
     const [copied, setCopied] = useState(false);
     const [liked, setLiked] = useState(initiallyLiked);
@@ -110,14 +105,12 @@ export function BlogArticleFrame({
         if (viewRecordedRef.current) return;
         viewRecordedRef.current = true;
         const storageKey = `necrotix:blog-view:${postId}`;
-
         try {
             if (sessionStorage.getItem(storageKey) === '1') return;
             sessionStorage.setItem(storageKey, '1');
         } catch {
-            // Embedded browsers can restrict storage. The view endpoint still works without it.
+            // Storage is optional in restricted embedded browsers.
         }
-
         void fetch('/api/blog/views', {
             method: 'POST',
             cache: 'no-store',
@@ -130,7 +123,7 @@ export function BlogArticleFrame({
                 setViewCount(Number(data.count) || 0);
             })
             .catch(() => {
-                try { sessionStorage.removeItem(storageKey); } catch { /* storage is optional */ }
+                try { sessionStorage.removeItem(storageKey); } catch { /* optional */ }
                 viewRecordedRef.current = false;
             });
     }, [postId]);
@@ -171,7 +164,6 @@ export function BlogArticleFrame({
         if (locale === activeLocale || switchingLocale || !availableLocales.includes(locale)) return;
         setSwitchingLocale(true);
         setLanguageError(null);
-
         try {
             const response = await fetch(`/api/blog/${encodeURIComponent(slug)}/locale`, {
                 method: 'POST',
@@ -182,7 +174,6 @@ export function BlogArticleFrame({
             });
             const data = await response.json() as LocalizedPayload;
             if (!response.ok || !data.ok) throw new Error(data.error || 'Unable to switch publication language.');
-
             setDisplayTitle(data.title);
             setDisplayExcerpt(data.excerpt);
             setDisplayContent(data.content);
@@ -212,11 +203,6 @@ export function BlogArticleFrame({
         }
     };
 
-    const goBack = () => {
-        if (window.history.length > 2) router.back();
-        else router.push('/blog');
-    };
-
     const dateLabel = new Date(publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     const readingMinutes = estimateReadingMinutes(postType === 'POETRY' ? displayContent.text ?? '' : displayContent.html ?? '', postType === 'POETRY' ? 180 : 220);
     const showLanguageSwitch = availableLocales.length > 1;
@@ -226,10 +212,10 @@ export function BlogArticleFrame({
         <main className="min-h-screen bg-background pb-24 pt-28 text-foreground sm:pt-32">
             <header className="container mx-auto max-w-6xl px-6">
                 <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.48, ease: 'easeOut' }} className={cn('mx-auto', compactPublication ? 'max-w-2xl' : 'max-w-3xl')}>
-                    <button onClick={goBack} className="group mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground">
+                    <Link href="/blog" className="group mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground">
                         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                         <span>Back to journal</span>
-                    </button>
+                    </Link>
 
                     <div className="mb-5 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                         <span className="text-fuchsia-500 dark:text-fuchsia-300">Journal</span>
@@ -240,13 +226,7 @@ export function BlogArticleFrame({
                     </div>
 
                     <AnimatePresence mode="wait" initial={false}>
-                        <motion.div
-                            key={activeLocale}
-                            initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
-                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                            exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
-                            transition={{ duration: 0.22, ease: 'easeOut' }}
-                        >
+                        <motion.div key={activeLocale} initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }} transition={{ duration: 0.22, ease: 'easeOut' }}>
                             <h1 className={cn('font-black leading-[1.04] tracking-[-0.04em]', compactPublication ? 'text-4xl sm:text-5xl' : 'text-4xl sm:text-5xl lg:text-6xl')}>{displayTitle}</h1>
                             {displayExcerpt && <p className="mt-7 max-w-2xl text-lg font-light leading-8 text-muted-foreground sm:text-xl">{displayExcerpt}</p>}
                         </motion.div>
@@ -279,16 +259,13 @@ export function BlogArticleFrame({
                             <span>{formatCompactCount(likeCount)}</span>
                         </motion.button>
                         <div className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs font-medium text-muted-foreground" title={`${viewCount.toLocaleString()} views`} aria-label={`${viewCount.toLocaleString()} views`}>
-                            <Eye className="h-4 w-4" />
-                            <span>{formatCompactCount(viewCount)}</span>
+                            <Eye className="h-4 w-4" /><span>{formatCompactCount(viewCount)}</span>
                         </div>
                         <button type="button" onClick={() => void sharePublication()} className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground">
-                            {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-                            <span>{copied ? 'Copied' : 'Share'}</span>
+                            {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}<span>{copied ? 'Copied' : 'Share'}</span>
                         </button>
                         <button type="button" onClick={() => void copyLink()} className="hidden h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground sm:inline-flex" aria-label="Copy publication link">
-                            <Copy className="h-4 w-4" />
-                            <span>Copy link</span>
+                            <Copy className="h-4 w-4" /><span>Copy link</span>
                         </button>
                     </div>
 
@@ -296,16 +273,7 @@ export function BlogArticleFrame({
                         <motion.div layout className="inline-flex h-9 items-center gap-1 rounded-full border border-foreground/10 bg-foreground/[0.03] p-1" aria-label="Publication language">
                             <Languages className={cn('ml-2 h-4 w-4', switchingLocale ? 'animate-spin text-fuchsia-500' : 'text-muted-foreground')} />
                             {(['en', 'bg'] as const).filter((locale) => availableLocales.includes(locale)).map((locale) => (
-                                <motion.button
-                                    layout
-                                    key={locale}
-                                    type="button"
-                                    onClick={() => void switchLanguage(locale)}
-                                    disabled={switchingLocale || locale === activeLocale}
-                                    aria-pressed={locale === activeLocale}
-                                    whileTap={{ scale: 0.92 }}
-                                    className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition', locale === activeLocale ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}
-                                >
+                                <motion.button layout key={locale} type="button" onClick={() => void switchLanguage(locale)} disabled={switchingLocale || locale === activeLocale} aria-pressed={locale === activeLocale} whileTap={{ scale: 0.92 }} className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition', locale === activeLocale ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
                                     {locale}
                                 </motion.button>
                             ))}
@@ -318,13 +286,7 @@ export function BlogArticleFrame({
             <div className="container mx-auto mt-12 max-w-6xl px-6">
                 <motion.article initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.52, delay: 0.2 }} className="mx-auto min-w-0">
                     <AnimatePresence mode="wait" initial={false}>
-                        <motion.div
-                            key={`body-${activeLocale}`}
-                            initial={{ opacity: 0, y: 10, filter: 'blur(3px)' }}
-                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                            exit={{ opacity: 0, y: -10, filter: 'blur(3px)' }}
-                            transition={{ duration: 0.24, ease: 'easeOut' }}
-                        >
+                        <motion.div key={`body-${activeLocale}`} initial={{ opacity: 0, y: 10, filter: 'blur(3px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -10, filter: 'blur(3px)' }} transition={{ duration: 0.24, ease: 'easeOut' }}>
                             {postType === 'POETRY' ? (
                                 <div className="mx-auto max-w-2xl whitespace-pre-wrap font-serif text-lg leading-9 text-foreground md:text-xl md:leading-10">{displayContent.text ?? ''}</div>
                             ) : (
@@ -350,10 +312,7 @@ export function BlogArticleFrame({
                 <section className="container mx-auto mt-20 max-w-6xl border-t border-foreground/10 px-6 pt-12">
                     <div className="mx-auto max-w-5xl">
                         <div className="mb-7 flex items-end justify-between gap-5">
-                            <div>
-                                <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Keep reading</p>
-                                <h3 className="mt-2 text-2xl font-bold tracking-tight">More from the journal</h3>
-                            </div>
+                            <div><p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Keep reading</p><h3 className="mt-2 text-2xl font-bold tracking-tight">More from the journal</h3></div>
                             <Link href="/blog" className="text-sm text-muted-foreground transition hover:text-foreground">View all</Link>
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
