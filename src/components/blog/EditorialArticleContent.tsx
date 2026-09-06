@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,6 +46,11 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
     const [progress, setProgress] = useState(0);
     const [previewImage, setPreviewImage] = useState<PreviewImage>(null);
     const [mobileTocOpen, setMobileTocOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         const root = articleRef.current;
@@ -159,20 +165,30 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
 
     const showToc = headings.length >= 3 && postType !== 'NOTE' && postType !== 'THOUGHT';
     const compactText = postType === 'NOTE' || postType === 'THOUGHT';
+    const progressIndicator = mounted ? createPortal(
+        <div
+            className="pointer-events-none fixed left-1/2 top-[4.75rem] z-[120] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 sm:top-[5.25rem]"
+            role="progressbar"
+            aria-label="Reading progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress)}
+        >
+            <div className="rounded-full border border-foreground/10 bg-background/88 px-3 py-1.5 shadow-[0_10px_28px_-18px_rgba(0,0,0,0.6)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
+                <div className="flex items-center gap-2.5">
+                    <div className="h-[3px] min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
+                        <div className="h-full rounded-full bg-foreground/75 transition-[width] duration-100 ease-out" style={{ width: `${progress}%` }} />
+                    </div>
+                    <span className="w-8 shrink-0 text-right font-mono text-[9px] font-semibold tabular-nums text-muted-foreground">{Math.round(progress)}%</span>
+                </div>
+            </div>
+        </div>,
+        document.body,
+    ) : null;
 
     return (
         <>
-            <div className="sticky top-[5.25rem] z-[90] mb-7 flex w-full justify-center px-1 sm:top-[5.75rem]" role="progressbar" aria-label="Reading progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
-                <div className="pointer-events-none w-full max-w-3xl rounded-full border border-foreground/10 bg-background/90 px-3 py-2 shadow-[0_12px_35px_-18px_rgba(0,0,0,0.65)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
-                    <div className="flex items-center gap-3">
-                        <span className="shrink-0 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Reading</span>
-                        <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
-                            <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 via-primary to-violet-400 transition-[width] duration-100 ease-out" style={{ width: `${progress}%` }} />
-                        </div>
-                        <span className="w-9 shrink-0 text-right font-mono text-[10px] font-semibold tabular-nums text-foreground/80">{Math.round(progress)}%</span>
-                    </div>
-                </div>
-            </div>
+            {progressIndicator}
 
             {showToc && (
                 <details open={mobileTocOpen} onToggle={(event) => setMobileTocOpen(event.currentTarget.open)} className="mb-8 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4 xl:hidden">
@@ -200,7 +216,7 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
                         'prose-p:my-6 prose-p:leading-8 prose-p:text-muted-foreground prose-strong:text-foreground',
                         'prose-a:text-fuchsia-600 prose-a:decoration-fuchsia-500/30 prose-a:underline-offset-4 dark:prose-a:text-fuchsia-300',
                         'prose-hr:my-14 prose-hr:border-foreground/10',
-                        "prose-blockquote:relative prose-blockquote:my-10 prose-blockquote:overflow-hidden prose-blockquote:rounded-2xl prose-blockquote:border prose-blockquote:border-foreground/10 prose-blockquote:bg-gradient-to-br prose-blockquote:from-fuchsia-500/[0.07] prose-blockquote:via-foreground/[0.025] prose-blockquote:to-transparent prose-blockquote:px-7 prose-blockquote:py-6 prose-blockquote:text-foreground/90 prose-blockquote:shadow-[0_18px_60px_-32px_rgba(0,0,0,0.55)] prose-blockquote:[quotes:none] prose-blockquote:before:absolute prose-blockquote:before:right-5 prose-blockquote:before:top-1 prose-blockquote:before:font-serif prose-blockquote:before:text-7xl prose-blockquote:before:font-black prose-blockquote:before:leading-none prose-blockquote:before:text-fuchsia-500/15 prose-blockquote:before:content-['“'] prose-blockquote:after:absolute prose-blockquote:after:inset-y-0 prose-blockquote:after:left-0 prose-blockquote:after:w-1 prose-blockquote:after:bg-gradient-to-b prose-blockquote:after:from-fuchsia-500/90 prose-blockquote:after:via-primary prose-blockquote:after:to-violet-500/80 [&_blockquote_p]:relative [&_blockquote_p]:z-[1] [&_blockquote_p]:text-inherit [&_blockquote_p]:leading-8 [&_blockquote_p:first-child]:mt-0 [&_blockquote_p:last-child]:mb-0",
+                        "prose-blockquote:relative prose-blockquote:my-10 prose-blockquote:overflow-hidden prose-blockquote:rounded-xl prose-blockquote:border prose-blockquote:border-foreground/10 prose-blockquote:bg-foreground/[0.025] prose-blockquote:px-7 prose-blockquote:py-6 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-foreground/88 prose-blockquote:shadow-[0_12px_35px_-30px_rgba(0,0,0,0.5)] prose-blockquote:[quotes:none] prose-blockquote:before:absolute prose-blockquote:before:right-5 prose-blockquote:before:top-2 prose-blockquote:before:font-serif prose-blockquote:before:text-4xl prose-blockquote:before:font-semibold prose-blockquote:before:leading-none prose-blockquote:before:text-foreground/[0.08] prose-blockquote:before:content-['“'] prose-blockquote:after:content-none [&_blockquote_p]:relative [&_blockquote_p]:z-[1] [&_blockquote_p]:text-inherit [&_blockquote_p]:leading-8 [&_blockquote_p:first-child]:mt-0 [&_blockquote_p:last-child]:mb-0",
                         'prose-code:rounded prose-code:bg-foreground/[0.055] prose-code:px-1.5 prose-code:py-0.5 prose-code:text-fuchsia-600 prose-code:before:content-none prose-code:after:content-none dark:prose-code:text-fuchsia-200',
                         'prose-pre:overflow-x-auto prose-pre:rounded-2xl prose-pre:border prose-pre:border-foreground/10 prose-pre:bg-[#090909] prose-pre:pt-12',
                         'prose-img:my-12 prose-img:rounded-2xl prose-img:border prose-img:border-foreground/10 prose-li:text-muted-foreground',
