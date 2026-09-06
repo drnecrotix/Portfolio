@@ -45,6 +45,7 @@ type ActivityItem = {
     operatingSystem: string;
     ipAddress: string | null;
     ipExpired: boolean;
+    isLiveCurrent: boolean;
     occurredAt: string;
 };
 
@@ -381,7 +382,7 @@ export function TrafficAnalyticsPanel({
                 <div>
                     <p className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Retained activity</p>
                     <h4 className="mt-1 text-sm font-semibold">Recent page activity</h4>
-                    <p className="mt-1 text-[10px] text-muted-foreground">Public page paths, location, device, OS and short-lived IP context. Query strings and full user-agent strings are not stored.</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">Public page paths, location, device, OS and short-lived IP context. Rows marked LIVE are the current page for that active visitor session. Query strings and full user-agent strings are not stored.</p>
                 </div>
                 <span className="rounded-full border border-foreground/10 bg-foreground/[0.03] px-2.5 py-1 text-[9px] text-muted-foreground">
                     {data?.activity.items.length ?? 0} of {data?.activity.total ?? 0}
@@ -394,18 +395,41 @@ export function TrafficAnalyticsPanel({
                         <span>Time</span><span>Page / URL</span><span>Location</span><span>Device</span><span>OS</span><span>IP address</span>
                     </div>
                     {data?.activity.items.length ? data.activity.items.map((item) => (
-                        <div key={item.id} className="grid grid-cols-[105px_minmax(220px,1.55fr)_minmax(170px,1fr)_105px_115px_minmax(135px,0.9fr)] items-center gap-3 border-t border-foreground/[0.08] px-3 py-2.5 text-[10px]">
+                        <div
+                            key={item.id}
+                            className={cn(
+                                'grid grid-cols-[105px_minmax(220px,1.55fr)_minmax(170px,1fr)_105px_115px_minmax(135px,0.9fr)] items-center gap-3 border-t border-foreground/[0.08] px-3 py-2.5 text-[10px] transition-colors',
+                                item.isLiveCurrent && 'bg-emerald-500/[0.045]',
+                            )}
+                        >
                             <span className="whitespace-nowrap text-muted-foreground">{activityTime(item.occurredAt)}</span>
-                            <Link href={item.path} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1.5 hover:underline">
-                                <span className="truncate font-mono text-[10px]">{item.path}</span><ExternalLink className="size-3 shrink-0 text-muted-foreground" />
-                            </Link>
+                            <div className="flex min-w-0 items-center gap-2">
+                                <Link href={item.path} target="_blank" rel="noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 hover:underline">
+                                    <span className="truncate font-mono text-[10px]">{item.path}</span><ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+                                </Link>
+                                {item.isLiveCurrent ? (
+                                    <span
+                                        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-emerald-600 dark:text-emerald-400"
+                                        title="Current page for this live visitor session"
+                                    >
+                                        <span className="size-1.5 rounded-full bg-emerald-500" /> Live
+                                    </span>
+                                ) : null}
+                            </div>
                             <div className="min-w-0">
                                 <p className="truncate">{item.city || 'City unavailable'}</p>
                                 <p className="truncate text-[9px] text-muted-foreground">{item.countryName}</p>
                             </div>
                             <span className="inline-flex min-w-0 items-center gap-1.5"><DeviceIcon device={item.device} /><span className="truncate">{deviceLabel(item.device)}</span></span>
                             <span className="truncate text-[10px]" title={item.operatingSystem}>{item.operatingSystem}</span>
-                            <span className={cn('truncate font-mono text-[9px]', item.ipAddress ? 'text-foreground' : 'text-muted-foreground')} title={item.ipAddress || undefined}>
+                            <span
+                                className={cn(
+                                    'truncate font-mono text-[9px]',
+                                    item.ipAddress ? 'text-foreground' : 'text-muted-foreground',
+                                    item.isLiveCurrent && item.ipAddress && 'font-semibold text-emerald-700 dark:text-emerald-300',
+                                )}
+                                title={item.ipAddress || undefined}
+                            >
                                 {item.ipAddress || (item.ipExpired ? 'Expired' : 'Unavailable')}
                             </span>
                         </div>

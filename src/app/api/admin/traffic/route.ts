@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
         prisma.trafficSession.findMany({
             where: { lastSeenAt: { gte: liveCutoff } },
             select: {
+                sessionHash: true,
                 currentPath: true,
                 currentCity: true,
                 countryCode: true,
@@ -86,6 +87,7 @@ export async function GET(request: NextRequest) {
             where: { occurredAt: { gte: cutoff } },
             select: {
                 id: true,
+                sessionHash: true,
                 path: true,
                 countryCode: true,
                 city: true,
@@ -140,6 +142,7 @@ export async function GET(request: NextRequest) {
     const liveCountryTotals = new Map<string, number>();
     const liveCityTotals = new Map<string, { name: string; countryCode: string; visitors: number }>();
     const livePageTotals = new Map<string, { visitors: number; countries: Map<string, number>; lastSeenAt: Date }>();
+    const liveCurrentPathBySession = new Map<string, string>();
 
     for (const liveSession of liveSessions) {
         const countryCode = liveSession.countryCode || 'XX';
@@ -154,6 +157,7 @@ export async function GET(request: NextRequest) {
         }
 
         const path = liveSession.currentPath || 'Unknown page';
+        if (liveSession.currentPath) liveCurrentPathBySession.set(liveSession.sessionHash, liveSession.currentPath);
         const current = livePageTotals.get(path) || {
             visitors: 0,
             countries: new Map<string, number>(),
@@ -223,6 +227,7 @@ export async function GET(request: NextRequest) {
             operatingSystem,
             ipAddress: item.occurredAt >= ipCutoff ? item.ipAddress : null,
             ipExpired: item.occurredAt < ipCutoff,
+            isLiveCurrent: liveCurrentPathBySession.get(item.sessionHash) === item.path,
             occurredAt: item.occurredAt.toISOString(),
         };
     });

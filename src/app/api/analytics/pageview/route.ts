@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
     const existing = await prisma.trafficSession.findUnique({ where: { sessionHash: hash } }).catch(() => null);
     const visitCutoff = new Date(now.getTime() - TRAFFIC_VISIT_TIMEOUT_MINUTES * 60 * 1000);
     const isNewVisit = !existing || existing.lastSeenAt < visitCutoff;
+    const pathChanged = Boolean(path && existing?.currentPath !== path);
 
     const rawIpAddress = clientIpFromHeaders(request.headers);
     const ipAddress = isPublicIpAddress(rawIpAddress) ? rawIpAddress : null;
@@ -124,6 +125,23 @@ export async function POST(request: NextRequest) {
         countryLookupAt = now;
     }
 
+    let missingCurrentPageEvent = false;
+    if (heartbeat && path && existing && !isNewVisit && !pathChanged) {
+        const retainedPage = await prisma.trafficPageEvent.findFirst({
+            where: { sessionHash: hash, path },
+            select: { id: true },
+            orderBy: { occurredAt: 'desc' },
+        }).catch(() => null);
+        missingCurrentPageEvent = !retainedPage;
+    }
+
+    const shouldPersistPageEvent = Boolean(path) && (
+        !heartbeat
+        || isNewVisit
+        || pathChanged
+        || missingCurrentPageEvent
+    );
+
     const currentPath = path || existing?.currentPath || null;
     const sessionUpsert = prisma.trafficSession.upsert({
         where: { sessionHash: hash },
@@ -149,13 +167,15 @@ export async function POST(request: NextRequest) {
         },
     });
 
-    // Heartbeats only refresh live presence. A visit starts again after the
-    // inactivity window, while page views and page history are stored only on
-    // real navigation requests.
-    if (heartbeat && !isNewVisit) {
+    // Normal heartbeats only refresh live presence. If the first navigation
+    // request was missed, a heartbeat can self-heal the retained page history
+    // when it represents a new visit, a changed path or a path with no retained
+    // event for this session. This avoids duplicate activity on steady-state
+    // heartbeats while keeping Live now and Recent page activity consistent.
+    if (heartbeat && !isNewVisit && !shouldPersistPageEvent) {
         await sessionUpsert;
     } else {
-        const pageViewIncrement = heartbeat ? 0 : 1;
+        const pageViewIncrement = heartbeat && !shouldPersistPageEvent ? 0 : 1;
         const metricUpsert = prisma.trafficMetric.upsert({
             where: { bucketStart_countryCode_deviceType: { bucketStart, countryCode, deviceType } },
             create: {
@@ -171,7 +191,7 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        if (!heartbeat && path) {
+        if (shouldPersistPageEvent && path) {
             await prisma.$transaction([
                 sessionUpsert,
                 metricUpsert,
