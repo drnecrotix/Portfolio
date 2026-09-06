@@ -17,6 +17,9 @@ export const dynamic = 'force-dynamic';
 
 type ChartBucket = { key: string; label: string; pageViews: number; visits: number };
 
+type LiveCountry = { code: string; name: string; visitors: number };
+type LivePage = { path: string; visitors: number; countries: LiveCountry[]; lastSeenAt: string };
+
 function buildChartBuckets(range: ReturnType<typeof parseTrafficRange>, now: Date) {
     const buckets: ChartBucket[] = [];
 
@@ -59,15 +62,20 @@ export async function GET(request: NextRequest) {
     const cutoff = new Date(now.getTime() - trafficRangeHours(range) * 60 * 60 * 1000);
     const liveCutoff = new Date(now.getTime() - LIVE_VISITOR_WINDOW_MINUTES * 60 * 1000);
 
-    // Retention cleanup is handled by the page-view ingestion path. Keeping this
-    // endpoint read-only prevents every open admin dashboard from issuing delete
-    // queries on each analytics refresh.
-    const [rows, liveVisitors] = await Promise.all([
+    const [rows, liveSessions] = await Promise.all([
         prisma.trafficMetric.findMany({
             where: { bucketStart: { gte: cutoff } },
             orderBy: { bucketStart: 'asc' },
         }),
-        prisma.trafficSession.count({ where: { lastSeenAt: { gte: liveCutoff } } }),
+        prisma.trafficSession.findMany({
+            where: { lastSeenAt: { gte: liveCutoff } },
+            select: {
+                currentPath: true,
+                countryCode: true,
+                lastSeenAt: true,
+            },
+            orderBy: { lastSeenAt: 'desc' },
+        }),
     ]);
 
     const chart = buildChartBuckets(range, now);
@@ -101,25 +109,66 @@ export async function GET(request: NextRequest) {
         deviceTotals.set(row.deviceType, device);
     }
 
+    const liveCountryTotals = new Map<string, number>();
+    const livePageTotals = new Map<string, { visitors: number; countries: Map<string, number>; lastSeenAt: Date }>();
+
+    for (const liveSession of liveSessions) {
+        const countryCode = liveSession.countryCode || 'XX';
+        liveCountryTotals.set(countryCode, (liveCountryTotals.get(countryCode) || 0) + 1);
+
+        const path = liveSession.currentPath || 'Unknown page';
+        const current = livePageTotals.get(path) || {
+            visitors: 0,
+            countries: new Map<string, number>(),
+            lastSeenAt: liveSession.lastSeenAt,
+        };
+        current.visitors += 1;
+        current.countries.set(countryCode, (current.countries.get(countryCode) || 0) + 1);
+        if (liveSession.lastSeenAt > current.lastSeenAt) current.lastSeenAt = liveSession.lastSeenAt;
+        livePageTotals.set(path, current);
+    }
+
+    const liveCountries: LiveCountry[] = [...liveCountryTotals.entries()]
+        .map(([code, visitors]) => ({ code, name: countryName(code), visitors }))
+        .sort((a, b) => b.visitors - a.visitors || a.name.localeCompare(b.name));
+
+    const livePages: LivePage[] = [...livePageTotals.entries()]
+        .map(([path, value]) => ({
+            path,
+            visitors: value.visitors,
+            countries: [...value.countries.entries()]
+                .map(([code, visitors]) => ({ code, name: countryName(code), visitors }))
+                .sort((a, b) => b.visitors - a.visitors || a.name.localeCompare(b.name)),
+            lastSeenAt: value.lastSeenAt.toISOString(),
+        }))
+        .sort((a, b) => b.visitors - a.visitors || b.lastSeenAt.localeCompare(a.lastSeenAt));
+
     const countries = [...countryTotals.entries()]
-        .map(([code, value]) => ({ code, name: countryName(code), ...value }))
-        .sort((a, b) => b.pageViews - a.pageViews || b.visits - a.visits);
+        .map(([code, value]) => ({
+            code,
+            name: countryName(code),
+            ...value,
+            liveVisitors: liveCountryTotals.get(code) || 0,
+        }))
+        .sort((a, b) => b.visits - a.visits || b.pageViews - a.pageViews);
     const devices = [...deviceTotals.entries()]
         .map(([device, value]) => ({ device, ...value }))
-        .sort((a, b) => b.pageViews - a.pageViews || b.visits - a.visits);
-    const unattributedPageViews = countryTotals.get('XX')?.pageViews || 0;
-    const attributedPageViews = Math.max(0, pageViews - unattributedPageViews);
-    const countryCoverage = pageViews > 0 ? attributedPageViews / pageViews : 0;
+        .sort((a, b) => b.visits - a.visits || b.pageViews - a.pageViews);
 
     return NextResponse.json({
         range,
         summary: {
-            liveVisitors,
+            liveVisitors: liveSessions.length,
+            livePages: livePages.filter((item) => item.path !== 'Unknown page').length,
             pageViews,
             visits,
-            countries: countries.filter((item) => item.code !== 'XX').length,
-            countryCoverage,
-            unattributedPageViews,
+            countries: countries.filter((item) => item.code !== 'XX' && item.visits > 0).length,
+        },
+        live: {
+            visitors: liveSessions.length,
+            pages: livePages,
+            countries: liveCountries,
+            windowMinutes: LIVE_VISITOR_WINDOW_MINUTES,
         },
         chart,
         countries,

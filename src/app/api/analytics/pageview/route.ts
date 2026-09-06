@@ -60,12 +60,25 @@ function isPublicIpAddress(value: string | null) {
     return false;
 }
 
+async function readTrafficPayload(request: NextRequest) {
+    try {
+        const payload = await request.json() as { path?: unknown; heartbeat?: unknown };
+        const path = typeof payload.path === 'string' && payload.path.startsWith('/')
+            ? payload.path.slice(0, 512)
+            : null;
+        return { path, heartbeat: payload.heartbeat === true };
+    } catch {
+        return { path: null, heartbeat: false };
+    }
+}
+
 export async function POST(request: NextRequest) {
     if (!isSameOrigin(request)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const userAgent = request.headers.get('user-agent');
     if (isLikelyBot(userAgent)) return new NextResponse(null, { status: 204 });
 
+    const { path, heartbeat } = await readTrafficPayload(request);
     const now = new Date();
     const deviceType = deviceFromUserAgent(userAgent);
     const bucketStart = startOfUtcHour(now);
@@ -91,41 +104,53 @@ export async function POST(request: NextRequest) {
         countryLookupAt = now;
     }
 
-    await prisma.$transaction([
-        prisma.trafficSession.upsert({
-            where: { sessionHash: hash },
-            create: {
-                sessionHash: hash,
-                countryCode,
-                deviceType,
-                ipAddress,
-                countryLookupAt,
-                startedAt: now,
-                lastSeenAt: now,
-            },
-            update: {
-                lastSeenAt: now,
-                countryCode,
-                deviceType,
-                ipAddress,
-                countryLookupAt,
-            },
-        }),
-        prisma.trafficMetric.upsert({
-            where: { bucketStart_countryCode_deviceType: { bucketStart, countryCode, deviceType } },
-            create: {
-                bucketStart,
-                countryCode,
-                deviceType,
-                pageViews: 1,
-                visits: isNewVisit ? 1 : 0,
-            },
-            update: {
-                pageViews: { increment: 1 },
-                visits: { increment: isNewVisit ? 1 : 0 },
-            },
-        }),
-    ]);
+    const currentPath = path || existing?.currentPath || null;
+    const sessionUpsert = prisma.trafficSession.upsert({
+        where: { sessionHash: hash },
+        create: {
+            sessionHash: hash,
+            countryCode,
+            deviceType,
+            currentPath,
+            ipAddress,
+            countryLookupAt,
+            startedAt: now,
+            lastSeenAt: now,
+        },
+        update: {
+            lastSeenAt: now,
+            countryCode,
+            deviceType,
+            currentPath,
+            ipAddress,
+            countryLookupAt,
+        },
+    });
+
+    // Heartbeats keep the live visitor/page list accurate without counting a new
+    // page open every minute. If the initial event was lost, the first heartbeat
+    // still records one visit so the visitor is not omitted from period totals.
+    if (heartbeat && !isNewVisit) {
+        await sessionUpsert;
+    } else {
+        await prisma.$transaction([
+            sessionUpsert,
+            prisma.trafficMetric.upsert({
+                where: { bucketStart_countryCode_deviceType: { bucketStart, countryCode, deviceType } },
+                create: {
+                    bucketStart,
+                    countryCode,
+                    deviceType,
+                    pageViews: 1,
+                    visits: isNewVisit ? 1 : 0,
+                },
+                update: {
+                    pageViews: { increment: 1 },
+                    visits: { increment: isNewVisit ? 1 : 0 },
+                },
+            }),
+        ]);
+    }
 
     if (Math.random() < 0.025) {
         const staleSession = new Date(now.getTime() - TRAFFIC_SESSION_RETENTION_HOURS * 60 * 60 * 1000);

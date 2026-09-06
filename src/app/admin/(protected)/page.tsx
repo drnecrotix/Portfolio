@@ -74,10 +74,9 @@ export default async function AdminDashboardPage() {
 
             <section className="mb-5">
                 <TrafficAnalyticsPanel
-                    chartMode="weekday"
-                    refreshIntervalMs={15000}
+                    refreshIntervalMs={10000}
                     title="Traffic overview"
-                    description="Weekly browsing pattern with live traffic, session depth, country coverage and device distribution."
+                    description="See visitors online right now, the pages they are viewing, total visits for the selected period and which countries those visits came from."
                 />
             </section>
 

@@ -116,16 +116,16 @@ model Post {
   categoryRef    BlogCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags           String[]
   authorName     String
-  seoTitle       String?
+  seoTitle        String?
   seoDescription String?
-  publishedAt    DateTime?
-  scheduledAt    DateTime?
-  viewCount      Int               @default(0)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  revisions      Revision[]
-  comments       BlogComment[]
-  likes          BlogPostLike[]
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  viewCount       Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  revisions       Revision[]
+  comments        BlogComment[]
+  likes           BlogPostLike[]
 
   @@index([postTypeId])
   @@index([categoryId])
@@ -230,7 +230,7 @@ model GalleryWorkLike {
   slug      String
   stats     GalleryWorkStats @relation(fields: [slug], references: [slug], onDelete: Cascade)
   visitorId String
-  createdAt DateTime         @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([slug, visitorId])
   @@index([slug, createdAt])
@@ -267,12 +267,14 @@ model TrafficSession {
   sessionHash     String    @id
   countryCode     String
   deviceType      String
+  currentPath     String?
   ipAddress       String?
   countryLookupAt DateTime?
   startedAt       DateTime  @default(now())
   lastSeenAt      DateTime  @default(now())
 
   @@index([lastSeenAt])
+  @@index([currentPath, lastSeenAt])
 }
 
 model SiteSettings {
@@ -392,15 +394,15 @@ model StoreProduct {
 }
 
 model StoreProductFile {
-  id        String       @id @default(cuid())
-  productId String
-  product   StoreProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  fileName  String
+  id         String       @id @default(cuid())
+  productId  String
+  product    StoreProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  fileName   String
   storageKey String       @unique
-  mimeType  String
-  size      Int
-  sortOrder Int          @default(0)
-  createdAt DateTime     @default(now())
+  mimeType   String
+  size       Int
+  sortOrder  Int          @default(0)
+  createdAt  DateTime     @default(now())
 
   @@index([productId, sortOrder])
 }

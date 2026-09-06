@@ -1,50 +1,55 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, Globe2, Monitor, RefreshCw, Smartphone, Tablet, Users } from 'lucide-react';
+import Link from 'next/link';
+import { Activity, ExternalLink, Globe2, Monitor, RefreshCw, Smartphone, Tablet, Users } from 'lucide-react';
 import { AudienceWorldMap } from './AudienceWorldMap';
 import { cn } from '@/lib/utils';
 import type { TrafficRange } from '@/lib/traffic-analytics';
+
+type LiveCountry = {
+    code: string;
+    name: string;
+    visitors: number;
+};
+
+type LivePage = {
+    path: string;
+    visitors: number;
+    countries: LiveCountry[];
+    lastSeenAt: string;
+};
 
 type TrafficPayload = {
     range: TrafficRange;
     summary: {
         liveVisitors: number;
+        livePages: number;
         pageViews: number;
         visits: number;
         countries: number;
-        countryCoverage: number;
-        unattributedPageViews: number;
+    };
+    live: {
+        visitors: number;
+        pages: LivePage[];
+        countries: LiveCountry[];
+        windowMinutes: number;
     };
     chart: Array<{ key: string; label: string; pageViews: number; visits: number }>;
-    countries: Array<{ code: string; name: string; pageViews: number; visits: number }>;
+    countries: Array<{ code: string; name: string; pageViews: number; visits: number; liveVisitors: number }>;
     devices: Array<{ device: string; pageViews: number; visits: number }>;
     retention: { aggregateDays: number; sessionHours: number; ipHours: number };
     updatedAt: string;
 };
 
-type ChartMode = 'timeline' | 'weekday';
-
-const timelineRangeOptions: Array<{ value: TrafficRange; label: string }> = [
-    { value: '24h', label: '24h' },
+const rangeOptions: Array<{ value: TrafficRange; label: string }> = [
     { value: '7d', label: '7 days' },
     { value: '30d', label: '30 days' },
 ];
 
-const weekdayRangeOptions: Array<{ value: TrafficRange; label: string }> = [
-    { value: '7d', label: '7 days' },
-    { value: '30d', label: '30 days' },
-];
-
-const weekdays = [
-    { key: 'mon', short: 'Mon', long: 'Monday' },
-    { key: 'tue', short: 'Tue', long: 'Tuesday' },
-    { key: 'wed', short: 'Wed', long: 'Wednesday' },
-    { key: 'thu', short: 'Thu', long: 'Thursday' },
-    { key: 'fri', short: 'Fri', long: 'Friday' },
-    { key: 'sat', short: 'Sat', long: 'Saturday' },
-    { key: 'sun', short: 'Sun', long: 'Sunday' },
-] as const;
+function rangeText(range: TrafficRange) {
+    return range === '30d' ? 'last 30 days' : 'last 7 days';
+}
 
 function deviceLabel(device: string) {
     if (device === 'desktop') return 'Desktop';
@@ -59,160 +64,48 @@ function DeviceIcon({ device }: { device: string }) {
     return <Monitor className="size-4" />;
 }
 
-function TimelineTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
-    const width = 1000;
-    const height = 280;
-    const paddingX = 38;
-    const paddingTop = 24;
-    const paddingBottom = 38;
-    const plotWidth = width - paddingX * 2;
-    const plotHeight = height - paddingTop - paddingBottom;
-    const maxValue = Math.max(1, ...rows.flatMap((row) => [row.pageViews, row.visits]));
-    const peakIndex = rows.reduce((bestIndex, row, index) => row.pageViews > (rows[bestIndex]?.pageViews ?? -1) ? index : bestIndex, 0);
-    const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-    const activeIndex = rows.length ? Math.min(selectedIndex ?? peakIndex, rows.length - 1) : 0;
-    const selected = rows[activeIndex] || { key: '', label: 'No data', pageViews: 0, visits: 0 };
-    const totalViews = rows.reduce((sum, row) => sum + row.pageViews, 0);
-    const totalVisits = rows.reduce((sum, row) => sum + row.visits, 0);
-    const selectedShare = totalViews > 0 ? selected.pageViews / totalViews : 0;
-
-    const xFor = (index: number) => paddingX + (rows.length <= 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
-    const yFor = (value: number) => paddingTop + plotHeight - (value / maxValue) * plotHeight;
-    const points = (key: 'pageViews' | 'visits') => rows.map((row, index) => `${xFor(index).toFixed(1)},${yFor(row[key]).toFixed(1)}`).join(' ');
-    const labelIndexes = rows.length <= 5
-        ? rows.map((_, index) => index)
-        : [0, Math.floor((rows.length - 1) * 0.25), Math.floor((rows.length - 1) * 0.5), Math.floor((rows.length - 1) * 0.75), rows.length - 1];
-    const hitWidth = rows.length > 1 ? plotWidth / (rows.length - 1) : plotWidth;
-
-    return (
-        <div className="mt-5 rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Traffic timeline</p>
-                    <h4 className="mt-1 font-semibold">Activity across the selected period</h4>
-                    <p className="mt-1 text-xs text-muted-foreground">Hover or tap a point to inspect page opens, visitor sessions and session depth.</p>
-                </div>
-                <div className="flex flex-wrap gap-4 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Page opens</span>
-                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Sessions</span>
-                </div>
-            </div>
-
-            <div className="mt-4 overflow-hidden rounded-xl border border-foreground/10 bg-background/35 px-1 py-2 sm:px-2">
-                <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Interactive page opens and visitor sessions timeline" className="h-auto w-full overflow-visible">
-                    {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                        const y = paddingTop + plotHeight * ratio;
-                        return <line key={ratio} x1={paddingX} x2={width - paddingX} y1={y} y2={y} className="stroke-foreground/10" strokeWidth="1" />;
-                    })}
-                    {rows.length ? <line x1={xFor(activeIndex)} x2={xFor(activeIndex)} y1={paddingTop} y2={paddingTop + plotHeight} className="stroke-foreground/20" strokeWidth="1.5" strokeDasharray="5 6" /> : null}
-                    <polyline points={points('pageViews')} fill="none" className="stroke-sky-500" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-                    <polyline points={points('visits')} fill="none" className="stroke-violet-500" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    {rows.map((row, index) => (
-                        <g key={row.key}>
-                            <rect
-                                x={Math.max(paddingX, xFor(index) - hitWidth / 2)}
-                                y={paddingTop}
-                                width={Math.min(hitWidth, width - paddingX - Math.max(paddingX, xFor(index) - hitWidth / 2))}
-                                height={plotHeight}
-                                fill="transparent"
-                                className="cursor-pointer"
-                                onMouseEnter={() => setSelectedIndex(index)}
-                                onClick={() => setSelectedIndex(index)}
-                            />
-                            <circle cx={xFor(index)} cy={yFor(row.pageViews)} r={activeIndex === index ? 7 : 3.5} className={cn('fill-sky-500 transition-all', activeIndex === index && 'stroke-background')} strokeWidth="3" />
-                            <circle cx={xFor(index)} cy={yFor(row.visits)} r={activeIndex === index ? 6 : 3} className={cn('fill-violet-500 transition-all', activeIndex === index && 'stroke-background')} strokeWidth="3" />
-                        </g>
-                    ))}
-                    {labelIndexes.map((index) => (
-                        <text key={`${rows[index]?.key}-${index}`} x={xFor(index)} y={height - 8} textAnchor={index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'middle'} className="fill-muted-foreground text-[19px]">{rows[index]?.label}</text>
-                    ))}
-                </svg>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                <div className="rounded-xl border border-sky-500/15 bg-sky-500/[0.035] p-4 sm:col-span-2">
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected period</p>
-                    <p className="mt-2 text-lg font-semibold">{selected.label}</p>
-                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                        <span><strong className="text-foreground">{selected.pageViews}</strong> page opens</span>
-                        <span><strong className="text-foreground">{selected.visits}</strong> sessions</span>
-                        <span><strong className="text-foreground">{selected.visits ? (selected.pageViews / selected.visits).toFixed(2) : '0.00'}</strong> pages/session</span>
-                    </div>
-                </div>
-                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Share of traffic</p><p className="mt-2 font-semibold">{(selectedShare * 100).toFixed(1)}%</p><p className="mt-1 text-xs text-muted-foreground">of page opens in range</p></div>
-                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Range depth</p><p className="mt-2 font-semibold">{totalVisits ? (totalViews / totalVisits).toFixed(2) : '0.00'}</p><p className="mt-1 text-xs text-muted-foreground">pages per session</p></div>
-            </div>
-        </div>
-    );
+function pageLabel(path: string) {
+    if (path === '/') return 'Home';
+    if (path === 'Unknown page') return path;
+    return path;
 }
 
-function WeekdayTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
-    const buckets = useMemo(() => {
-        const result = weekdays.map((day) => ({ ...day, pageViews: 0, visits: 0, samples: 0 }));
-        for (const row of rows) {
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(row.key)) continue;
-            const date = new Date(`${row.key}T00:00:00Z`);
-            const index = (date.getUTCDay() + 6) % 7;
-            result[index].pageViews += row.pageViews;
-            result[index].visits += row.visits;
-            result[index].samples += 1;
-        }
-        return result.map((item) => ({
-            ...item,
-            averageViews: item.samples ? item.pageViews / item.samples : 0,
-            averageVisits: item.samples ? item.visits / item.samples : 0,
-        }));
-    }, [rows]);
-
-    const peak = buckets.reduce((best, item) => item.averageViews > best.averageViews ? item : best, buckets[0]);
-    const [selectedKey, setSelectedKey] = useState<string | null>(null);
-    const selected = buckets.find((item) => item.key === selectedKey) || peak;
-    const maxValue = Math.max(1, ...buckets.flatMap((item) => [item.averageViews, item.averageVisits]));
-    const totalViews = buckets.reduce((sum, item) => sum + item.pageViews, 0);
-    const totalVisits = buckets.reduce((sum, item) => sum + item.visits, 0);
-    const pagesPerSession = totalVisits ? totalViews / totalVisits : 0;
+function VisitsChart({ rows }: { rows: TrafficPayload['chart'] }) {
+    const maxVisits = Math.max(1, ...rows.map((row) => row.visits));
+    const totalVisits = rows.reduce((sum, row) => sum + row.visits, 0);
+    const busiest = rows.reduce((best, row) => row.visits > best.visits ? row : best, rows[0] || { key: '', label: 'No data', visits: 0, pageViews: 0 });
 
     return (
-        <div className="mt-5 rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4 sm:p-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Weekday pattern</p>
-                    <h4 className="mt-1 font-semibold">Average activity by weekday</h4>
-                    <p className="mt-1 text-xs text-muted-foreground">Select a weekday to compare average page opens and visitor sessions.</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Visits over time</p>
+                    <h4 className="mt-1 font-semibold">Daily visits</h4>
+                    <p className="mt-1 text-xs text-muted-foreground">A visit is a browsing session, not every page that was opened.</p>
                 </div>
-                <div className="flex flex-wrap gap-4 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-sky-500" /> Page opens</span>
-                    <span className="inline-flex items-center gap-2"><span className="size-2 rounded-full bg-violet-500" /> Sessions</span>
+                <div className="text-left sm:text-right">
+                    <p className="text-2xl font-semibold tabular-nums">{totalVisits}</p>
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">visits in range</p>
                 </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-7 gap-1.5 sm:gap-3">
-                {buckets.map((item) => {
-                    const active = selected.key === item.key;
+            <div className="mt-5 flex h-44 items-end gap-1.5 sm:gap-2">
+                {rows.map((row, index) => {
+                    const height = row.visits ? Math.max(5, (row.visits / maxVisits) * 100) : 2;
+                    const showLabel = rows.length <= 10 || index === 0 || index === rows.length - 1 || index % 5 === 0;
                     return (
-                        <button key={item.key} type="button" onClick={() => setSelectedKey(item.key)} onFocus={() => setSelectedKey(item.key)} onMouseEnter={() => setSelectedKey(item.key)} className={cn('rounded-xl border px-1.5 pb-2 pt-3 transition duration-300 sm:px-2', active ? 'border-sky-500/30 bg-sky-500/[0.05]' : 'border-transparent hover:border-foreground/10 hover:bg-background/50')}>
-                            <div className="mx-auto flex h-28 items-end justify-center gap-1 sm:h-36 sm:gap-1.5">
-                                <span className="w-2.5 rounded-t bg-sky-500 transition-[height] duration-500 sm:w-3.5" style={{ height: `${item.averageViews ? Math.max(7, (item.averageViews / maxValue) * 100) : 2}%` }} />
-                                <span className="w-2.5 rounded-t bg-violet-500 transition-[height] duration-500 sm:w-3.5" style={{ height: `${item.averageVisits ? Math.max(7, (item.averageVisits / maxValue) * 100) : 2}%` }} />
+                        <div key={row.key} className="flex min-w-0 flex-1 flex-col items-center justify-end self-stretch" title={`${row.label}: ${row.visits} visits`}>
+                            <div className="flex w-full flex-1 items-end justify-center">
+                                <div className={cn('w-full max-w-8 rounded-t-md bg-emerald-500/80 transition-all', row.key === busiest.key && 'bg-emerald-400')} style={{ height: `${height}%` }} />
                             </div>
-                            <span className={cn('mt-2 block text-[10px] font-semibold sm:text-xs', active ? 'text-foreground' : 'text-muted-foreground')}>{item.short}</span>
-                        </button>
+                            <span className="mt-2 h-4 truncate text-[9px] text-muted-foreground">{showLabel ? row.label : ''}</span>
+                        </div>
                     );
                 })}
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                <div className="rounded-xl border border-foreground/10 bg-background/55 p-4 sm:col-span-2">
-                    <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected weekday</p>
-                    <p className="mt-2 text-lg font-semibold">{selected.long}</p>
-                    <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                        <span><strong className="text-foreground">{selected.averageViews.toFixed(1)}</strong> avg page opens</span>
-                        <span><strong className="text-foreground">{selected.averageVisits.toFixed(1)}</strong> avg sessions</span>
-                        <span><strong className="text-foreground">{selected.visits ? (selected.pageViews / selected.visits).toFixed(2) : '0.00'}</strong> pages/session</span>
-                    </div>
-                </div>
-                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Busiest weekday</p><p className="mt-2 font-semibold">{peak.long}</p><p className="mt-1 text-xs text-muted-foreground">{peak.averageViews.toFixed(1)} avg page opens</p></div>
-                <div className="rounded-xl border border-foreground/10 bg-background/45 p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Session depth</p><p className="mt-2 font-semibold">{pagesPerSession.toFixed(2)}</p><p className="mt-1 text-xs text-muted-foreground">pages per session</p></div>
+            <div className="mt-4 rounded-xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3 text-xs text-muted-foreground">
+                Busiest day: <strong className="text-foreground">{busiest.label}</strong> with <strong className="text-foreground">{busiest.visits}</strong> visits.
             </div>
         </div>
     );
@@ -220,23 +113,20 @@ function WeekdayTrafficChart({ rows }: { rows: TrafficPayload['chart'] }) {
 
 export function TrafficAnalyticsPanel({
     showMap = false,
-    title = 'Traffic',
-    description = 'Short-retention, country and device level analytics.',
-    chartMode = 'timeline',
-    refreshIntervalMs = 15000,
+    title = 'Traffic overview',
+    description = 'See who is online now, what they are viewing, total visits and where visitors come from.',
+    refreshIntervalMs = 10000,
 }: {
     showMap?: boolean;
     title?: string;
     description?: string;
-    chartMode?: ChartMode;
     refreshIntervalMs?: number;
 }) {
-    const [range, setRange] = useState<TrafficRange>(chartMode === 'weekday' ? '7d' : '24h');
+    const [range, setRange] = useState<TrafficRange>('7d');
     const [data, setData] = useState<TrafficPayload | null>(null);
     const [error, setError] = useState('');
     const [refreshing, setRefreshing] = useState(false);
     const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
-    const rangeOptions = chartMode === 'weekday' ? weekdayRangeOptions : timelineRangeOptions;
 
     const refresh = useCallback(async (manual = false) => {
         if (manual) setRefreshing(true);
@@ -254,21 +144,23 @@ export function TrafficAnalyticsPanel({
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => void refresh());
-        const timer = window.setInterval(() => void refresh(), Math.max(3000, refreshIntervalMs));
+        const timer = window.setInterval(() => void refresh(), Math.max(5000, refreshIntervalMs));
         return () => {
             window.cancelAnimationFrame(frame);
             window.clearInterval(timer);
         };
     }, [refresh, refreshIntervalMs]);
 
-    const topCountries = useMemo(() => data?.countries.filter((country) => country.code !== 'XX').slice(0, 8) || [], [data]);
-    const unknownCountry = data?.countries.find((country) => country.code === 'XX');
-    const selectedCountry = topCountries.find((country) => country.code === selectedCountryCode) || topCountries[0] || null;
-    const totalDeviceViews = data?.devices.reduce((sum, device) => sum + device.pageViews, 0) || 0;
-    const selectedCountryShare = selectedCountry && data?.summary.pageViews ? selectedCountry.pageViews / data.summary.pageViews : 0;
-    const liveVisitors = data?.summary.liveVisitors ?? 0;
-    const hasLiveVisitors = liveVisitors > 0;
-    const countryCoverage = data?.summary.countryCoverage ?? 0;
+    const countries = useMemo(
+        () => data?.countries.filter((country) => country.code !== 'XX' && country.visits > 0) || [],
+        [data],
+    );
+    const topCountries = countries.slice(0, 10);
+    const selectedCountry = countries.find((country) => country.code === selectedCountryCode) || countries[0] || null;
+    const knownLivePages = data?.live.pages.filter((page) => page.path !== 'Unknown page') || [];
+    const unknownLivePage = data?.live.pages.find((page) => page.path === 'Unknown page');
+    const liveVisitors = data?.live.visitors ?? 0;
+    const period = rangeText(range);
 
     return (
         <section className="rounded-3xl border border-foreground/10 bg-foreground/[0.018] p-5 sm:p-6">
@@ -276,76 +168,142 @@ export function TrafficAnalyticsPanel({
                 <div>
                     <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Analytics</p>
                     <h3 className="mt-2 text-xl font-semibold sm:text-2xl">{title}</h3>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="inline-flex rounded-xl border border-foreground/10 bg-background/60 p-1">
-                        {rangeOptions.map((option) => <button key={option.value} type="button" onClick={() => setRange(option.value)} className={cn('rounded-lg px-3 py-2 text-xs font-medium transition', range === option.value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>{option.label}</button>)}
+                        {rangeOptions.map((option) => (
+                            <button key={option.value} type="button" onClick={() => setRange(option.value)} className={cn('rounded-lg px-3 py-2 text-xs font-medium transition', range === option.value ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
+                                {option.label}
+                            </button>
+                        ))}
                     </div>
-                    <button type="button" onClick={() => void refresh(true)} className="rounded-xl border border-foreground/10 p-2.5 text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground" aria-label="Refresh traffic analytics"><RefreshCw className={cn('size-4', refreshing && 'animate-spin')} /></button>
+                    <button type="button" onClick={() => void refresh(true)} className="rounded-xl border border-foreground/10 p-2.5 text-muted-foreground transition hover:bg-foreground/[0.05] hover:text-foreground" aria-label="Refresh traffic analytics">
+                        <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
+                    </button>
                 </div>
             </div>
 
             {error ? <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-300">{error}</div> : null}
 
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div aria-live="polite" className={cn('rounded-2xl border p-4 transition-colors duration-500', hasLiveVisitors ? 'border-emerald-500/25 bg-emerald-500/[0.07]' : 'border-rose-500/20 bg-rose-500/[0.045]')}>
-                    <div className={cn('flex items-center justify-between gap-3', hasLiveVisitors ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}><span className="text-[10px] uppercase tracking-[0.15em]">Live now</span><span className="relative flex size-4 items-center justify-center"><span className={cn('absolute size-3 rounded-full opacity-30 animate-[pulse_1.1s_ease-in-out_infinite]', hasLiveVisitors ? 'bg-emerald-500' : 'bg-rose-500')} /><Activity className="relative size-4" /></span></div>
+                <div aria-live="polite" className={cn('rounded-2xl border p-4 transition-colors duration-500', liveVisitors ? 'border-emerald-500/25 bg-emerald-500/[0.07]' : 'border-foreground/10 bg-background/50')}>
+                    <div className="flex items-center justify-between gap-3 text-emerald-600 dark:text-emerald-400"><span className="text-[10px] uppercase tracking-[0.15em]">Visitors online</span><Activity className="size-4" /></div>
                     <p className="mt-3 text-2xl font-semibold tabular-nums">{liveVisitors}</p>
-                    <p className="mt-1 text-[10px] leading-4 text-muted-foreground">Active traffic sessions in the last 5 minutes</p>
+                    <p className="mt-1 text-[10px] leading-4 text-muted-foreground">Active in the last {data?.live.windowMinutes ?? 5} minutes</p>
                 </div>
-                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Sessions</span><Users className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.visits ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Separate browsing sessions in this period</p></div>
-                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Page opens</span><Monitor className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.pageViews ?? 0}</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">Total public page loads in this period</p></div>
-                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4"><div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Country coverage</span><Globe2 className="size-4" /></div><p className="mt-3 text-2xl font-semibold tabular-nums">{(countryCoverage * 100).toFixed(0)}%</p><p className="mt-1 text-[10px] leading-4 text-muted-foreground">{data?.summary.countries ?? 0} countries attributed in this period</p></div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4">
+                    <div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Pages active now</span><Monitor className="size-4" /></div>
+                    <p className="mt-3 text-2xl font-semibold tabular-nums">{knownLivePages.length}</p>
+                    <p className="mt-1 text-[10px] leading-4 text-muted-foreground">Different public pages currently being viewed</p>
+                </div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4">
+                    <div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Visits</span><Users className="size-4" /></div>
+                    <p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.visits ?? 0}</p>
+                    <p className="mt-1 text-[10px] leading-4 text-muted-foreground">Total browsing visits in the {period}</p>
+                </div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/50 p-4">
+                    <div className="flex items-center justify-between gap-3 text-muted-foreground"><span className="text-[10px] uppercase tracking-[0.15em]">Countries</span><Globe2 className="size-4" /></div>
+                    <p className="mt-3 text-2xl font-semibold tabular-nums">{data?.summary.countries ?? 0}</p>
+                    <p className="mt-1 text-[10px] leading-4 text-muted-foreground">Countries that generated visits in the {period}</p>
+                </div>
             </div>
 
-            {chartMode === 'weekday' ? <WeekdayTrafficChart rows={data?.chart || []} /> : <TimelineTrafficChart rows={data?.chart || []} />}
+            <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+                <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.025] p-4 sm:p-5">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">Live now</p>
+                            <h4 className="mt-1 font-semibold">Pages being viewed</h4>
+                            <p className="mt-1 text-xs text-muted-foreground">Automatically refreshed from active visitor heartbeats.</p>
+                        </div>
+                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">{liveVisitors} online</span>
+                    </div>
 
-            <div className={cn('mt-5 grid gap-4', showMap && 'xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]')}>
+                    <div className="mt-4 space-y-2">
+                        {knownLivePages.length ? knownLivePages.slice(0, 10).map((page) => (
+                            <div key={page.path} className="flex flex-col gap-2 rounded-xl border border-foreground/10 bg-background/55 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                    <Link href={page.path} target="_blank" className="inline-flex max-w-full items-center gap-1.5 text-sm font-medium hover:underline">
+                                        <span className="truncate">{pageLabel(page.path)}</span><ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+                                    </Link>
+                                    <p className="mt-1 truncate text-[10px] text-muted-foreground">
+                                        {page.countries.map((country) => `${country.name}${country.visitors > 1 ? ` (${country.visitors})` : ''}`).join(', ') || 'Country unavailable'}
+                                    </p>
+                                </div>
+                                <div className="shrink-0 text-left sm:text-right"><span className="text-lg font-semibold tabular-nums">{page.visitors}</span><span className="ml-1 text-[10px] text-muted-foreground">{page.visitors === 1 ? 'visitor' : 'visitors'}</span></div>
+                            </div>
+                        )) : <p className="rounded-xl border border-dashed border-foreground/15 px-4 py-8 text-center text-xs text-muted-foreground">No active public pages right now.</p>}
+                        {unknownLivePage?.visitors ? <p className="px-1 pt-1 text-[10px] text-muted-foreground">{unknownLivePage.visitors} older active session{unknownLivePage.visitors === 1 ? '' : 's'} do not have a page path yet and will become identifiable after their next heartbeat.</p> : null}
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4 sm:p-5">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Live audience</p>
+                    <h4 className="mt-1 font-semibold">Visitors online by country</h4>
+                    <div className="mt-4 space-y-2">
+                        {data?.live.countries.length ? data.live.countries.map((country) => (
+                            <div key={country.code} className="flex items-center justify-between gap-3 rounded-xl border border-foreground/10 bg-background/45 px-3 py-2.5 text-sm">
+                                <span className="truncate">{country.name}</span><span className="font-mono text-xs text-muted-foreground">{country.visitors} online</span>
+                            </div>
+                        )) : <p className="py-6 text-center text-xs text-muted-foreground">No visitors online right now.</p>}
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-5">
+                <VisitsChart rows={data?.chart || []} />
+            </div>
+
+            <div className={cn('mt-5 grid gap-4', showMap && 'xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]')}>
                 {showMap ? (
-                    <div>
-                        <div className="mb-3 flex items-center justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Audience map</p><h4 className="mt-1 font-semibold">Country distribution</h4></div><span className="text-xs text-muted-foreground">Country level only</span></div>
+                    <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4 sm:p-5">
+                        <div className="mb-3">
+                            <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Visual map</p>
+                            <h4 className="mt-1 font-semibold">Where visits come from</h4>
+                            <p className="mt-1 text-xs text-muted-foreground">The map is a visual aid. Exact visit counts are listed beside it.</p>
+                        </div>
                         <AudienceWorldMap countries={data?.countries || []} selectedCode={selectedCountry?.code} />
                         {selectedCountry ? (
-                            <div className="mt-3 rounded-xl border border-foreground/10 bg-background/45 p-4">
-                                <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Selected country</p><p className="mt-1 font-semibold">{selectedCountry.name}</p></div><p className="font-mono text-xs text-muted-foreground">{(selectedCountryShare * 100).toFixed(1)}% of page opens</p></div>
-                                <div className="mt-3 flex gap-5 text-xs text-muted-foreground"><span><strong className="text-foreground">{selectedCountry.pageViews}</strong> page opens</span><span><strong className="text-foreground">{selectedCountry.visits}</strong> sessions</span></div>
+                            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-foreground/10 bg-background/45 px-4 py-3 text-xs">
+                                <span><strong>{selectedCountry.name}</strong></span>
+                                <span className="text-muted-foreground"><strong className="text-foreground">{selectedCountry.visits}</strong> visits · <strong className="text-foreground">{selectedCountry.liveVisitors}</strong> online now</span>
                             </div>
                         ) : null}
                     </div>
                 ) : null}
 
-                <div className={cn('grid gap-4 sm:grid-cols-2', showMap && 'xl:grid-cols-1')}>
-                    <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4">
-                        <div className="flex items-center justify-between gap-3"><div><h4 className="text-sm font-semibold">Top countries</h4><p className="mt-1 text-[10px] text-muted-foreground">Header detection first, IP fallback when needed</p></div><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Opens / sessions</span></div>
-                        <div className="mt-3 space-y-2.5">
-                            {topCountries.length ? topCountries.map((country) => {
-                                const max = Math.max(1, topCountries[0]?.pageViews || 1);
-                                const active = selectedCountry?.code === country.code;
-                                return (
-                                    <button key={country.code} type="button" onClick={() => setSelectedCountryCode(country.code)} className={cn('block w-full rounded-xl border px-3 py-2.5 text-left transition', active ? 'border-sky-500/25 bg-sky-500/[0.04]' : 'border-transparent hover:border-foreground/10 hover:bg-foreground/[0.025]')}>
-                                        <div className="flex items-center justify-between gap-3 text-xs"><span className="truncate">{country.name}</span><span className="font-mono text-muted-foreground">{country.pageViews} / {country.visits}</span></div>
-                                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.max(4, (country.pageViews / max) * 100)}%` }} /></div>
-                                    </button>
-                                );
-                            }) : <p className="py-4 text-xs leading-5 text-muted-foreground">No country has been attributed yet. New sessions now fall back to IP-to-country lookup when the hosting proxy does not send a country header.</p>}
-                            {unknownCountry?.pageViews ? <p className="pt-1 text-[10px] leading-5 text-amber-600 dark:text-amber-300">Unattributed: {unknownCountry.pageViews} page opens / {unknownCountry.visits} sessions. Older traffic can remain unattributed because IP addresses were not stored before this release.</p> : null}
-                        </div>
+                <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4 sm:p-5">
+                    <div className="flex items-end justify-between gap-3">
+                        <div><p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Countries</p><h4 className="mt-1 font-semibold">Visits by country</h4></div>
+                        <span className="text-[10px] text-muted-foreground">{period}</span>
                     </div>
-
-                    <div className="rounded-2xl border border-foreground/10 bg-background/40 p-4">
-                        <div className="flex items-center justify-between"><h4 className="text-sm font-semibold">Devices</h4><span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Page share</span></div>
-                        <div className="mt-3 space-y-3">
-                            {data?.devices.length ? data.devices.map((device) => {
-                                const share = totalDeviceViews > 0 ? device.pageViews / totalDeviceViews : 0;
-                                return <div key={device.device} className="flex items-center gap-3"><span className="rounded-lg border border-foreground/10 p-2 text-muted-foreground"><DeviceIcon device={device.device} /></span><div className="min-w-0 flex-1"><div className="flex justify-between gap-3 text-xs"><span>{deviceLabel(device.device)}</span><span className="font-mono text-muted-foreground">{(share * 100).toFixed(1)}%</span></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full rounded-full bg-violet-500" style={{ width: `${Math.max(2, share * 100)}%` }} /></div></div></div>;
-                            }) : <p className="py-4 text-xs text-muted-foreground">No device data yet.</p>}
+                    <div className="mt-4 overflow-hidden rounded-xl border border-foreground/10">
+                        <div className="grid grid-cols-[minmax(0,1fr)_80px_80px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+                            <span>Country</span><span className="text-right">Visits</span><span className="text-right">Online</span>
                         </div>
+                        {topCountries.length ? topCountries.map((country) => (
+                            <button key={country.code} type="button" onClick={() => setSelectedCountryCode(country.code)} className={cn('grid w-full grid-cols-[minmax(0,1fr)_80px_80px] gap-2 border-t border-foreground/8 px-3 py-2.5 text-left text-xs transition hover:bg-foreground/[0.03]', selectedCountry?.code === country.code && 'bg-foreground/[0.025]')}>
+                                <span className="truncate">{country.name}</span><span className="text-right font-mono">{country.visits}</span><span className="text-right font-mono text-emerald-600 dark:text-emerald-400">{country.liveVisitors}</span>
+                            </button>
+                        )) : <p className="border-t border-foreground/8 px-4 py-8 text-center text-xs text-muted-foreground">No attributed country visits in this period yet.</p>}
                     </div>
                 </div>
             </div>
 
-            <p className="mt-5 border-t border-foreground/10 pt-4 text-[10px] leading-5 text-muted-foreground">Retention: country/device aggregates are kept for up to {data?.retention.aggregateDays ?? 31} days. Traffic session rows, including the raw client IP used for country fallback, are removed after about {data?.retention.ipHours ?? 24} hours. City and precise location are not collected.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}</p>
+            <div className="mt-5 rounded-2xl border border-foreground/10 bg-background/35 p-4">
+                <div className="flex items-center justify-between gap-3"><h4 className="text-sm font-semibold">Devices used for visits</h4><span className="text-[10px] text-muted-foreground">{period}</span></div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {data?.devices.length ? data.devices.map((device) => (
+                        <div key={device.device} className="flex items-center gap-3 rounded-xl border border-foreground/10 bg-background/45 px-3 py-3">
+                            <span className="rounded-lg border border-foreground/10 p-2 text-muted-foreground"><DeviceIcon device={device.device} /></span>
+                            <div><p className="text-xs font-medium">{deviceLabel(device.device)}</p><p className="mt-0.5 text-[10px] text-muted-foreground">{device.visits} visits</p></div>
+                        </div>
+                    )) : <p className="text-xs text-muted-foreground">No device data yet.</p>}
+                </div>
+            </div>
+
+            <p className="mt-5 border-t border-foreground/10 pt-4 text-[10px] leading-5 text-muted-foreground">Live activity uses a short heartbeat and the current public path only. Country/device aggregates are kept for up to {data?.retention.aggregateDays ?? 31} days. Traffic session rows, including the raw client IP used only for country fallback, are removed after about {data?.retention.ipHours ?? 24} hours. City and precise location are not collected.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}</p>
         </section>
     );
 }
