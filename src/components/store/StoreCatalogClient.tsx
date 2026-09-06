@@ -72,7 +72,10 @@ export function StoreCatalogClient({
     const firstRender = useRef(true);
     const filterKey = `${query}\u0000${category}\u0000${sort}`;
     const filterKeyRef = useRef(filterKey);
-    filterKeyRef.current = filterKey;
+
+    useEffect(() => {
+        filterKeyRef.current = filterKey;
+    }, [filterKey]);
 
     useEffect(() => {
         if (firstRender.current) {
