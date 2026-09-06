@@ -81,7 +81,7 @@ export const experimentDefinitions: readonly ExperimentDefinition[] = [
         name: 'Hero micro navigation',
         hypothesis: 'Two restrained text links in the hero should improve project discovery without turning the hero into a conventional CTA block.',
         scope: 'Homepage sessions after the hero becomes interactive',
-        status: 'RUNNING',
+        status: 'ENDED',
         primaryEvent: 'project_open',
         secondaryEvents: ['projects_seen', 'blog_open'],
         minimumSamplePerVariant: 80,
@@ -105,7 +105,7 @@ export function assignHomepageExperimentVariants(): ExperimentVariantMap {
     return {
         'niko-loader-duration': pick(),
         'home-section-order': pick(),
-        'hero-micro-cta': pick(),
+        'hero-micro-cta': 'A',
     };
 }
 
@@ -127,6 +127,6 @@ export function parseExperimentVariants(value: string | null | undefined): Exper
     return {
         'niko-loader-duration': niko as ExperimentVariant,
         'home-section-order': order as ExperimentVariant,
-        'hero-micro-cta': hero as ExperimentVariant,
+        'hero-micro-cta': 'A',
     };
 }
