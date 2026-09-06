@@ -129,8 +129,8 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
             if (!root) return;
             const rect = root.getBoundingClientRect();
             const absoluteTop = window.scrollY + rect.top;
-            const start = absoluteTop - window.innerHeight * 0.18;
-            const end = absoluteTop + root.offsetHeight - window.innerHeight * 0.72;
+            const start = absoluteTop - 96;
+            const end = absoluteTop + root.offsetHeight - Math.max(window.innerHeight * 0.62, 320);
             const ratio = end <= start ? 1 : (window.scrollY - start) / (end - start);
             setProgress(Math.max(0, Math.min(100, ratio * 100)));
         };
@@ -162,18 +162,16 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
 
     return (
         <>
-            <div
-                className="pointer-events-none fixed inset-x-0 top-0 z-[140] h-[3px] bg-foreground/10 shadow-[0_1px_0_rgba(255,255,255,0.03)]"
-                role="progressbar"
-                aria-label="Reading progress"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(progress)}
-            >
-                <div
-                    className="h-full bg-gradient-to-r from-fuchsia-500 via-primary to-violet-400 transition-[width] duration-100 ease-out"
-                    style={{ width: `${progress}%` }}
-                />
+            <div className="sticky top-[5.25rem] z-[90] mb-7 flex w-full justify-center px-1 sm:top-[5.75rem]" role="progressbar" aria-label="Reading progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+                <div className="pointer-events-none w-full max-w-3xl rounded-full border border-foreground/10 bg-background/90 px-3 py-2 shadow-[0_12px_35px_-18px_rgba(0,0,0,0.65)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/75">
+                    <div className="flex items-center gap-3">
+                        <span className="shrink-0 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Reading</span>
+                        <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-foreground/10">
+                            <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 via-primary to-violet-400 transition-[width] duration-100 ease-out" style={{ width: `${progress}%` }} />
+                        </div>
+                        <span className="w-9 shrink-0 text-right font-mono text-[10px] font-semibold tabular-nums text-foreground/80">{Math.round(progress)}%</span>
+                    </div>
+                </div>
             </div>
 
             {showToc && (
