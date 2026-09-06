@@ -1,0 +1,4 @@
+Contact: https://necrotixlab.com/contact
+Expires: 2027-09-05T23:59:59Z
+Preferred-Languages: en, bg
+Canonical: https://necrotixlab.com/.well-known/security.txt
