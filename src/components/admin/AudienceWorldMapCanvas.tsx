@@ -27,8 +27,8 @@ function AudienceGlobe({ countries, selectedCode }: { countries: AudienceCountry
     const groupRef = useRef<Group | null>(null);
     const globeRef = useRef<ThreeGlobe | null>(null);
     const [features, setFeatures] = useState<GeoFeature[]>([]);
-    const values = useMemo(() => new Map(countries.map((country) => [country.code, country.pageViews])), [countries]);
-    const maxValue = Math.max(1, ...countries.map((country) => country.pageViews));
+    const values = useMemo(() => new Map(countries.map((country) => [country.code, country.visits])), [countries]);
+    const maxValue = Math.max(1, ...countries.map((country) => country.visits));
 
     useEffect(() => {
         let cancelled = false;
