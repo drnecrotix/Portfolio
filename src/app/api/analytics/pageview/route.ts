@@ -7,6 +7,8 @@ import {
     TRAFFIC_METRIC_RETENTION_DAYS,
     TRAFFIC_SESSION_COOKIE,
     TRAFFIC_SESSION_RETENTION_HOURS,
+    TRAFFIC_VISIT_TIMEOUT_MINUTES,
+    cityFromHeaders,
     clientIpFromHeaders,
     countryCodeFromHeaders,
     countryCodeFromIp,
@@ -85,11 +87,13 @@ export async function POST(request: NextRequest) {
     const cookieValue = request.cookies.get(TRAFFIC_SESSION_COOKIE)?.value || randomUUID();
     const hash = sessionHash(cookieValue);
     const existing = await prisma.trafficSession.findUnique({ where: { sessionHash: hash } }).catch(() => null);
-    const isNewVisit = !existing;
+    const visitCutoff = new Date(now.getTime() - TRAFFIC_VISIT_TIMEOUT_MINUTES * 60 * 1000);
+    const isNewVisit = !existing || existing.lastSeenAt < visitCutoff;
 
     const rawIpAddress = clientIpFromHeaders(request.headers);
     const ipAddress = isPublicIpAddress(rawIpAddress) ? rawIpAddress : null;
     const headerCountry = countryCodeFromHeaders(request.headers);
+    const headerCity = cityFromHeaders(request.headers);
     let countryCode = headerCountry !== 'XX' ? headerCountry : (existing?.countryCode || 'XX');
     let countryLookupAt = existing?.countryLookupAt || null;
 
@@ -105,6 +109,7 @@ export async function POST(request: NextRequest) {
     }
 
     const currentPath = path || existing?.currentPath || null;
+    const currentCity = headerCity || existing?.currentCity || null;
     const sessionUpsert = prisma.trafficSession.upsert({
         where: { sessionHash: hash },
         create: {
@@ -112,6 +117,7 @@ export async function POST(request: NextRequest) {
             countryCode,
             deviceType,
             currentPath,
+            currentCity,
             ipAddress,
             countryLookupAt,
             startedAt: now,
@@ -122,17 +128,18 @@ export async function POST(request: NextRequest) {
             countryCode,
             deviceType,
             currentPath,
+            currentCity,
             ipAddress,
             countryLookupAt,
         },
     });
 
-    // Heartbeats keep the live visitor/page list accurate without counting a new
-    // page open every minute. If the initial event was lost, the first heartbeat
-    // still records one visit so the visitor is not omitted from period totals.
+    // Heartbeats only refresh live presence. A visit starts again after the
+    // inactivity window, while page views are counted only on real navigation.
     if (heartbeat && !isNewVisit) {
         await sessionUpsert;
     } else {
+        const pageViewIncrement = heartbeat ? 0 : 1;
         await prisma.$transaction([
             sessionUpsert,
             prisma.trafficMetric.upsert({
@@ -141,11 +148,11 @@ export async function POST(request: NextRequest) {
                     bucketStart,
                     countryCode,
                     deviceType,
-                    pageViews: 1,
+                    pageViews: pageViewIncrement,
                     visits: isNewVisit ? 1 : 0,
                 },
                 update: {
-                    pageViews: { increment: 1 },
+                    pageViews: { increment: pageViewIncrement },
                     visits: { increment: isNewVisit ? 1 : 0 },
                 },
             }),
