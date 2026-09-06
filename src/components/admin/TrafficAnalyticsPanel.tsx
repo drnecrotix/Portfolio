@@ -20,11 +20,31 @@ type LiveCity = {
     visitors: number;
 };
 
+type StoredCity = {
+    name: string;
+    countryCode: string;
+    countryName: string;
+    pageViews: number;
+    liveVisitors: number;
+};
+
 type LivePage = {
     path: string;
     visitors: number;
     countries: LiveCountry[];
     lastSeenAt: string;
+};
+
+type ActivityItem = {
+    id: string;
+    path: string;
+    countryCode: string;
+    countryName: string;
+    city: string | null;
+    device: string;
+    ipAddress: string | null;
+    ipExpired: boolean;
+    occurredAt: string;
 };
 
 type TrafficPayload = {
@@ -45,9 +65,22 @@ type TrafficPayload = {
     };
     chart: Array<{ key: string; label: string; pageViews: number; visits: number }>;
     countries: Array<{ code: string; name: string; pageViews: number; visits: number; liveVisitors: number }>;
-    devices: Array<{ device: string; pageViews: number; visits: number }>;
+    cities: StoredCity[];
+    devices: Array<{
+        device: string;
+        pageViews: number;
+        visits: number;
+        recentIps: string[];
+        recentIpCount: number;
+    }>;
+    activity: {
+        items: ActivityItem[];
+        total: number;
+        limit: number;
+    };
     retention: {
         aggregateDays: number;
+        pageActivityDays: number;
         sessionHours: number;
         ipHours: number;
         visitTimeoutMinutes: number;
@@ -87,6 +120,16 @@ function pageLabel(path: string) {
     } catch {
         return path;
     }
+}
+
+function activityTime(value: string) {
+    const date = new Date(value);
+    return date.toLocaleString(undefined, {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 }
 
 function MetricCard({
@@ -215,12 +258,11 @@ export function TrafficAnalyticsPanel({
     const selectedCountry = countries.find((country) => country.code === selectedCountryCode) || countries[0] || null;
     const knownLivePages = data?.live.pages.filter((page) => page.path !== 'Unknown page') || [];
     const unknownLivePage = data?.live.pages.find((page) => page.path === 'Unknown page');
-    const cities = data?.live.cities || [];
+    const cities = data?.cities || [];
     const liveVisitors = data?.live.visitors ?? 0;
     const period = rangeText(range);
-    const maxDeviceVisits = Math.max(1, ...(data?.devices || []).map((device) => device.visits));
     const visibleDescription = showMap
-        ? 'Live traffic, visit trends, country and device analytics, plus optional live city context supplied directly by the hosting/CDN.'
+        ? 'Live visitors, retained page activity, visit trends, countries, cities, devices and short-lived IP context in one focused view.'
         : description;
 
     const locationPanel = (
@@ -253,7 +295,7 @@ export function TrafficAnalyticsPanel({
                     <div className="grid grid-cols-[minmax(0,1fr)_68px_64px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
                         <span>Country</span><span className="text-right">Visits</span><span className="text-right">Online</span>
                     </div>
-                    <div className="max-h-[286px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                    <div className="max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                         {countries.length ? countries.map((country) => (
                             <button
                                 key={country.code}
@@ -273,23 +315,24 @@ export function TrafficAnalyticsPanel({
                 </div>
             ) : (
                 <div className="mt-3 overflow-hidden rounded-xl border border-foreground/10">
-                    <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
-                        <span>City</span><span className="text-right">Online</span>
+                    <div className="grid grid-cols-[minmax(0,1fr)_70px_62px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
+                        <span>City</span><span className="text-right">Views</span><span className="text-right">Online</span>
                     </div>
-                    <div className="max-h-[286px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                    <div className="max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                         {cities.length ? cities.map((city) => (
-                            <div key={`${city.countryCode}:${city.name}`} className="grid grid-cols-[minmax(0,1fr)_64px] gap-2 border-t border-foreground/[0.08] px-3 py-2 text-[11px]">
+                            <div key={`${city.countryCode}:${city.name}`} className="grid grid-cols-[minmax(0,1fr)_70px_62px] gap-2 border-t border-foreground/[0.08] px-3 py-2 text-[11px]">
                                 <div className="min-w-0">
                                     <p className="truncate">{city.name}</p>
                                     <p className="truncate text-[9px] text-muted-foreground">{city.countryName}</p>
                                 </div>
-                                <span className="self-center text-right font-mono text-emerald-600 dark:text-emerald-400">{city.visitors}</span>
+                                <span className="self-center text-right font-mono">{city.pageViews}</span>
+                                <span className="self-center text-right font-mono text-emerald-600 dark:text-emerald-400">{city.liveVisitors}</span>
                             </div>
                         )) : (
                             <div className="border-t border-foreground/[0.08] px-4 py-7 text-center">
                                 <MapPin className="mx-auto size-4 text-muted-foreground" />
-                                <p className="mt-2 text-xs font-medium">No live city data available.</p>
-                                <p className="mx-auto mt-1 max-w-sm text-[10px] leading-4 text-muted-foreground">Cities appear only when the hosting/CDN already provides a city header. No external IP-to-city lookup is performed.</p>
+                                <p className="mt-2 text-xs font-medium">No city activity in this period yet.</p>
+                                <p className="mx-auto mt-1 max-w-sm text-[10px] leading-4 text-muted-foreground">City comes from hosting/CDN headers when available, otherwise from a short-lived IP location lookup. Precise coordinates are not stored.</p>
                             </div>
                         )}
                     </div>
@@ -297,7 +340,7 @@ export function TrafficAnalyticsPanel({
             )}
 
             <p className="mt-2 text-[9px] leading-4 text-muted-foreground">
-                {locationMode === 'countries' ? `${period} · exact visit totals plus live visitors` : `Live visitors only · ${data?.live.windowMinutes ?? 5}-minute activity window`}
+                {locationMode === 'countries' ? `${period} · visit totals plus live visitors` : `${period} · retained page activity plus live visitors`}
             </p>
         </div>
     );
@@ -308,19 +351,67 @@ export function TrafficAnalyticsPanel({
                 <div><p className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Devices</p><h4 className="mt-1 text-sm font-semibold">Visits by device</h4></div>
                 <span className="text-[9px] text-muted-foreground">{period}</span>
             </div>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 overflow-hidden rounded-xl border border-foreground/10">
+                <div className="grid grid-cols-[minmax(105px,0.75fr)_62px_minmax(140px,1.25fr)] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <span>Device</span><span className="text-right">Visits</span><span>Recent IP</span>
+                </div>
                 {data?.devices.length ? data.devices.map((device) => (
-                    <div key={device.device} className="rounded-xl border border-foreground/10 bg-background/45 px-3 py-2.5">
-                        <div className="flex items-center justify-between gap-3">
-                            <span className="inline-flex min-w-0 items-center gap-2 text-xs"><DeviceIcon device={device.device} /><span className="truncate">{deviceLabel(device.device)}</span></span>
-                            <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{device.visits} visits</span>
-                        </div>
-                        <div className="mt-2 h-1 overflow-hidden rounded-full bg-foreground/[0.07]">
-                            <div className="h-full rounded-full bg-foreground/45" style={{ width: `${Math.max(3, (device.visits / maxDeviceVisits) * 100)}%` }} />
+                    <div key={device.device} className="grid grid-cols-[minmax(105px,0.75fr)_62px_minmax(140px,1.25fr)] items-center gap-2 border-t border-foreground/[0.08] px-3 py-2 text-[10px]">
+                        <span className="inline-flex min-w-0 items-center gap-2"><DeviceIcon device={device.device} /><span className="truncate text-xs">{deviceLabel(device.device)}</span></span>
+                        <span className="text-right font-mono">{device.visits}</span>
+                        <div className="min-w-0">
+                            {device.recentIps.length ? (
+                                <p className="truncate font-mono text-[9px] text-muted-foreground" title={device.recentIps.join(', ')}>
+                                    {device.recentIps.join(' · ')}{device.recentIpCount > device.recentIps.length ? ` +${device.recentIpCount - device.recentIps.length}` : ''}
+                                </p>
+                            ) : <span className="text-[9px] text-muted-foreground">No IP in retention window</span>}
                         </div>
                     </div>
-                )) : <p className="py-6 text-center text-xs text-muted-foreground">No device data yet.</p>}
+                )) : <p className="border-t border-foreground/[0.08] py-6 text-center text-xs text-muted-foreground">No device data yet.</p>}
             </div>
+            <p className="mt-2 text-[9px] leading-4 text-muted-foreground">IP addresses shown here are recent unique addresses only and expire from analytics after about {data?.retention.ipHours ?? 24} hours.</p>
+        </div>
+    );
+
+    const activityPanel = (
+        <div className="mt-4 min-w-0 rounded-2xl border border-foreground/10 bg-background/40 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Retained activity</p>
+                    <h4 className="mt-1 text-sm font-semibold">Recent page activity</h4>
+                    <p className="mt-1 text-[10px] text-muted-foreground">Public page paths, location, device and short-lived IP context. Query strings are not stored.</p>
+                </div>
+                <span className="rounded-full border border-foreground/10 bg-foreground/[0.03] px-2.5 py-1 text-[9px] text-muted-foreground">
+                    {data?.activity.items.length ?? 0} of {data?.activity.total ?? 0}
+                </span>
+            </div>
+
+            <div className="mt-3 max-h-[360px] overflow-auto overscroll-contain rounded-xl border border-foreground/10 [scrollbar-gutter:stable]">
+                <div className="min-w-[820px]">
+                    <div className="sticky top-0 z-10 grid grid-cols-[105px_minmax(220px,1.6fr)_minmax(170px,1fr)_110px_minmax(135px,0.9fr)] gap-3 bg-background/95 px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground backdrop-blur">
+                        <span>Time</span><span>Page / URL</span><span>Location</span><span>Device</span><span>IP address</span>
+                    </div>
+                    {data?.activity.items.length ? data.activity.items.map((item) => (
+                        <div key={item.id} className="grid grid-cols-[105px_minmax(220px,1.6fr)_minmax(170px,1fr)_110px_minmax(135px,0.9fr)] items-center gap-3 border-t border-foreground/[0.08] px-3 py-2.5 text-[10px]">
+                            <span className="whitespace-nowrap text-muted-foreground">{activityTime(item.occurredAt)}</span>
+                            <Link href={item.path} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1.5 hover:underline">
+                                <span className="truncate font-mono text-[10px]">{item.path}</span><ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+                            </Link>
+                            <div className="min-w-0">
+                                <p className="truncate">{item.city || 'City unavailable'}</p>
+                                <p className="truncate text-[9px] text-muted-foreground">{item.countryName}</p>
+                            </div>
+                            <span className="inline-flex min-w-0 items-center gap-1.5"><DeviceIcon device={item.device} /><span className="truncate">{deviceLabel(item.device)}</span></span>
+                            <span className={cn('truncate font-mono text-[9px]', item.ipAddress ? 'text-foreground' : 'text-muted-foreground')} title={item.ipAddress || undefined}>
+                                {item.ipAddress || (item.ipExpired ? 'Expired' : 'Unavailable')}
+                            </span>
+                        </div>
+                    )) : <p className="border-t border-foreground/[0.08] px-4 py-8 text-center text-xs text-muted-foreground">No retained page activity in this period yet.</p>}
+                </div>
+            </div>
+            {(data?.activity.total ?? 0) > (data?.activity.limit ?? 150) ? (
+                <p className="mt-2 text-[9px] leading-4 text-muted-foreground">Showing the latest {data?.activity.limit} entries to keep the dashboard responsive. Aggregate totals still include the full selected period.</p>
+            ) : null}
         </div>
     );
 
@@ -387,6 +478,8 @@ export function TrafficAnalyticsPanel({
                 <VisitsChart rows={data?.chart || []} />
             </div>
 
+            {activityPanel}
+
             {showMap ? (
                 <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
                     <div className="min-w-0 rounded-2xl border border-foreground/10 bg-background/40 p-4">
@@ -396,7 +489,10 @@ export function TrafficAnalyticsPanel({
                         </div>
                         <AudienceWorldMap countries={data?.countries || []} selectedCode={selectedCountry?.code} />
                     </div>
-                    {locationPanel}
+                    <div className="min-w-0 space-y-4">
+                        {locationPanel}
+                        {devicesPanel}
+                    </div>
                 </div>
             ) : (
                 <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
@@ -405,10 +501,8 @@ export function TrafficAnalyticsPanel({
                 </div>
             )}
 
-            {showMap ? <div className="mt-4">{devicesPanel}</div> : null}
-
             <p className="mt-4 border-t border-foreground/10 pt-3 text-[9px] leading-4 text-muted-foreground">
-                A visit restarts after about {data?.retention.visitTimeoutMinutes ?? 30} minutes of inactivity. Live activity stores only the current public path and, when supplied by the hosting/CDN, a coarse city label. Country/device aggregates are retained for up to {data?.retention.aggregateDays ?? 31} days. Raw client IP fallback data is removed after about {data?.retention.ipHours ?? 24} hours. No precise location is collected.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}
+                A visit restarts after about {data?.retention.visitTimeoutMinutes ?? 30} minutes of inactivity. Page activity is retained for up to {data?.retention.pageActivityDays ?? 31} days, while raw IP context expires after about {data?.retention.ipHours ?? 24} hours. City is taken from infrastructure headers where available or resolved through the short-lived IP fallback; precise coordinates are not stored. Country/device aggregates are retained for up to {data?.retention.aggregateDays ?? 31} days.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}
             </p>
         </section>
     );

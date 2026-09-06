@@ -4,15 +4,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
     COUNTRY_LOOKUP_RETRY_HOURS,
+    TRAFFIC_IP_RETENTION_HOURS,
     TRAFFIC_METRIC_RETENTION_DAYS,
+    TRAFFIC_PAGE_EVENT_RETENTION_DAYS,
     TRAFFIC_SESSION_COOKIE,
     TRAFFIC_SESSION_RETENTION_HOURS,
     TRAFFIC_VISIT_TIMEOUT_MINUTES,
     cityFromHeaders,
     clientIpFromHeaders,
     countryCodeFromHeaders,
-    countryCodeFromIp,
     deviceFromUserAgent,
+    ipLocationFromIp,
     isLikelyBot,
     startOfUtcHour,
 } from '@/lib/traffic-analytics';
@@ -65,8 +67,11 @@ function isPublicIpAddress(value: string | null) {
 async function readTrafficPayload(request: NextRequest) {
     try {
         const payload = await request.json() as { path?: unknown; heartbeat?: unknown };
-        const path = typeof payload.path === 'string' && payload.path.startsWith('/')
-            ? payload.path.slice(0, 512)
+        const rawPath = typeof payload.path === 'string' && payload.path.startsWith('/')
+            ? payload.path
+            : null;
+        const path = rawPath
+            ? rawPath.split('?')[0].split('#')[0].slice(0, 512)
             : null;
         return { path, heartbeat: payload.heartbeat === true };
     } catch {
@@ -92,24 +97,30 @@ export async function POST(request: NextRequest) {
 
     const rawIpAddress = clientIpFromHeaders(request.headers);
     const ipAddress = isPublicIpAddress(rawIpAddress) ? rawIpAddress : null;
+    const ipChanged = Boolean(ipAddress && existing && existing.ipAddress !== ipAddress);
     const headerCountry = countryCodeFromHeaders(request.headers);
     const headerCity = cityFromHeaders(request.headers);
-    let countryCode = headerCountry !== 'XX' ? headerCountry : (existing?.countryCode || 'XX');
-    let countryLookupAt = existing?.countryLookupAt || null;
+
+    let countryCode = headerCountry !== 'XX'
+        ? headerCountry
+        : (ipChanged ? 'XX' : (existing?.countryCode || 'XX'));
+    let currentCity = headerCity || (ipChanged ? null : existing?.currentCity) || null;
+    let countryLookupAt = ipChanged ? null : (existing?.countryLookupAt || null);
 
     const retryBefore = new Date(now.getTime() - COUNTRY_LOOKUP_RETRY_HOURS * 60 * 60 * 1000);
-    const ipChanged = Boolean(ipAddress && existing?.ipAddress && existing.ipAddress !== ipAddress);
-    const shouldLookupCountry = countryCode === 'XX'
-        && Boolean(ipAddress)
-        && (ipChanged || !countryLookupAt || countryLookupAt < retryBefore);
+    const needsFallbackLocation = Boolean(ipAddress)
+        && !headerCity
+        && (countryCode === 'XX' || !currentCity)
+        && (!countryLookupAt || countryLookupAt < retryBefore);
 
-    if (shouldLookupCountry && ipAddress) {
-        countryCode = await countryCodeFromIp(ipAddress);
+    if (needsFallbackLocation && ipAddress) {
+        const location = await ipLocationFromIp(ipAddress);
+        if (headerCountry === 'XX' && location.countryCode !== 'XX') countryCode = location.countryCode;
+        if (location.city) currentCity = location.city;
         countryLookupAt = now;
     }
 
     const currentPath = path || existing?.currentPath || null;
-    const currentCity = headerCity || existing?.currentCity || null;
     const sessionUpsert = prisma.trafficSession.upsert({
         where: { sessionHash: hash },
         create: {
@@ -135,36 +146,61 @@ export async function POST(request: NextRequest) {
     });
 
     // Heartbeats only refresh live presence. A visit starts again after the
-    // inactivity window, while page views are counted only on real navigation.
+    // inactivity window, while page views and page history are stored only on
+    // real navigation requests.
     if (heartbeat && !isNewVisit) {
         await sessionUpsert;
     } else {
         const pageViewIncrement = heartbeat ? 0 : 1;
-        await prisma.$transaction([
-            sessionUpsert,
-            prisma.trafficMetric.upsert({
-                where: { bucketStart_countryCode_deviceType: { bucketStart, countryCode, deviceType } },
-                create: {
-                    bucketStart,
-                    countryCode,
-                    deviceType,
-                    pageViews: pageViewIncrement,
-                    visits: isNewVisit ? 1 : 0,
-                },
-                update: {
-                    pageViews: { increment: pageViewIncrement },
-                    visits: { increment: isNewVisit ? 1 : 0 },
-                },
-            }),
-        ]);
+        const metricUpsert = prisma.trafficMetric.upsert({
+            where: { bucketStart_countryCode_deviceType: { bucketStart, countryCode, deviceType } },
+            create: {
+                bucketStart,
+                countryCode,
+                deviceType,
+                pageViews: pageViewIncrement,
+                visits: isNewVisit ? 1 : 0,
+            },
+            update: {
+                pageViews: { increment: pageViewIncrement },
+                visits: { increment: isNewVisit ? 1 : 0 },
+            },
+        });
+
+        if (!heartbeat && path) {
+            await prisma.$transaction([
+                sessionUpsert,
+                metricUpsert,
+                prisma.trafficPageEvent.create({
+                    data: {
+                        sessionHash: hash,
+                        path,
+                        countryCode,
+                        city: currentCity,
+                        ipAddress,
+                        deviceType,
+                        occurredAt: now,
+                    },
+                }),
+            ]);
+        } else {
+            await prisma.$transaction([sessionUpsert, metricUpsert]);
+        }
     }
 
     if (Math.random() < 0.025) {
         const staleSession = new Date(now.getTime() - TRAFFIC_SESSION_RETENTION_HOURS * 60 * 60 * 1000);
         const staleMetric = new Date(now.getTime() - TRAFFIC_METRIC_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        const stalePageEvent = new Date(now.getTime() - TRAFFIC_PAGE_EVENT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        const stalePageIp = new Date(now.getTime() - TRAFFIC_IP_RETENTION_HOURS * 60 * 60 * 1000);
         void Promise.all([
             prisma.trafficSession.deleteMany({ where: { lastSeenAt: { lt: staleSession } } }),
             prisma.trafficMetric.deleteMany({ where: { bucketStart: { lt: staleMetric } } }),
+            prisma.trafficPageEvent.deleteMany({ where: { occurredAt: { lt: stalePageEvent } } }),
+            prisma.trafficPageEvent.updateMany({
+                where: { occurredAt: { lt: stalePageIp }, ipAddress: { not: null } },
+                data: { ipAddress: null },
+            }),
         ]).catch(() => undefined);
     }
 
