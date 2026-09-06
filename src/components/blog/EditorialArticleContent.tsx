@@ -149,7 +149,7 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
                     ? (rect.top <= topReadingLine ? 1 : 0)
                     : (topReadingLine - rect.top) / scrollableArticleHeight;
                 const nextProgress = Math.max(0, Math.min(100, ratio * 100));
-                const visible = rect.top <= topReadingLine && rect.bottom > topReadingLine;
+                const visible = rect.top <= topReadingLine && rect.bottom > bottomReadingLine;
 
                 setProgress(nextProgress);
                 setProgressVisible(visible);
