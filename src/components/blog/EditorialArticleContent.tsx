@@ -46,6 +46,7 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
     const articleRef = useRef<HTMLDivElement>(null);
     const [headings, setHeadings] = useState<HeadingItem[]>([]);
     const [progress, setProgress] = useState(0);
+    const [progressVisible, setProgressVisible] = useState(false);
     const [previewImage, setPreviewImage] = useState<PreviewImage>(null);
     const [mobileTocOpen, setMobileTocOpen] = useState(false);
     const mounted = useSyncExternalStore(subscribeHydration, () => true, () => false);
@@ -136,7 +137,9 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
             const start = absoluteTop - 96;
             const end = absoluteTop + root.offsetHeight - Math.max(window.innerHeight * 0.62, 320);
             const ratio = end <= start ? 1 : (window.scrollY - start) / (end - start);
+            const visible = rect.top <= window.innerHeight - 96 && rect.bottom >= 96;
             setProgress(Math.max(0, Math.min(100, ratio * 100)));
+            setProgressVisible(visible);
         };
         updateProgress();
         window.addEventListener('scroll', updateProgress, { passive: true });
@@ -165,12 +168,16 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
     const compactText = postType === 'NOTE' || postType === 'THOUGHT';
     const progressIndicator = mounted ? createPortal(
         <div
-            className="pointer-events-none fixed left-1/2 top-[4.75rem] z-[120] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 sm:top-[5.25rem]"
+            className={cn(
+                'pointer-events-none fixed left-1/2 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[120] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 transition-all duration-200 ease-out sm:bottom-6',
+                progressVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
+            )}
             role="progressbar"
             aria-label="Reading progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress)}
+            aria-hidden={!progressVisible}
         >
             <div className="rounded-full border border-foreground/10 bg-background/88 px-3 py-1.5 shadow-[0_10px_28px_-18px_rgba(0,0,0,0.6)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
                 <div className="flex items-center gap-2.5">

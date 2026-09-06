@@ -10,6 +10,7 @@ import {
     TRAFFIC_SESSION_RETENTION_HOURS,
     TRAFFIC_VISIT_TIMEOUT_MINUTES,
     countryName,
+    decodePageEventDeviceContext,
     parseTrafficRange,
     startOfUtcDay,
     startOfUtcHour,
@@ -201,9 +202,10 @@ export async function GET(request: NextRequest) {
     const deviceIpMap = new Map<string, string[]>();
     for (const row of recentIpRows) {
         if (!row.ipAddress) continue;
-        const addresses = deviceIpMap.get(row.deviceType) || [];
+        const { device } = decodePageEventDeviceContext(row.deviceType);
+        const addresses = deviceIpMap.get(device) || [];
         if (!addresses.includes(row.ipAddress)) addresses.push(row.ipAddress);
-        deviceIpMap.set(row.deviceType, addresses);
+        deviceIpMap.set(device, addresses);
     }
 
     const devices = [...deviceTotals.entries()]
@@ -232,17 +234,21 @@ export async function GET(request: NextRequest) {
             };
         });
 
-    const activity = recentActivity.map((item) => ({
-        id: item.id,
-        path: item.path,
-        countryCode: item.countryCode,
-        countryName: countryName(item.countryCode),
-        city: item.city,
-        device: item.deviceType,
-        ipAddress: item.occurredAt >= ipCutoff ? item.ipAddress : null,
-        ipExpired: item.occurredAt < ipCutoff,
-        occurredAt: item.occurredAt.toISOString(),
-    }));
+    const activity = recentActivity.map((item) => {
+        const { device, operatingSystem } = decodePageEventDeviceContext(item.deviceType);
+        return {
+            id: item.id,
+            path: item.path,
+            countryCode: item.countryCode,
+            countryName: countryName(item.countryCode),
+            city: item.city,
+            device,
+            operatingSystem,
+            ipAddress: item.occurredAt >= ipCutoff ? item.ipAddress : null,
+            ipExpired: item.occurredAt < ipCutoff,
+            occurredAt: item.occurredAt.toISOString(),
+        };
+    });
 
     return NextResponse.json({
         range,

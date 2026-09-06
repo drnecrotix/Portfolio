@@ -1,5 +1,6 @@
 export type TrafficRange = '24h' | '7d' | '30d';
 export type TrafficDevice = 'desktop' | 'mobile' | 'tablet' | 'unknown';
+export type TrafficOperatingSystem = 'Windows' | 'macOS' | 'iOS/iPadOS' | 'Android' | 'ChromeOS' | 'Linux' | 'Unknown';
 
 export const TRAFFIC_SESSION_COOKIE = 'necrotix_traffic_session';
 export const TRAFFIC_SESSION_RETENTION_HOURS = 24;
@@ -10,6 +11,8 @@ export const TRAFFIC_PAGE_EVENT_ADMIN_LIMIT = 150;
 export const TRAFFIC_VISIT_TIMEOUT_MINUTES = 30;
 export const LIVE_VISITOR_WINDOW_MINUTES = 5;
 export const COUNTRY_LOOKUP_RETRY_HOURS = 6;
+
+const PAGE_EVENT_DEVICE_SEPARATOR = '::';
 
 export function parseTrafficRange(value: string | null | undefined): TrafficRange {
     return value === '7d' || value === '30d' ? value : '24h';
@@ -177,6 +180,38 @@ export function deviceFromUserAgent(userAgent: string | null | undefined): Traff
     if (/Mobi|iPhone|iPod|Android|Windows Phone/i.test(ua)) return 'mobile';
     if (!ua) return 'unknown';
     return 'desktop';
+}
+
+export function operatingSystemFromUserAgent(userAgent: string | null | undefined): TrafficOperatingSystem {
+    const ua = userAgent || '';
+    if (!ua) return 'Unknown';
+    if (/Windows Phone|Windows NT/i.test(ua)) return 'Windows';
+    if (/CrOS/i.test(ua)) return 'ChromeOS';
+    if (/Android/i.test(ua)) return 'Android';
+    if (/iPhone|iPad|iPod|Macintosh.*Mobile/i.test(ua)) return 'iOS/iPadOS';
+    if (/Macintosh|Mac OS X/i.test(ua)) return 'macOS';
+    if (/Linux|X11/i.test(ua)) return 'Linux';
+    return 'Unknown';
+}
+
+export function encodePageEventDeviceContext(device: TrafficDevice, operatingSystem: TrafficOperatingSystem) {
+    return `${device}${PAGE_EVENT_DEVICE_SEPARATOR}${operatingSystem}`;
+}
+
+export function decodePageEventDeviceContext(value: string | null | undefined): {
+    device: TrafficDevice;
+    operatingSystem: TrafficOperatingSystem;
+} {
+    const [rawDevice = 'unknown', rawOperatingSystem] = (value || '').split(PAGE_EVENT_DEVICE_SEPARATOR, 2);
+    const device: TrafficDevice = ['desktop', 'mobile', 'tablet', 'unknown'].includes(rawDevice)
+        ? rawDevice as TrafficDevice
+        : 'unknown';
+    const knownOperatingSystems: TrafficOperatingSystem[] = ['Windows', 'macOS', 'iOS/iPadOS', 'Android', 'ChromeOS', 'Linux', 'Unknown'];
+    const operatingSystem = knownOperatingSystems.includes(rawOperatingSystem as TrafficOperatingSystem)
+        ? rawOperatingSystem as TrafficOperatingSystem
+        : 'Unknown';
+
+    return { device, operatingSystem };
 }
 
 export function isLikelyBot(userAgent: string | null | undefined) {

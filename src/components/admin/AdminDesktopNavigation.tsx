@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useRef, useState, type WheelEvent } from 'react';
+import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 import type { AdminNavGroup, AdminNavItem } from '@/components/admin/AdminMobileNavigation';
+import { handleContainedWheel } from '@/lib/contained-scroll';
 
 function isItemActive(pathname: string, href: string, items: readonly AdminNavItem[]) {
     if (pathname === href) return true;
@@ -33,22 +34,8 @@ export function AdminDesktopNavigation({
     const pathname = usePathname();
     const activeGroup = activeGroupForPath(pathname, navGroups);
     const [openGroup, setOpenGroup] = useState<string | null>(() => activeGroup ?? navGroups[0]?.[0] ?? null);
-    const scrollRef = useRef<HTMLDivElement>(null);
 
     const linkClass = (active: boolean) => `block rounded-lg border px-3 py-2 text-sm transition-colors ${active ? 'border-foreground/10 bg-foreground/[0.06] font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:border-foreground/10 hover:bg-foreground/[0.05] hover:text-foreground'}`;
-
-    const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
-        const element = scrollRef.current;
-        if (!element || element.scrollHeight <= element.clientHeight) return;
-
-        const maxScroll = element.scrollHeight - element.clientHeight;
-        const canScrollDown = event.deltaY > 0 && element.scrollTop < maxScroll;
-        const canScrollUp = event.deltaY < 0 && element.scrollTop > 0;
-        if (!canScrollDown && !canScrollUp) return;
-
-        event.preventDefault();
-        element.scrollTop = Math.max(0, Math.min(maxScroll, element.scrollTop + event.deltaY));
-    };
 
     return (
         <aside className="hidden h-dvh max-h-dvh min-h-0 flex-col overflow-hidden border-r border-foreground/10 bg-foreground/[0.015] lg:sticky lg:top-0 lg:flex">
@@ -64,8 +51,7 @@ export function AdminDesktopNavigation({
             </div>
 
             <div
-                ref={scrollRef}
-                onWheel={handleWheel}
+                onWheel={handleContainedWheel}
                 className="admin-sidebar-scroll min-h-0 flex-1 touch-pan-y overflow-y-scroll overscroll-y-contain px-4 pb-4 [scrollbar-gutter:stable]"
             >
                 <nav className="grid gap-2 py-2">

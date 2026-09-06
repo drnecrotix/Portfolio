@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Activity, ExternalLink, Globe2, MapPin, Monitor, RefreshCw, Smartphone, Tablet, Users } from 'lucide-react';
 import { AudienceWorldMap } from './AudienceWorldMap';
 import { cn } from '@/lib/utils';
+import { handleContainedWheel } from '@/lib/contained-scroll';
 import type { TrafficRange } from '@/lib/traffic-analytics';
 
 type LiveCountry = {
@@ -42,6 +43,7 @@ type ActivityItem = {
     countryName: string;
     city: string | null;
     device: string;
+    operatingSystem: string;
     ipAddress: string | null;
     ipExpired: boolean;
     occurredAt: string;
@@ -262,7 +264,7 @@ export function TrafficAnalyticsPanel({
     const liveVisitors = data?.live.visitors ?? 0;
     const period = rangeText(range);
     const visibleDescription = showMap
-        ? 'Live visitors, retained page activity, visit trends, countries, cities, devices and short-lived IP context in one focused view.'
+        ? 'Live visitors, retained page activity, visit trends, countries, cities, devices, operating systems and short-lived IP context in one focused view.'
         : description;
 
     const locationPanel = (
@@ -295,7 +297,7 @@ export function TrafficAnalyticsPanel({
                     <div className="grid grid-cols-[minmax(0,1fr)_68px_64px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
                         <span>Country</span><span className="text-right">Visits</span><span className="text-right">Online</span>
                     </div>
-                    <div className="max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                    <div onWheel={handleContainedWheel} className="admin-contained-scroll max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                         {countries.length ? countries.map((country) => (
                             <button
                                 key={country.code}
@@ -318,7 +320,7 @@ export function TrafficAnalyticsPanel({
                     <div className="grid grid-cols-[minmax(0,1fr)_70px_62px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
                         <span>City</span><span className="text-right">Views</span><span className="text-right">Online</span>
                     </div>
-                    <div className="max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                    <div onWheel={handleContainedWheel} className="admin-contained-scroll max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                         {cities.length ? cities.map((city) => (
                             <div key={`${city.countryCode}:${city.name}`} className="grid grid-cols-[minmax(0,1fr)_70px_62px] gap-2 border-t border-foreground/[0.08] px-3 py-2 text-[11px]">
                                 <div className="min-w-0">
@@ -379,20 +381,20 @@ export function TrafficAnalyticsPanel({
                 <div>
                     <p className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Retained activity</p>
                     <h4 className="mt-1 text-sm font-semibold">Recent page activity</h4>
-                    <p className="mt-1 text-[10px] text-muted-foreground">Public page paths, location, device and short-lived IP context. Query strings are not stored.</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">Public page paths, location, device, OS and short-lived IP context. Query strings and full user-agent strings are not stored.</p>
                 </div>
                 <span className="rounded-full border border-foreground/10 bg-foreground/[0.03] px-2.5 py-1 text-[9px] text-muted-foreground">
                     {data?.activity.items.length ?? 0} of {data?.activity.total ?? 0}
                 </span>
             </div>
 
-            <div className="mt-3 max-h-[360px] overflow-auto overscroll-contain rounded-xl border border-foreground/10 [scrollbar-gutter:stable]">
-                <div className="min-w-[820px]">
-                    <div className="sticky top-0 z-10 grid grid-cols-[105px_minmax(220px,1.6fr)_minmax(170px,1fr)_110px_minmax(135px,0.9fr)] gap-3 bg-background/95 px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground backdrop-blur">
-                        <span>Time</span><span>Page / URL</span><span>Location</span><span>Device</span><span>IP address</span>
+            <div onWheel={handleContainedWheel} className="admin-contained-scroll mt-3 max-h-[360px] overflow-auto overscroll-contain rounded-xl border border-foreground/10 [scrollbar-gutter:stable]">
+                <div className="min-w-[950px]">
+                    <div className="sticky top-0 z-10 grid grid-cols-[105px_minmax(220px,1.55fr)_minmax(170px,1fr)_105px_115px_minmax(135px,0.9fr)] gap-3 bg-background/95 px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground backdrop-blur">
+                        <span>Time</span><span>Page / URL</span><span>Location</span><span>Device</span><span>OS</span><span>IP address</span>
                     </div>
                     {data?.activity.items.length ? data.activity.items.map((item) => (
-                        <div key={item.id} className="grid grid-cols-[105px_minmax(220px,1.6fr)_minmax(170px,1fr)_110px_minmax(135px,0.9fr)] items-center gap-3 border-t border-foreground/[0.08] px-3 py-2.5 text-[10px]">
+                        <div key={item.id} className="grid grid-cols-[105px_minmax(220px,1.55fr)_minmax(170px,1fr)_105px_115px_minmax(135px,0.9fr)] items-center gap-3 border-t border-foreground/[0.08] px-3 py-2.5 text-[10px]">
                             <span className="whitespace-nowrap text-muted-foreground">{activityTime(item.occurredAt)}</span>
                             <Link href={item.path} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1.5 hover:underline">
                                 <span className="truncate font-mono text-[10px]">{item.path}</span><ExternalLink className="size-3 shrink-0 text-muted-foreground" />
@@ -402,6 +404,7 @@ export function TrafficAnalyticsPanel({
                                 <p className="truncate text-[9px] text-muted-foreground">{item.countryName}</p>
                             </div>
                             <span className="inline-flex min-w-0 items-center gap-1.5"><DeviceIcon device={item.device} /><span className="truncate">{deviceLabel(item.device)}</span></span>
+                            <span className="truncate text-[10px]" title={item.operatingSystem}>{item.operatingSystem}</span>
                             <span className={cn('truncate font-mono text-[9px]', item.ipAddress ? 'text-foreground' : 'text-muted-foreground')} title={item.ipAddress || undefined}>
                                 {item.ipAddress || (item.ipExpired ? 'Expired' : 'Unavailable')}
                             </span>
@@ -457,7 +460,7 @@ export function TrafficAnalyticsPanel({
                         <span className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">{liveVisitors} online</span>
                     </div>
 
-                    <div className="mt-3 max-h-[232px] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
+                    <div onWheel={handleContainedWheel} className="admin-contained-scroll mt-3 max-h-[232px] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
                         {knownLivePages.length ? knownLivePages.map((page) => (
                             <div key={page.path} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-foreground/10 bg-background/55 px-3 py-2">
                                 <div className="min-w-0">
@@ -502,7 +505,7 @@ export function TrafficAnalyticsPanel({
             )}
 
             <p className="mt-4 border-t border-foreground/10 pt-3 text-[9px] leading-4 text-muted-foreground">
-                A visit restarts after about {data?.retention.visitTimeoutMinutes ?? 30} minutes of inactivity. Page activity is retained for up to {data?.retention.pageActivityDays ?? 31} days, while raw IP context expires after about {data?.retention.ipHours ?? 24} hours. City is taken from infrastructure headers where available or resolved through the short-lived IP fallback; precise coordinates are not stored. Country/device aggregates are retained for up to {data?.retention.aggregateDays ?? 31} days.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}
+                A visit restarts after about {data?.retention.visitTimeoutMinutes ?? 30} minutes of inactivity. Page activity is retained for up to {data?.retention.pageActivityDays ?? 31} days, while raw IP context expires after about {data?.retention.ipHours ?? 24} hours. City is taken from infrastructure headers where available or resolved through the short-lived IP fallback; precise coordinates are not stored. OS is reduced to a coarse label from the browser user-agent and the full user-agent string is not retained. Country/device aggregates are retained for up to {data?.retention.aggregateDays ?? 31} days.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}
             </p>
         </section>
     );
