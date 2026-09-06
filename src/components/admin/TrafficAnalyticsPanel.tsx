@@ -144,17 +144,27 @@ function MetricCard({
     icon: ReactNode;
     live?: boolean;
 }) {
+    const liveActive = live && value > 0;
+    const liveOffline = live && value === 0;
+
     return (
         <div className={cn(
             'min-w-0 rounded-xl border px-3.5 py-3 transition-colors',
-            live ? 'border-emerald-500/25 bg-emerald-500/[0.065]' : 'border-foreground/10 bg-background/50',
+            liveActive && 'border-emerald-500/25 bg-emerald-500/[0.065]',
+            liveOffline && 'border-red-500/25 bg-red-500/[0.055]',
+            !live && 'border-foreground/10 bg-background/50',
         )}>
-            <div className={cn('flex items-center justify-between gap-3', live ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>
+            <div className={cn(
+                'flex items-center justify-between gap-3',
+                liveActive && 'text-emerald-600 dark:text-emerald-400',
+                liveOffline && 'text-red-600 dark:text-red-400',
+                !live && 'text-muted-foreground',
+            )}>
                 <span className="truncate text-[9px] font-medium uppercase tracking-[0.15em]">{label}</span>
                 {icon}
             </div>
             <div className="mt-1.5 flex items-end justify-between gap-3">
-                <p className="text-2xl font-semibold tabular-nums">{value}</p>
+                <p className={cn('text-2xl font-semibold tabular-nums', liveOffline && 'text-red-600 dark:text-red-400')}>{value}</p>
                 <p className="min-w-0 truncate text-right text-[9px] text-muted-foreground">{note}</p>
             </div>
         </div>
