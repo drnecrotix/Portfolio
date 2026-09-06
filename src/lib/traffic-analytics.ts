@@ -5,6 +5,7 @@ export const TRAFFIC_SESSION_COOKIE = 'necrotix_traffic_session';
 export const TRAFFIC_SESSION_RETENTION_HOURS = 24;
 export const TRAFFIC_IP_RETENTION_HOURS = 24;
 export const TRAFFIC_METRIC_RETENTION_DAYS = 31;
+export const TRAFFIC_VISIT_TIMEOUT_MINUTES = 30;
 export const LIVE_VISITOR_WINDOW_MINUTES = 5;
 export const COUNTRY_LOOKUP_RETRY_HOURS = 6;
 
