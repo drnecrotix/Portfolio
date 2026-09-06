@@ -11,10 +11,16 @@ export function HeroVisual({
   isExiting = false,
   content = defaultHomepageContent,
   identity = defaultPublicIdentity,
+  showMicroCta = false,
+  onProjectsCta,
+  onGalleryCta,
 }: {
   isExiting?: boolean;
   content?: HomepageContent;
   identity?: PublicIdentity;
+  showMicroCta?: boolean;
+  onProjectsCta?: () => void;
+  onGalleryCta?: () => void;
 }) {
   const [showProfile, setShowProfile] = useState(false);
   const [tooltip, setTooltip] = useState<{ show: boolean; text: string; x: number; y: number; icon: 'zap' | 'bot' | null }>({ show: false, text: '', x: 0, y: 0, icon: null });
@@ -128,6 +134,23 @@ export function HeroVisual({
               {content.collaboration}
             </motion.p>
           </div>
+
+          {showMicroCta ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={isExiting ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+              transition={{ duration: 0.65, delay: 0.55 }}
+              className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:mt-5 md:text-xs"
+              aria-label="Quick navigation"
+            >
+              <button type="button" onClick={onProjectsCta} className="border-b border-foreground/25 pb-1 transition hover:border-foreground hover:text-foreground">
+                View projects
+              </button>
+              <button type="button" onClick={onGalleryCta} className="border-b border-foreground/25 pb-1 transition hover:border-foreground hover:text-foreground">
+                Explore gallery
+              </button>
+            </motion.div>
+          ) : null}
         </div>
       </main>
 

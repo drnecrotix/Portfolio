@@ -90,7 +90,7 @@ model Project {
   demoUrl         String?
   role             String?
   timeline        String?
-  team            String?
+  team             String?
   sortOrder       Int           @default(0)
   content         Json?
   seoTitle        String?
@@ -246,6 +246,18 @@ model ExperimentMetric {
 
   @@id([experimentId, variant, event])
   @@index([experimentId, updatedAt])
+}
+
+model ExperimentSessionEvent {
+  experimentId String
+  sessionHash  String
+  variant      String
+  event        String
+  createdAt    DateTime @default(now())
+
+  @@id([experimentId, sessionHash, event])
+  @@index([experimentId, variant, event])
+  @@index([createdAt])
 }
 
 model TrafficMetric {
