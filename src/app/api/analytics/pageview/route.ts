@@ -14,8 +14,10 @@ import {
     clientIpFromHeaders,
     countryCodeFromHeaders,
     deviceFromUserAgent,
+    encodePageEventDeviceContext,
     ipLocationFromIp,
     isLikelyBot,
+    operatingSystemFromUserAgent,
     startOfUtcHour,
 } from '@/lib/traffic-analytics';
 
@@ -88,6 +90,8 @@ export async function POST(request: NextRequest) {
     const { path, heartbeat } = await readTrafficPayload(request);
     const now = new Date();
     const deviceType = deviceFromUserAgent(userAgent);
+    const operatingSystem = operatingSystemFromUserAgent(userAgent);
+    const pageEventDeviceType = encodePageEventDeviceContext(deviceType, operatingSystem);
     const bucketStart = startOfUtcHour(now);
     const cookieValue = request.cookies.get(TRAFFIC_SESSION_COOKIE)?.value || randomUUID();
     const hash = sessionHash(cookieValue);
@@ -178,7 +182,7 @@ export async function POST(request: NextRequest) {
                         countryCode,
                         city: currentCity,
                         ipAddress,
-                        deviceType,
+                        deviceType: pageEventDeviceType,
                         occurredAt: now,
                     },
                 }),
