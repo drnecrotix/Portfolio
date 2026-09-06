@@ -63,6 +63,16 @@ html:not(.dark) .admin-shell select option {
   color: hsl(var(--foreground));
 }
 
+/* Keep nested admin scrollers independent from the document scroll. Lenis is
+   disabled for the admin shell in layout.tsx, so these containers use native
+   browser scrolling without wheel events leaking to the page underneath. */
+.admin-shell [class*="overflow-y-auto"],
+.admin-shell [class*="overflow-y-scroll"],
+.admin-shell [class*="overflow-auto"] {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .admin-sidebar-scroll,
 .admin-contained-scroll {
   scrollbar-width: thin;

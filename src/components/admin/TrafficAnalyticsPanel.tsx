@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Activity, ExternalLink, Globe2, MapPin, Monitor, RefreshCw, Smartphone, Tablet, Users } from 'lucide-react';
 import { AudienceWorldMap } from './AudienceWorldMap';
 import { cn } from '@/lib/utils';
-import { handleContainedWheel } from '@/lib/contained-scroll';
 import type { TrafficRange } from '@/lib/traffic-analytics';
 
 type LiveCountry = {
@@ -72,8 +71,6 @@ type TrafficPayload = {
         device: string;
         pageViews: number;
         visits: number;
-        recentIps: string[];
-        recentIpCount: number;
     }>;
     activity: {
         items: ActivityItem[];
@@ -147,17 +144,27 @@ function MetricCard({
     icon: ReactNode;
     live?: boolean;
 }) {
+    const liveActive = live && value > 0;
+    const liveOffline = live && value === 0;
+
     return (
         <div className={cn(
             'min-w-0 rounded-xl border px-3.5 py-3 transition-colors',
-            live ? 'border-emerald-500/25 bg-emerald-500/[0.065]' : 'border-foreground/10 bg-background/50',
+            liveActive && 'border-emerald-500/25 bg-emerald-500/[0.065]',
+            liveOffline && 'border-red-500/25 bg-red-500/[0.055]',
+            !live && 'border-foreground/10 bg-background/50',
         )}>
-            <div className={cn('flex items-center justify-between gap-3', live ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground')}>
+            <div className={cn(
+                'flex items-center justify-between gap-3',
+                liveActive && 'text-emerald-600 dark:text-emerald-400',
+                liveOffline && 'text-red-600 dark:text-red-400',
+                !live && 'text-muted-foreground',
+            )}>
                 <span className="truncate text-[9px] font-medium uppercase tracking-[0.15em]">{label}</span>
                 {icon}
             </div>
             <div className="mt-1.5 flex items-end justify-between gap-3">
-                <p className="text-2xl font-semibold tabular-nums">{value}</p>
+                <p className={cn('text-2xl font-semibold tabular-nums', liveOffline && 'text-red-600 dark:text-red-400')}>{value}</p>
                 <p className="min-w-0 truncate text-right text-[9px] text-muted-foreground">{note}</p>
             </div>
         </div>
@@ -297,7 +304,7 @@ export function TrafficAnalyticsPanel({
                     <div className="grid grid-cols-[minmax(0,1fr)_68px_64px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
                         <span>Country</span><span className="text-right">Visits</span><span className="text-right">Online</span>
                     </div>
-                    <div onWheel={handleContainedWheel} className="admin-contained-scroll max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                    <div className="admin-contained-scroll max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                         {countries.length ? countries.map((country) => (
                             <button
                                 key={country.code}
@@ -320,7 +327,7 @@ export function TrafficAnalyticsPanel({
                     <div className="grid grid-cols-[minmax(0,1fr)_70px_62px] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
                         <span>City</span><span className="text-right">Views</span><span className="text-right">Online</span>
                     </div>
-                    <div onWheel={handleContainedWheel} className="admin-contained-scroll max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                    <div className="admin-contained-scroll max-h-[250px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                         {cities.length ? cities.map((city) => (
                             <div key={`${city.countryCode}:${city.name}`} className="grid grid-cols-[minmax(0,1fr)_70px_62px] gap-2 border-t border-foreground/[0.08] px-3 py-2 text-[11px]">
                                 <div className="min-w-0">
@@ -354,24 +361,17 @@ export function TrafficAnalyticsPanel({
                 <span className="text-[9px] text-muted-foreground">{period}</span>
             </div>
             <div className="mt-3 overflow-hidden rounded-xl border border-foreground/10">
-                <div className="grid grid-cols-[minmax(105px,0.75fr)_62px_minmax(140px,1.25fr)] gap-2 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
-                    <span>Device</span><span className="text-right">Visits</span><span>Recent IP</span>
+                <div className="grid grid-cols-[minmax(120px,1fr)_80px] gap-3 bg-foreground/[0.035] px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <span>Device</span><span className="text-right">Visits</span>
                 </div>
                 {data?.devices.length ? data.devices.map((device) => (
-                    <div key={device.device} className="grid grid-cols-[minmax(105px,0.75fr)_62px_minmax(140px,1.25fr)] items-center gap-2 border-t border-foreground/[0.08] px-3 py-2 text-[10px]">
+                    <div key={device.device} className="grid grid-cols-[minmax(120px,1fr)_80px] items-center gap-3 border-t border-foreground/[0.08] px-3 py-2.5 text-[10px]">
                         <span className="inline-flex min-w-0 items-center gap-2"><DeviceIcon device={device.device} /><span className="truncate text-xs">{deviceLabel(device.device)}</span></span>
-                        <span className="text-right font-mono">{device.visits}</span>
-                        <div className="min-w-0">
-                            {device.recentIps.length ? (
-                                <p className="truncate font-mono text-[9px] text-muted-foreground" title={device.recentIps.join(', ')}>
-                                    {device.recentIps.join(' · ')}{device.recentIpCount > device.recentIps.length ? ` +${device.recentIpCount - device.recentIps.length}` : ''}
-                                </p>
-                            ) : <span className="text-[9px] text-muted-foreground">No IP in retention window</span>}
-                        </div>
+                        <span className="text-right font-mono text-xs font-semibold tabular-nums">{device.visits}</span>
                     </div>
                 )) : <p className="border-t border-foreground/[0.08] py-6 text-center text-xs text-muted-foreground">No device data yet.</p>}
             </div>
-            <p className="mt-2 text-[9px] leading-4 text-muted-foreground">IP addresses shown here are recent unique addresses only and expire from analytics after about {data?.retention.ipHours ?? 24} hours.</p>
+            <p className="mt-2 text-[9px] leading-4 text-muted-foreground">Broad device classes and visit totals for {period}.</p>
         </div>
     );
 
@@ -388,7 +388,7 @@ export function TrafficAnalyticsPanel({
                 </span>
             </div>
 
-            <div onWheel={handleContainedWheel} className="admin-contained-scroll mt-3 max-h-[360px] overflow-auto overscroll-contain rounded-xl border border-foreground/10 [scrollbar-gutter:stable]">
+            <div className="admin-contained-scroll mt-3 max-h-[360px] overflow-auto overscroll-contain rounded-xl border border-foreground/10 [scrollbar-gutter:stable]">
                 <div className="min-w-[950px]">
                     <div className="sticky top-0 z-10 grid grid-cols-[105px_minmax(220px,1.55fr)_minmax(170px,1fr)_105px_115px_minmax(135px,0.9fr)] gap-3 bg-background/95 px-3 py-2 text-[8px] uppercase tracking-[0.12em] text-muted-foreground backdrop-blur">
                         <span>Time</span><span>Page / URL</span><span>Location</span><span>Device</span><span>OS</span><span>IP address</span>
@@ -460,7 +460,7 @@ export function TrafficAnalyticsPanel({
                         <span className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">{liveVisitors} online</span>
                     </div>
 
-                    <div onWheel={handleContainedWheel} className="admin-contained-scroll mt-3 max-h-[232px] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
+                    <div className="admin-contained-scroll mt-3 max-h-[232px] space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
                         {knownLivePages.length ? knownLivePages.map((page) => (
                             <div key={page.path} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-foreground/10 bg-background/55 px-3 py-2">
                                 <div className="min-w-0">

@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     const liveCutoff = new Date(now.getTime() - LIVE_VISITOR_WINDOW_MINUTES * 60 * 1000);
     const ipCutoff = new Date(now.getTime() - TRAFFIC_IP_RETENTION_HOURS * 60 * 60 * 1000);
 
-    const [rows, liveSessions, recentActivity, recentActivityTotal, cityRows, recentIpRows] = await Promise.all([
+    const [rows, liveSessions, recentActivity, recentActivityTotal, cityRows] = await Promise.all([
         prisma.trafficMetric.findMany({
             where: { bucketStart: { gte: cutoff } },
             orderBy: { bucketStart: 'asc' },
@@ -103,12 +103,6 @@ export async function GET(request: NextRequest) {
             _count: { city: true },
             orderBy: { _count: { city: 'desc' } },
             take: 100,
-        }),
-        prisma.trafficPageEvent.findMany({
-            where: { occurredAt: { gte: ipCutoff }, ipAddress: { not: null } },
-            select: { deviceType: true, ipAddress: true, occurredAt: true },
-            orderBy: { occurredAt: 'desc' },
-            take: 500,
         }),
     ]);
 
@@ -199,25 +193,8 @@ export async function GET(request: NextRequest) {
         }))
         .sort((a, b) => b.visits - a.visits || b.pageViews - a.pageViews);
 
-    const deviceIpMap = new Map<string, string[]>();
-    for (const row of recentIpRows) {
-        if (!row.ipAddress) continue;
-        const { device } = decodePageEventDeviceContext(row.deviceType);
-        const addresses = deviceIpMap.get(device) || [];
-        if (!addresses.includes(row.ipAddress)) addresses.push(row.ipAddress);
-        deviceIpMap.set(device, addresses);
-    }
-
     const devices = [...deviceTotals.entries()]
-        .map(([device, value]) => {
-            const ips = deviceIpMap.get(device) || [];
-            return {
-                device,
-                ...value,
-                recentIps: ips.slice(0, 3),
-                recentIpCount: ips.length,
-            };
-        })
+        .map(([device, value]) => ({ device, ...value }))
         .sort((a, b) => b.visits - a.visits || b.pageViews - a.pageViews);
 
     const cities = cityRows
