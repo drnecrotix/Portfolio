@@ -8,8 +8,31 @@ import { getPublicSiteUrl } from '@/lib/social-metadata';
 export const dynamic = 'force-dynamic';
 const siteUrl = getPublicSiteUrl();
 
+function decodeTag(value: string) {
+  let decoded = value;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      break;
+    }
+  }
+  return decoded;
+}
+
 function normalizeTag(value: string) {
-  return value.trim().replace(/^#+/, '').slice(0, 60);
+  return decodeTag(value)
+    .normalize('NFKC')
+    .trim()
+    .replace(/^#+/, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, 60);
+}
+
+function comparableTag(value: string) {
+  return normalizeTag(value).toLocaleLowerCase('en');
 }
 
 async function loadTaggedGallery(tag: string) {
@@ -25,9 +48,9 @@ async function loadTaggedGallery(tag: string) {
   ]);
 
   const normalizedTag = normalizeTag(tag);
-  const needle = normalizedTag.toLocaleLowerCase('en');
+  const needle = comparableTag(normalizedTag);
   const content = normalizeGallerySettings(settings?.galleryContent);
-  const items = content.items.filter((item) => item.tags.some((itemTag) => itemTag.toLocaleLowerCase('en') === needle));
+  const items = content.items.filter((item) => item.tags.some((itemTag) => comparableTag(itemTag) === needle));
 
   return {
     siteName: settings?.siteName || 'NecrotixLab',
@@ -59,7 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ tag: stri
 }
 
 export default async function GalleryTagPage({ params }: { params: Promise<{ tag: string }> }) {
-  const { tag } = await params;
-  const { content, watermark } = await loadTaggedGallery(tag);
-  return <GalleryPageClient content={content} watermark={watermark} />;
+  const { tag: rawTag } = await params;
+  const { content, watermark, tag } = await loadTaggedGallery(rawTag);
+  return <GalleryPageClient content={content} watermark={watermark} activeTag={tag} />;
 }

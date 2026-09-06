@@ -5,6 +5,7 @@ export const TRAFFIC_SESSION_COOKIE = 'necrotix_traffic_session';
 export const TRAFFIC_SESSION_RETENTION_HOURS = 24;
 export const TRAFFIC_IP_RETENTION_HOURS = 24;
 export const TRAFFIC_METRIC_RETENTION_DAYS = 31;
+export const TRAFFIC_VISIT_TIMEOUT_MINUTES = 30;
 export const LIVE_VISITOR_WINDOW_MINUTES = 5;
 export const COUNTRY_LOOKUP_RETRY_HOURS = 6;
 
@@ -57,6 +58,39 @@ export function countryCodeFromHeaders(headers: Headers) {
     const edgeScape = headers.get('x-akamai-edgescape');
     const edgeCountry = edgeScape?.match(/(?:^|,)\s*country_code=([A-Za-z]{2})(?:,|$)/i)?.[1]?.toUpperCase();
     return edgeCountry && /^[A-Z]{2}$/.test(edgeCountry) ? edgeCountry : 'XX';
+}
+
+function decodeLocationHeader(value: string | null | undefined) {
+    if (!value?.trim()) return null;
+    const raw = value.trim().replace(/^"|"$/g, '');
+    let decoded = raw;
+    try {
+        decoded = decodeURIComponent(raw.replace(/\+/g, '%20'));
+    } catch {
+        decoded = raw;
+    }
+    const sanitized = decoded.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 80);
+    return sanitized || null;
+}
+
+export function cityFromHeaders(headers: Headers) {
+    const direct = [
+        headers.get('x-vercel-ip-city'),
+        headers.get('cloudfront-viewer-city'),
+        headers.get('x-city'),
+        headers.get('x-geo-city'),
+        headers.get('x-geoip-city'),
+        headers.get('x-forwarded-city'),
+        headers.get('x-client-city'),
+        headers.get('geoip-city'),
+    ].find((value) => value?.trim());
+
+    const directCity = decodeLocationHeader(direct);
+    if (directCity) return directCity;
+
+    const edgeScape = headers.get('x-akamai-edgescape');
+    const edgeCity = edgeScape?.match(/(?:^|,)\s*city=([^,]+)(?:,|$)/i)?.[1];
+    return decodeLocationHeader(edgeCity);
 }
 
 function normalizeIpCandidate(value: string | null | undefined) {
