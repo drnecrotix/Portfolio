@@ -167,14 +167,14 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        if (!heartbeat && currentPath) {
+        if (!heartbeat && path) {
             await prisma.$transaction([
                 sessionUpsert,
                 metricUpsert,
                 prisma.trafficPageEvent.create({
                     data: {
                         sessionHash: hash,
-                        path: currentPath,
+                        path,
                         countryCode,
                         city: currentCity,
                         ipAddress,
