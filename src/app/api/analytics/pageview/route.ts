@@ -11,8 +11,8 @@ import {
     cityFromHeaders,
     clientIpFromHeaders,
     countryCodeFromHeaders,
-    countryCodeFromIp,
     deviceFromUserAgent,
+    ipLocationFromIp,
     isLikelyBot,
     startOfUtcHour,
 } from '@/lib/traffic-analytics';
@@ -92,24 +92,30 @@ export async function POST(request: NextRequest) {
 
     const rawIpAddress = clientIpFromHeaders(request.headers);
     const ipAddress = isPublicIpAddress(rawIpAddress) ? rawIpAddress : null;
+    const ipChanged = Boolean(ipAddress && existing && existing.ipAddress !== ipAddress);
     const headerCountry = countryCodeFromHeaders(request.headers);
     const headerCity = cityFromHeaders(request.headers);
-    let countryCode = headerCountry !== 'XX' ? headerCountry : (existing?.countryCode || 'XX');
-    let countryLookupAt = existing?.countryLookupAt || null;
+
+    let countryCode = headerCountry !== 'XX'
+        ? headerCountry
+        : (ipChanged ? 'XX' : (existing?.countryCode || 'XX'));
+    let currentCity = headerCity || (ipChanged ? null : existing?.currentCity) || null;
+    let countryLookupAt = ipChanged ? null : (existing?.countryLookupAt || null);
 
     const retryBefore = new Date(now.getTime() - COUNTRY_LOOKUP_RETRY_HOURS * 60 * 60 * 1000);
-    const ipChanged = Boolean(ipAddress && existing?.ipAddress && existing.ipAddress !== ipAddress);
-    const shouldLookupCountry = countryCode === 'XX'
-        && Boolean(ipAddress)
-        && (ipChanged || !countryLookupAt || countryLookupAt < retryBefore);
+    const needsFallbackLocation = Boolean(ipAddress)
+        && !headerCity
+        && (countryCode === 'XX' || !currentCity)
+        && (!countryLookupAt || countryLookupAt < retryBefore);
 
-    if (shouldLookupCountry && ipAddress) {
-        countryCode = await countryCodeFromIp(ipAddress);
+    if (needsFallbackLocation && ipAddress) {
+        const location = await ipLocationFromIp(ipAddress);
+        if (headerCountry === 'XX' && location.countryCode !== 'XX') countryCode = location.countryCode;
+        if (location.city) currentCity = location.city;
         countryLookupAt = now;
     }
 
     const currentPath = path || existing?.currentPath || null;
-    const currentCity = headerCity || existing?.currentCity || null;
     const sessionUpsert = prisma.trafficSession.upsert({
         where: { sessionHash: hash },
         create: {
