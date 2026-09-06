@@ -402,7 +402,7 @@ model StoreProduct {
   currency              String                 @default("EUR")
   coverImageUrl         String?
   paymentProvider       StorePaymentProvider   @default(LEMON_SQUEEZY)
-  lemonSqueeSqueezyVariantId String?
+  lemonSqueezyVariantId String?
   creemProductId        String?
   status                StoreProductStatus     @default(DRAFT)
   featured              Boolean                @default(false)
