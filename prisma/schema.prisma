@@ -90,7 +90,7 @@ model Project {
   demoUrl         String?
   role             String?
   timeline        String?
-  team             String?
+  team            String?
   sortOrder       Int           @default(0)
   content         Json?
   seoTitle        String?
@@ -290,6 +290,23 @@ model TrafficSession {
   @@index([currentPath, lastSeenAt])
 }
 
+model TrafficPageEvent {
+  id          String   @id @default(cuid())
+  sessionHash String
+  path        String
+  countryCode String
+  city        String?
+  ipAddress   String?
+  deviceType  String
+  occurredAt  DateTime @default(now())
+
+  @@index([occurredAt])
+  @@index([sessionHash, occurredAt])
+  @@index([countryCode, occurredAt])
+  @@index([deviceType, occurredAt])
+  @@index([path, occurredAt])
+}
+
 model SiteSettings {
   id                    String   @id @default("default")
   siteName              String   @default("Dr Necrotix")
@@ -385,7 +402,7 @@ model StoreProduct {
   currency              String                 @default("EUR")
   coverImageUrl         String?
   paymentProvider       StorePaymentProvider   @default(LEMON_SQUEEZY)
-  lemonSqueezyVariantId String?
+  lemonSqueeSqueezyVariantId String?
   creemProductId        String?
   status                StoreProductStatus     @default(DRAFT)
   featured              Boolean                @default(false)
