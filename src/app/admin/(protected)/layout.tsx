@@ -76,7 +76,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     ] as const).filter(([, items]) => items.length > 0);
 
     return (
-        <div className="admin-shell min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
+        <div data-lenis-prevent className="admin-shell min-h-screen bg-background text-foreground lg:grid lg:grid-cols-[250px_minmax(0,1fr)]">
             <AdminMobileNavigation siteName={siteName} role={session.user.role} dashboardItem={dashboardItem} navGroups={visibleNavGroups} signOutAction={signOutAction} />
             <AdminDesktopNavigation siteName={siteName} role={session.user.role} dashboardItem={dashboardItem} navGroups={visibleNavGroups} signOutAction={signOutAction} />
 
