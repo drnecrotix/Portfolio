@@ -23,6 +23,7 @@ const contentSecurityPolicy = [
 ].join('; ');
 const securityHeaders = [
     { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+    { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'X-Frame-Options', value: 'DENY' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -34,6 +35,7 @@ const securityHeaders = [
 const nextConfig = {
     distDir: buildDistDir,
     reactStrictMode: true,
+    poweredByHeader: false,
     transpilePackages: ['three'],
     // The self-updater builds into .next-update while the live .next tree stays in
     // place. Older deployments can therefore still contain stale generated route
