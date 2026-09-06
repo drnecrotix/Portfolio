@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,8 @@ type PreviewImage = {
     src: string;
     alt: string;
 } | null;
+
+const subscribeHydration = () => () => undefined;
 
 function headingSlug(value: string) {
     return value
@@ -46,11 +48,7 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
     const [progress, setProgress] = useState(0);
     const [previewImage, setPreviewImage] = useState<PreviewImage>(null);
     const [mobileTocOpen, setMobileTocOpen] = useState(false);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const mounted = useSyncExternalStore(subscribeHydration, () => true, () => false);
 
     useEffect(() => {
         const root = articleRef.current;
