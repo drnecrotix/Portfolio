@@ -130,23 +130,43 @@ export function clientIpFromHeaders(headers: Headers) {
     return null;
 }
 
-export async function countryCodeFromIp(ipAddress: string) {
+type IpLocation = {
+    countryCode: string;
+    city: string | null;
+};
+
+export async function ipLocationFromIp(ipAddress: string): Promise<IpLocation> {
     try {
-        const response = await fetch(`https://api.country.is/${encodeURIComponent(ipAddress)}`, {
+        const response = await fetch(`https://ipwho.is/${encodeURIComponent(ipAddress)}`, {
             cache: 'no-store',
             headers: {
                 Accept: 'application/json',
-                'User-Agent': 'NecrotixLab-Traffic-Country-Lookup',
+                'User-Agent': 'NecrotixLab-Traffic-Location-Lookup',
             },
-            signal: AbortSignal.timeout(1600),
+            signal: AbortSignal.timeout(1800),
         });
-        if (!response.ok) return 'XX';
-        const payload = await response.json() as { country?: string };
-        const country = payload.country?.trim().toUpperCase();
-        return country && /^[A-Z]{2}$/.test(country) ? country : 'XX';
+        if (!response.ok) return { countryCode: 'XX', city: null };
+
+        const payload = await response.json() as {
+            success?: boolean;
+            country_code?: string;
+            city?: string;
+        };
+        if (payload.success === false) return { countryCode: 'XX', city: null };
+
+        const country = payload.country_code?.trim().toUpperCase();
+        return {
+            countryCode: country && /^[A-Z]{2}$/.test(country) ? country : 'XX',
+            city: decodeLocationHeader(payload.city),
+        };
     } catch {
-        return 'XX';
+        return { countryCode: 'XX', city: null };
     }
+}
+
+export async function countryCodeFromIp(ipAddress: string) {
+    const location = await ipLocationFromIp(ipAddress);
+    return location.countryCode;
 }
 
 export function deviceFromUserAgent(userAgent: string | null | undefined): TrafficDevice {
