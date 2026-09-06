@@ -6,7 +6,6 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { AdminThemeToggle } from '@/components/admin/AdminThemeToggle';
 import type { AdminNavGroup, AdminNavItem } from '@/components/admin/AdminMobileNavigation';
-import { handleContainedWheel } from '@/lib/contained-scroll';
 
 function isItemActive(pathname: string, href: string, items: readonly AdminNavItem[]) {
     if (pathname === href) return true;
@@ -50,10 +49,7 @@ export function AdminDesktopNavigation({
                 </div>
             </div>
 
-            <div
-                onWheel={handleContainedWheel}
-                className="admin-sidebar-scroll min-h-0 flex-1 touch-pan-y overflow-y-scroll overscroll-y-contain px-4 pb-4 [scrollbar-gutter:stable]"
-            >
+            <div className="admin-sidebar-scroll min-h-0 flex-1 touch-pan-y overflow-y-scroll overscroll-y-contain px-4 pb-4 [scrollbar-gutter:stable]">
                 <nav className="grid gap-2 py-2">
                     <Link href={dashboardItem[1]} onClick={() => setOpenGroup(null)} className={linkClass(pathname === dashboardItem[1])}>{dashboardItem[0]}</Link>
 
