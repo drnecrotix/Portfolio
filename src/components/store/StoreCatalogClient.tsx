@@ -53,17 +53,8 @@ export function StoreCatalogClient({ products, categories }: { products: StoreCa
 
     return (
         <div className="min-w-0 max-w-full overflow-x-clip">
-            <section className="mt-12 min-w-0 max-w-full sm:mt-14">
-                <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="min-w-0">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:text-[10px]">Catalog</p>
-                        <h2 className="mt-2 break-words text-2xl font-black tracking-[-0.035em] sm:text-3xl">Browse the collection</h2>
-                        <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">A focused catalog of digital releases without countdowns, popups or artificial urgency.</p>
-                    </div>
-                    <p className="shrink-0 text-xs font-semibold text-muted-foreground">{visibleProducts.length} of {products.length} shown</p>
-                </div>
-
-                <div className="mt-6 rounded-[1.35rem] border border-foreground/10 bg-foreground/[0.018] p-2.5 shadow-[0_18px_55px_rgba(0,0,0,0.08)] sm:rounded-[1.7rem] sm:p-3">
+            <section className="min-w-0 max-w-full" aria-label="Store controls">
+                <div className="rounded-[1.35rem] border border-foreground/10 bg-foreground/[0.018] p-2.5 shadow-[0_18px_55px_rgba(0,0,0,0.08)] sm:rounded-[1.7rem] sm:p-3">
                     <div className="flex min-w-0 flex-col gap-2.5 lg:flex-row lg:items-center">
                         <label className="relative min-w-0 flex-1">
                             <span className="sr-only">Search the Store</span>
@@ -108,13 +99,12 @@ export function StoreCatalogClient({ products, categories }: { products: StoreCa
 
             {visibleProducts.length ? (
                 <section className="mt-7 grid min-w-0 max-w-full grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-label="Digital products">
-                    {visibleProducts.map((product, index) => {
+                    {visibleProducts.map((product) => {
                         const free = product.priceCents === 0;
-                        const spotlight = product.featured && index === 0 && visibleProducts.length >= 3;
                         return (
-                            <article key={product.id} className={`group min-w-0 max-w-full overflow-hidden rounded-[1.35rem] border border-foreground/8 bg-foreground/[0.012] p-2 transition duration-300 hover:border-foreground/15 hover:bg-foreground/[0.022] sm:rounded-[1.6rem] ${spotlight ? 'sm:col-span-2 lg:col-span-2' : ''}`}>
+                            <article key={product.id} className="group min-w-0 max-w-full overflow-hidden rounded-[1.35rem] border border-foreground/8 bg-foreground/[0.012] p-2 transition duration-300 hover:border-foreground/15 hover:bg-foreground/[0.022] sm:rounded-[1.6rem]">
                                 <Link href={`/store/${product.slug}`} className="block min-w-0 max-w-full">
-                                    <div className={`relative w-full max-w-full overflow-hidden rounded-[1rem] border border-foreground/8 bg-foreground/[0.035] shadow-[0_14px_40px_rgba(0,0,0,0.10)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_22px_60px_rgba(0,0,0,0.16)] sm:rounded-[1.25rem] ${spotlight ? 'aspect-[16/9]' : 'aspect-square'}`}>
+                                    <div className="relative aspect-square w-full max-w-full overflow-hidden rounded-[1rem] border border-foreground/8 bg-foreground/[0.035] shadow-[0_14px_40px_rgba(0,0,0,0.10)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_22px_60px_rgba(0,0,0,0.16)] sm:rounded-[1.25rem]">
                                         {product.coverImageUrl ? (
                                             <div className="absolute inset-0 bg-cover bg-center transition-transform duration-500 ease-out group-hover:scale-[1.03]" style={{ backgroundImage: `url(${JSON.stringify(product.coverImageUrl).slice(1, -1)})` }} />
                                         ) : (
@@ -135,14 +125,14 @@ export function StoreCatalogClient({ products, categories }: { products: StoreCa
                                     <div className="flex min-w-0 items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
                                             {product.category ? <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{product.category}</p> : <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Digital product</p>}
-                                            <Link href={`/store/${product.slug}`} className={`mt-1.5 block min-w-0 break-words line-clamp-2 font-bold leading-tight tracking-[-0.02em] transition hover:underline ${spotlight ? 'text-lg sm:text-xl' : 'text-[15px]'}`}>{product.title}</Link>
+                                            <Link href={`/store/${product.slug}`} className="mt-1.5 block min-w-0 break-words line-clamp-2 text-[15px] font-bold leading-tight tracking-[-0.02em] transition hover:underline">{product.title}</Link>
                                         </div>
                                         <div className="min-w-0 shrink-0 text-right">
                                             {product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents ? <p className="text-[11px] text-muted-foreground line-through">{money(product.compareAtPriceCents, product.currency)}</p> : null}
                                             <p className="text-sm font-black">{free ? 'Free' : money(product.priceCents, product.currency)}</p>
                                         </div>
                                     </div>
-                                    <p className={`mt-2 break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere] ${spotlight ? 'line-clamp-3 max-w-2xl' : 'line-clamp-2'}`}>{product.excerpt || product.description}</p>
+                                    <p className="mt-2 break-words line-clamp-2 text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">{product.excerpt || product.description}</p>
                                     <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-foreground/8 pt-3 text-[11px] text-muted-foreground">
                                         <span className="inline-flex min-w-0 items-center gap-1.5"><Download className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Instant digital delivery</span></span>
                                         <span className="shrink-0">{product.fileCount} {product.fileCount === 1 ? 'file' : 'files'}</span>
