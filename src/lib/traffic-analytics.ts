@@ -59,6 +59,39 @@ export function countryCodeFromHeaders(headers: Headers) {
     return edgeCountry && /^[A-Z]{2}$/.test(edgeCountry) ? edgeCountry : 'XX';
 }
 
+function decodeLocationHeader(value: string | null | undefined) {
+    if (!value?.trim()) return null;
+    const raw = value.trim().replace(/^"|"$/g, '');
+    let decoded = raw;
+    try {
+        decoded = decodeURIComponent(raw.replace(/\+/g, '%20'));
+    } catch {
+        decoded = raw;
+    }
+    const sanitized = decoded.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 80);
+    return sanitized || null;
+}
+
+export function cityFromHeaders(headers: Headers) {
+    const direct = [
+        headers.get('x-vercel-ip-city'),
+        headers.get('cloudfront-viewer-city'),
+        headers.get('x-city'),
+        headers.get('x-geo-city'),
+        headers.get('x-geoip-city'),
+        headers.get('x-forwarded-city'),
+        headers.get('x-client-city'),
+        headers.get('geoip-city'),
+    ].find((value) => value?.trim());
+
+    const directCity = decodeLocationHeader(direct);
+    if (directCity) return directCity;
+
+    const edgeScape = headers.get('x-akamai-edgescape');
+    const edgeCity = edgeScape?.match(/(?:^|,)\s*city=([^,]+)(?:,|$)/i)?.[1];
+    return decodeLocationHeader(edgeCity);
+}
+
 function normalizeIpCandidate(value: string | null | undefined) {
     if (!value) return null;
     let candidate = value.trim().replace(/^for=/i, '').replace(/^"|"$/g, '');
