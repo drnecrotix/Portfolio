@@ -4,8 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, Check, Copy, Eye, Heart, Languages } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, Clock3, Copy, Eye, Heart, Languages, Share2, X } from 'lucide-react';
+import { EditorialArticleContent } from '@/components/blog/EditorialArticleContent';
 import type { CmsPostContent } from '@/lib/cms-posts';
+import { estimateReadingMinutes } from '@/lib/reading-time';
+import { cn } from '@/lib/utils';
 
 export type RelatedBlogPost = {
     slug: string;
@@ -101,6 +104,7 @@ export function BlogArticleFrame({
     const [displayExcerpt, setDisplayExcerpt] = useState(excerpt);
     const [displayContent, setDisplayContent] = useState<CmsPostContent>(initialContent);
     const [languageError, setLanguageError] = useState<string | null>(null);
+    const [previewFeatured, setPreviewFeatured] = useState(false);
 
     useEffect(() => {
         if (viewRecordedRef.current) return;
@@ -131,10 +135,36 @@ export function BlogArticleFrame({
             });
     }, [postId]);
 
+    useEffect(() => {
+        if (!previewFeatured) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setPreviewFeatured(false);
+        };
+        document.addEventListener('keydown', onKeyDown);
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.removeEventListener('keydown', onKeyDown);
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [previewFeatured]);
+
     const copyLink = async () => {
         await navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1800);
+    };
+
+    const sharePublication = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: displayTitle, url: window.location.href });
+                return;
+            } catch (error) {
+                if (error instanceof DOMException && error.name === 'AbortError') return;
+            }
+        }
+        await copyLink();
     };
 
     const switchLanguage = async (locale: 'en' | 'bg') => {
@@ -188,20 +218,24 @@ export function BlogArticleFrame({
     };
 
     const dateLabel = new Date(publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    const readingMinutes = estimateReadingMinutes(postType === 'POETRY' ? displayContent.text ?? '' : displayContent.html ?? '', postType === 'POETRY' ? 180 : 220);
     const showLanguageSwitch = availableLocales.length > 1;
+    const compactPublication = postType === 'NOTE' || postType === 'THOUGHT';
 
     return (
         <main className="min-h-screen bg-background pb-24 pt-28 text-foreground sm:pt-32">
-            <header className="container mx-auto max-w-5xl px-6">
-                <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.48, ease: 'easeOut' }} className="mx-auto max-w-3xl">
+            <header className="container mx-auto max-w-6xl px-6">
+                <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.48, ease: 'easeOut' }} className={cn('mx-auto', compactPublication ? 'max-w-2xl' : 'max-w-3xl')}>
                     <button onClick={goBack} className="group mb-10 inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground">
                         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
                         <span>Back to journal</span>
                     </button>
 
-                    <div className="mb-5 flex flex-wrap items-center gap-3 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
-                        <span className="text-fuchsia-400 dark:text-fuchsia-300">Journal</span>
-                        <span className="h-px w-5 bg-foreground/20" />
+                    <div className="mb-5 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        <span className="text-fuchsia-500 dark:text-fuchsia-300">Journal</span>
+                        <span aria-hidden="true">/</span>
+                        <span>{typeLabel}</span>
+                        <span aria-hidden="true">/</span>
                         <span>{categoryLabel}</span>
                     </div>
 
@@ -213,7 +247,7 @@ export function BlogArticleFrame({
                             exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
                             transition={{ duration: 0.22, ease: 'easeOut' }}
                         >
-                            <h1 className="text-4xl font-black leading-[1.04] tracking-[-0.035em] sm:text-5xl lg:text-6xl">{displayTitle}</h1>
+                            <h1 className={cn('font-black leading-[1.04] tracking-[-0.04em]', compactPublication ? 'text-4xl sm:text-5xl' : 'text-4xl sm:text-5xl lg:text-6xl')}>{displayTitle}</h1>
                             {displayExcerpt && <p className="mt-7 max-w-2xl text-lg font-light leading-8 text-muted-foreground sm:text-xl">{displayExcerpt}</p>}
                         </motion.div>
                     </AnimatePresence>
@@ -223,64 +257,66 @@ export function BlogArticleFrame({
                         <span aria-hidden="true">·</span>
                         <time dateTime={publishedAt}>{dateLabel}</time>
                         <span aria-hidden="true">·</span>
-                        <span>{typeLabel}</span>
+                        <span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5" /> {readingMinutes} min read</span>
                     </div>
                 </motion.div>
             </header>
 
-            {featuredImage && (
-                <div className="container mx-auto mt-12 max-w-5xl px-6">
-                    <motion.figure initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }} className="overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.025]">
+            {featuredImage && !compactPublication && (
+                <div className="container mx-auto mt-12 max-w-6xl px-6">
+                    <motion.button type="button" onClick={() => setPreviewFeatured(true)} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }} className="group block w-full overflow-hidden rounded-3xl border border-foreground/10 bg-foreground/[0.025] text-left" aria-label="Open featured image">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={featuredImage} alt={displayTitle} className="max-h-[38rem] w-full object-cover" />
-                    </motion.figure>
+                        <img src={featuredImage} alt={displayTitle} className="max-h-[42rem] w-full object-cover transition duration-700 group-hover:scale-[1.012]" />
+                    </motion.button>
                 </div>
             )}
 
-            <div className="container mx-auto mt-10 max-w-5xl px-6">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.16 }} className="mx-auto flex max-w-3xl items-center justify-center gap-5 border-y border-foreground/10 py-4 sm:justify-between">
-                    <span className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:block">A note from the journal</span>
-                    <div className="flex w-full flex-col items-center gap-2 sm:w-auto sm:flex-row sm:justify-end">
-                        <div className="flex w-full flex-nowrap items-center justify-center gap-2 sm:w-auto">
-                            <motion.button type="button" onClick={() => void toggleLike()} disabled={liking} aria-pressed={liked} aria-label={liked ? 'Unlike this publication' : 'Like this publication'} whileTap={{ scale: 0.9 }} className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-medium transition ${liked ? 'border-rose-500/25 bg-rose-500/10 text-rose-500' : 'border-foreground/10 bg-foreground/[0.03] text-muted-foreground hover:text-foreground'}`}>
-                                <Heart className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-                                <span>{formatCompactCount(likeCount)}</span>
-                            </motion.button>
-                            <div className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs font-medium text-muted-foreground" title={`${viewCount.toLocaleString()} views`} aria-label={`${viewCount.toLocaleString()} views`}>
-                                <Eye className="h-4 w-4" />
-                                <span>{formatCompactCount(viewCount)}</span>
-                            </div>
-                            <button onClick={copyLink} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground">
-                                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                <span>{copied ? 'Copied' : 'Share'}</span>
-                            </button>
+            <div className="container mx-auto mt-9 max-w-6xl px-6">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.16 }} className={cn('mx-auto flex flex-wrap items-center justify-between gap-3 border-y border-foreground/10 py-3.5', compactPublication ? 'max-w-2xl' : 'max-w-3xl')}>
+                    <div className="flex items-center gap-2">
+                        <motion.button type="button" onClick={() => void toggleLike()} disabled={liking} aria-pressed={liked} aria-label={liked ? 'Unlike this publication' : 'Like this publication'} whileTap={{ scale: 0.92 }} className={cn('inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-medium transition', liked ? 'border-rose-500/25 bg-rose-500/10 text-rose-500' : 'border-foreground/10 bg-foreground/[0.03] text-muted-foreground hover:text-foreground')}>
+                            <Heart className={cn('h-4 w-4', liked && 'fill-current')} />
+                            <span>{formatCompactCount(likeCount)}</span>
+                        </motion.button>
+                        <div className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs font-medium text-muted-foreground" title={`${viewCount.toLocaleString()} views`} aria-label={`${viewCount.toLocaleString()} views`}>
+                            <Eye className="h-4 w-4" />
+                            <span>{formatCompactCount(viewCount)}</span>
                         </div>
-                        {showLanguageSwitch && (
-                            <motion.div layout className="inline-flex h-9 items-center gap-1 rounded-full border border-foreground/10 bg-foreground/[0.03] p-1" aria-label="Publication language">
-                                <Languages className={`ml-2 h-4 w-4 ${switchingLocale ? 'animate-spin text-fuchsia-500' : 'text-muted-foreground'}`} />
-                                {(['en', 'bg'] as const).filter((locale) => availableLocales.includes(locale)).map((locale) => (
-                                    <motion.button
-                                        layout
-                                        key={locale}
-                                        type="button"
-                                        onClick={() => void switchLanguage(locale)}
-                                        disabled={switchingLocale || locale === activeLocale}
-                                        aria-pressed={locale === activeLocale}
-                                        whileTap={{ scale: 0.92 }}
-                                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${locale === activeLocale ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                                    >
-                                        {locale}
-                                    </motion.button>
-                                ))}
-                            </motion.div>
-                        )}
+                        <button type="button" onClick={() => void sharePublication()} className="inline-flex h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground">
+                            {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                            <span>{copied ? 'Copied' : 'Share'}</span>
+                        </button>
+                        <button type="button" onClick={() => void copyLink()} className="hidden h-9 items-center gap-2 rounded-full border border-foreground/10 bg-foreground/[0.03] px-3 text-xs text-muted-foreground transition hover:text-foreground sm:inline-flex" aria-label="Copy publication link">
+                            <Copy className="h-4 w-4" />
+                            <span>Copy link</span>
+                        </button>
                     </div>
+
+                    {showLanguageSwitch && (
+                        <motion.div layout className="inline-flex h-9 items-center gap-1 rounded-full border border-foreground/10 bg-foreground/[0.03] p-1" aria-label="Publication language">
+                            <Languages className={cn('ml-2 h-4 w-4', switchingLocale ? 'animate-spin text-fuchsia-500' : 'text-muted-foreground')} />
+                            {(['en', 'bg'] as const).filter((locale) => availableLocales.includes(locale)).map((locale) => (
+                                <motion.button
+                                    layout
+                                    key={locale}
+                                    type="button"
+                                    onClick={() => void switchLanguage(locale)}
+                                    disabled={switchingLocale || locale === activeLocale}
+                                    aria-pressed={locale === activeLocale}
+                                    whileTap={{ scale: 0.92 }}
+                                    className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition', locale === activeLocale ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}
+                                >
+                                    {locale}
+                                </motion.button>
+                            ))}
+                        </motion.div>
+                    )}
                 </motion.div>
-                {languageError && <p className="mx-auto mt-3 max-w-3xl text-right text-xs text-rose-500">{languageError}</p>}
+                {languageError && <p className={cn('mx-auto mt-3 text-right text-xs text-rose-500', compactPublication ? 'max-w-2xl' : 'max-w-3xl')}>{languageError}</p>}
             </div>
 
-            <div className="container mx-auto mt-14 max-w-5xl px-6">
-                <motion.article initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.52, delay: 0.2 }} className="mx-auto min-w-0 max-w-3xl">
+            <div className="container mx-auto mt-12 max-w-6xl px-6">
+                <motion.article initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.52, delay: 0.2 }} className="mx-auto min-w-0">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={`body-${activeLocale}`}
@@ -292,50 +328,66 @@ export function BlogArticleFrame({
                             {postType === 'POETRY' ? (
                                 <div className="mx-auto max-w-2xl whitespace-pre-wrap font-serif text-lg leading-9 text-foreground md:text-xl md:leading-10">{displayContent.text ?? ''}</div>
                             ) : (
-                                <div
-                                    className="prose prose-lg max-w-none prose-headings:scroll-mt-32 prose-headings:font-black prose-headings:tracking-tight prose-h2:mb-5 prose-h2:mt-14 prose-h2:text-3xl prose-h3:mt-10 prose-p:my-6 prose-p:leading-8 prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-fuchsia-600 prose-a:decoration-fuchsia-500/30 prose-a:underline-offset-4 prose-hr:my-14 prose-hr:border-foreground/10 prose-blockquote:my-12 prose-blockquote:rounded-r-2xl prose-blockquote:border-l-4 prose-blockquote:border-fuchsia-500/70 prose-blockquote:bg-foreground/[0.025] prose-blockquote:px-7 prose-blockquote:py-5 prose-blockquote:text-xl prose-blockquote:font-medium prose-blockquote:italic prose-blockquote:leading-9 prose-blockquote:text-foreground prose-blockquote:[quotes:none] prose-blockquote:before:content-none prose-blockquote:after:content-none prose-img:my-12 prose-img:rounded-2xl prose-img:border prose-img:border-foreground/10 prose-li:text-muted-foreground dark:prose-invert dark:prose-a:text-fuchsia-300 [&>p:first-of-type]:text-[1.08rem] [&>p:first-of-type]:leading-8 [&>p:first-of-type]:text-foreground/85"
-                                    dangerouslySetInnerHTML={{ __html: displayContent.html ?? '' }}
-                                />
+                                <EditorialArticleContent html={displayContent.html ?? ''} postType={postType} />
                             )}
                         </motion.div>
                     </AnimatePresence>
 
                     {tags.length > 0 && (
-                        <section className="mt-16 flex flex-wrap gap-x-4 gap-y-2 border-t border-foreground/10 pt-7">
-                            {tags.map((tag) => <Link key={tag} href={`/blog?q=${encodeURIComponent(tag)}`} className="font-mono text-xs text-muted-foreground transition hover:text-foreground">#{tag.replace(/^#/, '')}</Link>)}
+                        <section className={cn('mx-auto mt-16 flex flex-wrap gap-2 border-t border-foreground/10 pt-7', compactPublication ? 'max-w-2xl' : 'max-w-3xl')} aria-label="Publication tags">
+                            {tags.map((tag) => {
+                                const cleanTag = tag.replace(/^#/, '');
+                                return <Link key={tag} href={`/blog?tag=${encodeURIComponent(cleanTag)}`} className="rounded-full border border-foreground/10 px-3 py-1.5 font-mono text-[10px] text-muted-foreground transition hover:border-fuchsia-500/30 hover:text-foreground">#{cleanTag}</Link>;
+                            })}
                         </section>
                     )}
                 </motion.article>
             </div>
 
-            {comments && <div className="container mx-auto mt-16 max-w-5xl px-6"><div className="mx-auto max-w-3xl">{comments}</div></div>}
+            {comments && <div className="container mx-auto mt-16 max-w-6xl px-6"><div className="mx-auto max-w-3xl">{comments}</div></div>}
 
             {relatedPosts.length > 0 && (
-                <section className="container mx-auto mt-20 max-w-5xl border-t border-foreground/10 px-6 pt-12">
-                    <div className="mx-auto max-w-3xl">
-                        <div className="mb-8 flex items-center justify-between gap-5">
+                <section className="container mx-auto mt-20 max-w-6xl border-t border-foreground/10 px-6 pt-12">
+                    <div className="mx-auto max-w-5xl">
+                        <div className="mb-7 flex items-end justify-between gap-5">
                             <div>
                                 <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Keep reading</p>
-                                <h3 className="mt-2 text-xl font-bold">More from the journal</h3>
+                                <h3 className="mt-2 text-2xl font-bold tracking-tight">More from the journal</h3>
                             </div>
                             <Link href="/blog" className="text-sm text-muted-foreground transition hover:text-foreground">View all</Link>
                         </div>
-                        <div className="divide-y divide-foreground/10 border-y border-foreground/10">
+                        <div className="grid gap-4 md:grid-cols-2">
                             {relatedPosts.map((post, index) => (
-                                <motion.article key={post.slug} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.4, delay: index * 0.06 }}>
-                                    <Link href={`/blog/${post.slug}`} className="group grid gap-4 py-6 sm:grid-cols-[1fr_auto] sm:items-center">
-                                        <div>
-                                            <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{post.category} · {new Date(post.date).toLocaleDateString()}</div>
-                                            <h4 className="text-xl font-bold transition group-hover:text-fuchsia-500 dark:group-hover:text-fuchsia-300">{post.title}</h4>
-                                            {post.excerpt && <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">{post.excerpt}</p>}
+                                <motion.article key={post.slug} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.4, delay: index * 0.06 }} className="overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
+                                    <Link href={`/blog/${post.slug}`} className="group grid h-full grid-cols-[110px_minmax(0,1fr)] sm:grid-cols-[140px_minmax(0,1fr)]">
+                                        <div className="min-h-36 overflow-hidden bg-foreground/[0.035]">
+                                            {post.image ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={post.image} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
+                                            ) : <div className="grid h-full place-items-center font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/40">Journal</div>}
                                         </div>
-                                        <span className="hidden text-lg text-muted-foreground transition group-hover:translate-x-1 group-hover:text-foreground sm:block">↗</span>
+                                        <div className="flex min-w-0 flex-col justify-between p-4 sm:p-5">
+                                            <div>
+                                                <div className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">{post.category} · {new Date(post.date).toLocaleDateString()}</div>
+                                                <h4 className="mt-2 line-clamp-3 text-lg font-bold leading-snug transition group-hover:text-fuchsia-500 dark:group-hover:text-fuchsia-300">{post.title}</h4>
+                                                {post.excerpt && <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">{post.excerpt}</p>}
+                                            </div>
+                                            <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-foreground">Read <ArrowUpRight className="size-3.5 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" /></span>
+                                        </div>
                                     </Link>
                                 </motion.article>
                             ))}
                         </div>
                     </div>
                 </section>
+            )}
+
+            {previewFeatured && featuredImage && (
+                <div role="dialog" aria-modal="true" aria-label="Featured image preview" onClick={() => setPreviewFeatured(false)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5 backdrop-blur-sm">
+                    <button type="button" onClick={() => setPreviewFeatured(false)} className="absolute right-5 top-5 grid size-10 place-items-center rounded-full border border-white/15 bg-black/50 text-white" aria-label="Close featured image preview"><X className="size-5" /></button>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={featuredImage} alt={displayTitle} onClick={(event) => event.stopPropagation()} className="max-h-[90vh] max-w-[94vw] rounded-xl object-contain" />
+                </div>
             )}
         </main>
     );
