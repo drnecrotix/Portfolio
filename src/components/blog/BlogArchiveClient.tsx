@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, SortAsc, SortDesc, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, SortAsc, SortDesc, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import FlowingMenu from '@/components/ui/flowing-menu';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,11 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
     const [selectedTag, setSelectedTag] = useState(() => searchParams.get('tag') ?? 'all');
     const [sortBy, setSortBy] = useState<'latest' | 'oldest'>('latest');
     const [currentPage, setCurrentPage] = useState(1);
+    const [canScrollTagsLeft, setCanScrollTagsLeft] = useState(false);
+    const [canScrollTagsRight, setCanScrollTagsRight] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
+    const tagRailRef = useRef<HTMLDivElement>(null);
+    const activeTagRef = useRef<HTMLButtonElement>(null);
 
     const categories = useMemo(() => {
         const bySlug = new Map<string, { label: string; count: number }>();
@@ -99,6 +103,35 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
         listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
+    const updateTagRailState = () => {
+        const rail = tagRailRef.current;
+        if (!rail) return;
+        const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
+        setCanScrollTagsLeft(rail.scrollLeft > 4);
+        setCanScrollTagsRight(rail.scrollLeft < maxScroll - 4);
+    };
+
+    const scrollTags = (direction: -1 | 1) => {
+        const rail = tagRailRef.current;
+        if (!rail) return;
+        rail.scrollBy({ left: direction * Math.max(240, rail.clientWidth * 0.72), behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        const rail = tagRailRef.current;
+        if (!rail) return;
+        updateTagRailState();
+        const onResize = () => updateTagRailState();
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, [tags.length]);
+
+    useEffect(() => {
+        activeTagRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        const timer = window.setTimeout(updateTagRailState, 260);
+        return () => window.clearTimeout(timer);
+    }, [selectedTag]);
+
     return (
         <main className="min-h-screen bg-background text-foreground selection:bg-primary/30">
             <section className="px-4 pb-24 pt-24 sm:px-6 sm:pt-28 md:px-12 md:pt-32 lg:px-10">
@@ -115,34 +148,68 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
                         </div>
                     </header>
 
-                    <nav className="-mx-4 overflow-x-auto border-b border-foreground/10 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0" aria-label="Publication tags">
-                        <div className="flex w-max min-w-full gap-7 py-5 md:flex-wrap md:gap-x-9 md:gap-y-3">
+                    <div className="relative border-b border-foreground/10" aria-label="Publication tags">
+                        <div className="flex items-stretch gap-1">
                             <button
                                 type="button"
-                                onClick={() => { setSelectedTag('all'); resetPage(); }}
-                                className={cn('group relative flex shrink-0 items-start gap-1.5 py-1 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:text-xs', selectedTag === 'all' ? 'text-primary' : 'text-muted-foreground/55 hover:text-foreground')}
+                                onClick={() => scrollTags(-1)}
+                                disabled={!canScrollTagsLeft}
+                                aria-label="Scroll tags left"
+                                className="my-3 grid size-9 shrink-0 place-items-center rounded-full border border-foreground/10 bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition hover:border-foreground/20 hover:text-foreground disabled:pointer-events-none disabled:opacity-20"
                             >
-                                <span>All Publications</span>
-                                <span className={cn('text-[10px] tabular-nums', selectedTag === 'all' ? 'text-primary/70' : 'text-muted-foreground/35')}>{posts.length}</span>
-                                {selectedTag === 'all' && <motion.span layoutId="active-blog-tag" className="absolute -bottom-5 left-0 right-0 h-px bg-primary" />}
+                                <ChevronLeft className="size-4" />
                             </button>
-                            {tags.map(({ tag, count }) => {
-                                const active = selectedTag.toLocaleLowerCase() === tag.toLocaleLowerCase();
-                                return (
-                                    <button
-                                        key={tag}
-                                        type="button"
-                                        onClick={() => { setSelectedTag(tag); resetPage(); }}
-                                        className={cn('group relative flex shrink-0 items-start gap-1.5 py-1 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:text-xs', active ? 'text-primary' : 'text-muted-foreground/55 hover:text-foreground')}
-                                    >
-                                        <span>#{tag}</span>
-                                        <span className={cn('text-[10px] tabular-nums', active ? 'text-primary/70' : 'text-muted-foreground/35')}>{count}</span>
-                                        {active && <motion.span layoutId="active-blog-tag" className="absolute -bottom-5 left-0 right-0 h-px bg-primary" />}
-                                    </button>
-                                );
-                            })}
+
+                            <div className="relative min-w-0 flex-1">
+                                {canScrollTagsLeft && <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-background to-transparent" aria-hidden="true" />}
+                                {canScrollTagsRight && <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background to-transparent" aria-hidden="true" />}
+                                <nav
+                                    ref={tagRailRef}
+                                    onScroll={updateTagRailState}
+                                    className="scrollbar-none overflow-x-auto overscroll-x-contain scroll-smooth px-2"
+                                >
+                                    <div className="flex w-max min-w-full gap-7 py-5 md:gap-9">
+                                        <button
+                                            ref={selectedTag === 'all' ? activeTagRef : undefined}
+                                            type="button"
+                                            onClick={() => { setSelectedTag('all'); resetPage(); }}
+                                            className={cn('group relative flex shrink-0 items-start gap-1.5 py-1 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:text-xs', selectedTag === 'all' ? 'text-primary' : 'text-muted-foreground/55 hover:text-foreground')}
+                                        >
+                                            <span>All Publications</span>
+                                            <span className={cn('text-[10px] tabular-nums', selectedTag === 'all' ? 'text-primary/70' : 'text-muted-foreground/35')}>{posts.length}</span>
+                                            {selectedTag === 'all' && <motion.span layoutId="active-blog-tag" className="absolute -bottom-5 left-0 right-0 h-px bg-primary" />}
+                                        </button>
+                                        {tags.map(({ tag, count }) => {
+                                            const active = selectedTag.toLocaleLowerCase() === tag.toLocaleLowerCase();
+                                            return (
+                                                <button
+                                                    ref={active ? activeTagRef : undefined}
+                                                    key={tag}
+                                                    type="button"
+                                                    onClick={() => { setSelectedTag(tag); resetPage(); }}
+                                                    className={cn('group relative flex shrink-0 items-start gap-1.5 py-1 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:text-xs', active ? 'text-primary' : 'text-muted-foreground/55 hover:text-foreground')}
+                                                >
+                                                    <span>#{tag}</span>
+                                                    <span className={cn('text-[10px] tabular-nums', active ? 'text-primary/70' : 'text-muted-foreground/35')}>{count}</span>
+                                                    {active && <motion.span layoutId="active-blog-tag" className="absolute -bottom-5 left-0 right-0 h-px bg-primary" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </nav>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => scrollTags(1)}
+                                disabled={!canScrollTagsRight}
+                                aria-label="Scroll tags right"
+                                className="my-3 grid size-9 shrink-0 place-items-center rounded-full border border-foreground/10 bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition hover:border-foreground/20 hover:text-foreground disabled:pointer-events-none disabled:opacity-20"
+                            >
+                                <ChevronRight className="size-4" />
+                            </button>
                         </div>
-                    </nav>
+                    </div>
 
                     <div className="grid gap-3 border-b border-foreground/10 py-5 lg:grid-cols-[minmax(260px,1fr)_auto_auto] lg:items-center">
                         <label className="group flex min-w-0 items-center gap-3 rounded-xl border border-foreground/10 bg-foreground/[0.025] px-4 py-2.5 focus-within:border-primary/40">
@@ -175,7 +242,14 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
                     </div>
 
                     <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 py-4 text-xs text-muted-foreground">
-                        <p><span className="font-medium text-foreground">{filteredPosts.length}</span> {filteredPosts.length === 1 ? 'publication' : 'publications'} in this view</p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p><span className="font-medium text-foreground">{filteredPosts.length}</span> {filteredPosts.length === 1 ? 'publication' : 'publications'} in this view</p>
+                            {selectedTag !== 'all' && (
+                                <button type="button" onClick={() => { setSelectedTag('all'); resetPage(); }} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1 font-mono text-[10px] text-primary transition hover:bg-primary/[0.1]" aria-label={`Clear ${selectedTag} tag filter`}>
+                                    #{selectedTag}<X className="size-3" />
+                                </button>
+                            )}
+                        </div>
                         {hasFilters && <button type="button" onClick={clearFilters} className="inline-flex items-center gap-2 font-medium text-foreground transition hover:text-primary"><X className="size-3.5" /> Clear filters</button>}
                     </div>
 
