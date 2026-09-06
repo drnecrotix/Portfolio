@@ -162,8 +162,18 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
 
     return (
         <>
-            <div className="pointer-events-none fixed inset-x-0 top-0 z-[80] h-[2px] bg-transparent" aria-hidden="true">
-                <div className="h-full bg-fuchsia-500 transition-[width] duration-75" style={{ width: `${progress}%` }} />
+            <div
+                className="pointer-events-none fixed inset-x-0 top-0 z-[140] h-[3px] bg-foreground/10 shadow-[0_1px_0_rgba(255,255,255,0.03)]"
+                role="progressbar"
+                aria-label="Reading progress"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress)}
+            >
+                <div
+                    className="h-full bg-gradient-to-r from-fuchsia-500 via-primary to-violet-400 transition-[width] duration-100 ease-out"
+                    style={{ width: `${progress}%` }}
+                />
             </div>
 
             {showToc && (
@@ -192,7 +202,7 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
                         'prose-p:my-6 prose-p:leading-8 prose-p:text-muted-foreground prose-strong:text-foreground',
                         'prose-a:text-fuchsia-600 prose-a:decoration-fuchsia-500/30 prose-a:underline-offset-4 dark:prose-a:text-fuchsia-300',
                         'prose-hr:my-14 prose-hr:border-foreground/10',
-                        'prose-blockquote:my-10 prose-blockquote:rounded-r-xl prose-blockquote:border-l-2 prose-blockquote:border-fuchsia-500/60 prose-blockquote:bg-foreground/[0.025] prose-blockquote:px-6 prose-blockquote:py-4 prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-foreground/90 prose-blockquote:[quotes:none] prose-blockquote:before:content-none prose-blockquote:after:content-none [&_blockquote_p]:my-0 [&_blockquote_p]:text-inherit [&_blockquote_p]:leading-8',
+                        "prose-blockquote:relative prose-blockquote:my-10 prose-blockquote:overflow-hidden prose-blockquote:rounded-2xl prose-blockquote:border prose-blockquote:border-foreground/10 prose-blockquote:bg-gradient-to-br prose-blockquote:from-fuchsia-500/[0.07] prose-blockquote:via-foreground/[0.025] prose-blockquote:to-transparent prose-blockquote:px-7 prose-blockquote:py-6 prose-blockquote:text-foreground/90 prose-blockquote:shadow-[0_18px_60px_-32px_rgba(0,0,0,0.55)] prose-blockquote:[quotes:none] prose-blockquote:before:absolute prose-blockquote:before:right-5 prose-blockquote:before:top-1 prose-blockquote:before:font-serif prose-blockquote:before:text-7xl prose-blockquote:before:font-black prose-blockquote:before:leading-none prose-blockquote:before:text-fuchsia-500/15 prose-blockquote:before:content-['“'] prose-blockquote:after:absolute prose-blockquote:after:inset-y-0 prose-blockquote:after:left-0 prose-blockquote:after:w-1 prose-blockquote:after:bg-gradient-to-b prose-blockquote:after:from-fuchsia-500/90 prose-blockquote:after:via-primary prose-blockquote:after:to-violet-500/80 [&_blockquote_p]:relative [&_blockquote_p]:z-[1] [&_blockquote_p]:text-inherit [&_blockquote_p]:leading-8 [&_blockquote_p:first-child]:mt-0 [&_blockquote_p:last-child]:mb-0",
                         'prose-code:rounded prose-code:bg-foreground/[0.055] prose-code:px-1.5 prose-code:py-0.5 prose-code:text-fuchsia-600 prose-code:before:content-none prose-code:after:content-none dark:prose-code:text-fuchsia-200',
                         'prose-pre:overflow-x-auto prose-pre:rounded-2xl prose-pre:border prose-pre:border-foreground/10 prose-pre:bg-[#090909] prose-pre:pt-12',
                         'prose-img:my-12 prose-img:rounded-2xl prose-img:border prose-img:border-foreground/10 prose-li:text-muted-foreground',
