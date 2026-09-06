@@ -76,7 +76,6 @@ export default function HomeClient({ content, identity, posts, projects, experim
     const orderExperimentApplies = showBlog && showProjects;
     const projectsFirst = orderExperimentApplies && experimentVariants['home-section-order'] === 'B';
     const loaderDuration = experimentVariants['niko-loader-duration'] === 'B' ? 2000 : 2500;
-    const showHeroMicroCta = experimentVariants['hero-micro-cta'] === 'B';
 
     useEffect(() => {
         if (orderExperimentApplies) trackExperiment('home-section-order', 'exposure');
@@ -85,10 +84,6 @@ export default function HomeClient({ content, identity, posts, projects, experim
     useEffect(() => {
         if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'exposure');
     }, [isFirstVisit, trackExperiment]);
-
-    useEffect(() => {
-        if (!isLoading) trackExperiment('hero-micro-cta', 'exposure');
-    }, [isLoading, trackExperiment]);
 
     const handleLoadingComplete = () => {
         setIsLoading(false);
@@ -122,7 +117,6 @@ export default function HomeClient({ content, identity, posts, projects, experim
             if (!entries.some((entry) => entry.isIntersecting)) return;
             if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'projects_seen');
             if (orderExperimentApplies) trackExperiment('home-section-order', 'projects_seen');
-            trackExperiment('hero-micro-cta', 'projects_seen');
             observer.disconnect();
         }, { threshold: 0.25 });
 
@@ -196,27 +190,11 @@ export default function HomeClient({ content, identity, posts, projects, experim
     const handleProjectOpen = () => {
         if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'project_open');
         if (orderExperimentApplies) trackExperiment('home-section-order', 'project_open');
-        trackExperiment('hero-micro-cta', 'project_open');
     };
 
     const handleBlogOpen = () => {
         if (isFirstVisit === true) trackExperiment('niko-loader-duration', 'blog_open');
         if (orderExperimentApplies) trackExperiment('home-section-order', 'blog_open');
-        trackExperiment('hero-micro-cta', 'blog_open');
-    };
-
-    const handleHeroProjectsCta = () => {
-        const section = document.getElementById('home-projects');
-        if (section) {
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-        }
-        window.location.assign('/projects');
-    };
-
-    const handleHeroGalleryCta = () => {
-        trackExperiment('hero-micro-cta', 'gallery_open');
-        window.location.assign('/gallery');
     };
 
     const journalSection = showBlog ? <HomeBlogSection posts={posts} onPostOpen={handleBlogOpen} /> : null;
@@ -236,9 +214,6 @@ export default function HomeClient({ content, identity, posts, projects, experim
                     isExiting={isReadyToAnimate}
                     content={content}
                     identity={identity}
-                    showMicroCta={showHeroMicroCta}
-                    onProjectsCta={handleHeroProjectsCta}
-                    onGalleryCta={handleHeroGalleryCta}
                 />
             </motion.main>
             {projectsFirst ? <>{projectsSection}{journalSection}</> : <>{journalSection}{projectsSection}</>}

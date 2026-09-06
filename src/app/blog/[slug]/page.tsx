@@ -72,7 +72,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     const now = new Date();
     const [cookieStore, locale] = await Promise.all([cookies(), getLocale()]);
     const visitorId = cookieStore.get(likeCookieName)?.value || '__none__';
-    const [cmsPost, related, watermarkPage] = await prisma.$transaction([
+    const [cmsPost, watermarkPage] = await prisma.$transaction([
         prisma.post.findUnique({
             where: { slug },
             include: {
@@ -87,12 +87,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 _count: { select: { likes: true } },
             },
         }),
-        prisma.post.findMany({
-            where: { slug: { not: slug }, status: 'PUBLISHED', OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] },
-            include: { categoryRef: { select: { name: true } } },
-            orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-            take: 2,
-        }),
         prisma.page.findUnique({
             where: { slug: CONTENT_WATERMARK_CONFIG_SLUG },
             select: { content: true },
@@ -100,6 +94,40 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     ]);
 
     if (!cmsPost || !isPublicPost(cmsPost)) notFound();
+
+    const taxonomySignals = [
+        ...(cmsPost.categoryId ? [{ categoryId: cmsPost.categoryId }] : []),
+        ...(cmsPost.tags.length ? [{ tags: { hasSome: cmsPost.tags } }] : []),
+    ];
+    const publicationWindow = { OR: [{ publishedAt: null }, { publishedAt: { lte: now } }] };
+    const relatedPrimary = await prisma.post.findMany({
+        where: {
+            slug: { not: slug },
+            status: 'PUBLISHED',
+            AND: [
+                publicationWindow,
+                ...(taxonomySignals.length ? [{ OR: taxonomySignals }] : []),
+            ],
+        },
+        include: { categoryRef: { select: { name: true } } },
+        orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 4,
+    });
+
+    const relatedFallback = relatedPrimary.length < 4
+        ? await prisma.post.findMany({
+            where: {
+                slug: { not: slug },
+                id: { notIn: relatedPrimary.map((post) => post.id) },
+                status: 'PUBLISHED',
+                ...publicationWindow,
+            },
+            include: { categoryRef: { select: { name: true } } },
+            orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+            take: 4 - relatedPrimary.length,
+        })
+        : [];
+    const related = [...relatedPrimary, ...relatedFallback];
 
     const localized = getLocalizedPostFields(cmsPost, locale);
     const content = localized.content as PostContent;

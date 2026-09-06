@@ -1,5 +1,6 @@
 import type { Post as PrismaPost, PostType } from '@prisma/client';
 import { safeCmsMediaUrl, sanitizeCmsHtml } from '@/lib/sanitize-cms-html';
+import { estimateReadingMinutes } from '@/lib/reading-time';
 
 export type BlogLocale = 'en' | 'bg';
 
@@ -34,6 +35,23 @@ export type PublicPost = {
     authorName: string;
     date: string;
     content: CmsPostContent;
+};
+
+export type BlogArchivePost = {
+    id: string;
+    slug: string;
+    title: string;
+    excerpt: string;
+    category: string;
+    categorySlug: string;
+    tags: string[];
+    type: PostType;
+    typeLabel: string;
+    typeSlug: string;
+    authorName: string;
+    date: string;
+    featuredImage: string;
+    readingMinutes: number;
 };
 
 type CmsPostRecord = PrismaPost & {
@@ -105,24 +123,53 @@ export function getLocalizedPostFields(post: Pick<PrismaPost, 'title' | 'excerpt
     };
 }
 
-export function cmsPostToPublicPost(post: CmsPostRecord, locale?: string): PublicPost {
+function publicTaxonomy(post: CmsPostRecord) {
     const fallbackType = post.type.toLowerCase().replaceAll('_', '-');
     const categoryName = post.categoryRef?.name ?? post.category ?? 'Publication';
+    return {
+        category: categoryName,
+        categorySlug: post.categoryRef?.slug ?? categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+        typeLabel: post.postType?.name ?? post.type.replaceAll('_', ' '),
+        typeSlug: post.postType?.slug ?? fallbackType,
+    };
+}
+
+export function cmsPostToPublicPost(post: CmsPostRecord, locale?: string): PublicPost {
     const localized = getLocalizedPostFields(post, locale);
+    const taxonomy = publicTaxonomy(post);
     return {
         id: post.id,
         slug: post.slug,
         title: localized.title,
         excerpt: localized.excerpt ?? '',
-        category: categoryName,
-        categorySlug: post.categoryRef?.slug ?? categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+        ...taxonomy,
         tags: post.tags,
         type: post.type,
-        typeLabel: post.postType?.name ?? post.type.replaceAll('_', ' '),
-        typeSlug: post.postType?.slug ?? fallbackType,
         authorName: post.authorName,
         date: (post.publishedAt ?? post.createdAt).toISOString(),
         content: localized.content,
+    };
+}
+
+export function cmsPostToArchivePost(post: CmsPostRecord, locale?: string): BlogArchivePost {
+    const localized = getLocalizedPostFields(post, locale);
+    const taxonomy = publicTaxonomy(post);
+    const readingSource = post.type === 'POETRY'
+        ? localized.content.text ?? ''
+        : localized.content.html ?? '';
+
+    return {
+        id: post.id,
+        slug: post.slug,
+        title: localized.title,
+        excerpt: localized.excerpt ?? '',
+        ...taxonomy,
+        tags: post.tags,
+        type: post.type,
+        authorName: post.authorName,
+        date: (post.publishedAt ?? post.createdAt).toISOString(),
+        featuredImage: localized.content.featuredImage ?? '',
+        readingMinutes: estimateReadingMinutes(readingSource, post.type === 'POETRY' ? 180 : 220),
     };
 }
 

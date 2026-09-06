@@ -1,6 +1,6 @@
 import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
-import { cmsPostToPublicPost } from '@/lib/cms-posts';
+import { cmsPostToArchivePost } from '@/lib/cms-posts';
 import { BlogArchiveClient } from '@/components/blog/BlogArchiveClient';
 
 export const dynamic = 'force-dynamic';
@@ -24,5 +24,5 @@ export default async function BlogPage() {
         getLocale(),
     ]);
 
-    return <BlogArchiveClient posts={cmsPosts.map((post) => cmsPostToPublicPost(post, locale))} />;
+    return <BlogArchiveClient posts={cmsPosts.map((post) => cmsPostToArchivePost(post, locale))} />;
 }
