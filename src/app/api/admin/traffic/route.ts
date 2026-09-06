@@ -6,6 +6,7 @@ import {
     TRAFFIC_IP_RETENTION_HOURS,
     TRAFFIC_METRIC_RETENTION_DAYS,
     TRAFFIC_SESSION_RETENTION_HOURS,
+    TRAFFIC_VISIT_TIMEOUT_MINUTES,
     countryName,
     parseTrafficRange,
     startOfUtcDay,
@@ -16,8 +17,8 @@ import {
 export const dynamic = 'force-dynamic';
 
 type ChartBucket = { key: string; label: string; pageViews: number; visits: number };
-
 type LiveCountry = { code: string; name: string; visitors: number };
+type LiveCity = { name: string; countryCode: string; countryName: string; visitors: number };
 type LivePage = { path: string; visitors: number; countries: LiveCountry[]; lastSeenAt: string };
 
 function buildChartBuckets(range: ReturnType<typeof parseTrafficRange>, now: Date) {
@@ -71,6 +72,7 @@ export async function GET(request: NextRequest) {
             where: { lastSeenAt: { gte: liveCutoff } },
             select: {
                 currentPath: true,
+                currentCity: true,
                 countryCode: true,
                 lastSeenAt: true,
             },
@@ -110,11 +112,20 @@ export async function GET(request: NextRequest) {
     }
 
     const liveCountryTotals = new Map<string, number>();
+    const liveCityTotals = new Map<string, { name: string; countryCode: string; visitors: number }>();
     const livePageTotals = new Map<string, { visitors: number; countries: Map<string, number>; lastSeenAt: Date }>();
 
     for (const liveSession of liveSessions) {
         const countryCode = liveSession.countryCode || 'XX';
         liveCountryTotals.set(countryCode, (liveCountryTotals.get(countryCode) || 0) + 1);
+
+        const city = liveSession.currentCity?.trim();
+        if (city) {
+            const cityKey = `${countryCode}:${city.toLocaleLowerCase('en')}`;
+            const currentCity = liveCityTotals.get(cityKey) || { name: city, countryCode, visitors: 0 };
+            currentCity.visitors += 1;
+            liveCityTotals.set(cityKey, currentCity);
+        }
 
         const path = liveSession.currentPath || 'Unknown page';
         const current = livePageTotals.get(path) || {
@@ -130,6 +141,10 @@ export async function GET(request: NextRequest) {
 
     const liveCountries: LiveCountry[] = [...liveCountryTotals.entries()]
         .map(([code, visitors]) => ({ code, name: countryName(code), visitors }))
+        .sort((a, b) => b.visitors - a.visitors || a.name.localeCompare(b.name));
+
+    const liveCities: LiveCity[] = [...liveCityTotals.values()]
+        .map((city) => ({ ...city, countryName: countryName(city.countryCode) }))
         .sort((a, b) => b.visitors - a.visitors || a.name.localeCompare(b.name));
 
     const livePages: LivePage[] = [...livePageTotals.entries()]
@@ -168,6 +183,7 @@ export async function GET(request: NextRequest) {
             visitors: liveSessions.length,
             pages: livePages,
             countries: liveCountries,
+            cities: liveCities,
             windowMinutes: LIVE_VISITOR_WINDOW_MINUTES,
         },
         chart,
@@ -177,6 +193,7 @@ export async function GET(request: NextRequest) {
             aggregateDays: TRAFFIC_METRIC_RETENTION_DAYS,
             sessionHours: TRAFFIC_SESSION_RETENTION_HOURS,
             ipHours: TRAFFIC_IP_RETENTION_HOURS,
+            visitTimeoutMinutes: TRAFFIC_VISIT_TIMEOUT_MINUTES,
         },
         updatedAt: now.toISOString(),
     }, {
