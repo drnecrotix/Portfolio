@@ -98,43 +98,43 @@ export function StoreCatalogClient({ products, categories }: { products: StoreCa
             </section>
 
             {visibleProducts.length ? (
-                <section className="mt-7 grid min-w-0 max-w-full grid-cols-1 gap-4 sm:mt-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-label="Digital products">
+                <section className="mt-5 grid min-w-0 max-w-full grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6" aria-label="Digital products">
                     {visibleProducts.map((product) => {
                         const free = product.priceCents === 0;
                         return (
-                            <article key={product.id} className="group min-w-0 max-w-full overflow-hidden rounded-[1.35rem] border border-foreground/8 bg-foreground/[0.012] p-2 transition duration-300 hover:border-foreground/15 hover:bg-foreground/[0.022] sm:rounded-[1.6rem]">
+                            <article key={product.id} className="group min-w-0 max-w-full overflow-hidden rounded-[1rem] border border-foreground/8 bg-foreground/[0.012] p-1.5 transition duration-300 hover:border-foreground/15 hover:bg-foreground/[0.022]">
                                 <Link href={`/store/${product.slug}`} className="block min-w-0 max-w-full">
-                                    <div className="relative aspect-square w-full max-w-full overflow-hidden rounded-[1rem] border border-foreground/8 bg-foreground/[0.035] shadow-[0_14px_40px_rgba(0,0,0,0.10)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_22px_60px_rgba(0,0,0,0.16)] sm:rounded-[1.25rem]">
+                                    <div className="relative aspect-[4/3] w-full max-w-full overflow-hidden rounded-[0.8rem] border border-foreground/8 bg-foreground/[0.035] shadow-[0_10px_28px_rgba(0,0,0,0.09)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_16px_36px_rgba(0,0,0,0.14)]">
                                         {product.coverImageUrl ? (
                                             <div className="absolute inset-0 bg-cover bg-center transition-transform duration-500 ease-out group-hover:scale-[1.03]" style={{ backgroundImage: `url(${JSON.stringify(product.coverImageUrl).slice(1, -1)})` }} />
                                         ) : (
                                             <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.07),transparent_40%)]">
-                                                <Download className="h-10 w-10 text-foreground/15" />
+                                                <Download className="h-7 w-7 text-foreground/15" />
                                             </div>
                                         )}
-                                        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 to-transparent opacity-80" />
-                                        <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
-                                            {product.featured ? <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white backdrop-blur-md"><Sparkles className="h-3 w-3" /> Featured</span> : null}
-                                            {free ? <span className="rounded-full border border-white/15 bg-white/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black">Free</span> : null}
+                                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent opacity-75" />
+                                        <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1">
+                                            {product.featured ? <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-white backdrop-blur-md"><Sparkles className="h-2.5 w-2.5" /> Featured</span> : null}
+                                            {free ? <span className="rounded-full border border-white/15 bg-white/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] text-black">Free</span> : null}
                                         </div>
-                                        <span className="absolute bottom-3 right-3 hidden h-9 w-9 translate-y-2 items-center justify-center rounded-full bg-white text-black opacity-0 shadow-xl transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:flex"><ArrowUpRight className="h-4 w-4" /></span>
+                                        <span className="absolute bottom-2 right-2 hidden h-7 w-7 translate-y-1 items-center justify-center rounded-full bg-white text-black opacity-0 shadow-lg transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:flex"><ArrowUpRight className="h-3.5 w-3.5" /></span>
                                     </div>
                                 </Link>
 
-                                <div className="min-w-0 px-2 pb-2 pt-4 sm:px-2.5">
-                                    <div className="flex min-w-0 items-start justify-between gap-3">
-                                        <div className="min-w-0 flex-1">
-                                            {product.category ? <p className="truncate text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{product.category}</p> : <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Digital product</p>}
-                                            <Link href={`/store/${product.slug}`} className="mt-1.5 block min-w-0 break-words line-clamp-2 text-[15px] font-bold leading-tight tracking-[-0.02em] transition hover:underline">{product.title}</Link>
-                                        </div>
-                                        <div className="min-w-0 shrink-0 text-right">
-                                            {product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents ? <p className="text-[11px] text-muted-foreground line-through">{money(product.compareAtPriceCents, product.currency)}</p> : null}
-                                            <p className="text-sm font-black">{free ? 'Free' : money(product.priceCents, product.currency)}</p>
+                                <div className="min-w-0 px-1 pb-1 pt-2.5">
+                                    <div className="flex min-w-0 items-center justify-between gap-2">
+                                        <p className="min-w-0 truncate text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{product.category || 'Digital product'}</p>
+                                        <div className="shrink-0 text-right">
+                                            {product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents ? <span className="mr-1 text-[9px] text-muted-foreground line-through">{money(product.compareAtPriceCents, product.currency)}</span> : null}
+                                            <span className="text-xs font-black">{free ? 'Free' : money(product.priceCents, product.currency)}</span>
                                         </div>
                                     </div>
-                                    <p className="mt-2 break-words line-clamp-2 text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">{product.excerpt || product.description}</p>
-                                    <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-foreground/8 pt-3 text-[11px] text-muted-foreground">
-                                        <span className="inline-flex min-w-0 items-center gap-1.5"><Download className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Instant digital delivery</span></span>
+
+                                    <Link href={`/store/${product.slug}`} className="mt-1.5 block min-w-0 break-words line-clamp-2 text-sm font-bold leading-[1.25] tracking-[-0.015em] transition hover:underline">{product.title}</Link>
+                                    <p className="mt-1 break-words line-clamp-1 text-[11px] leading-4 text-muted-foreground [overflow-wrap:anywhere]">{product.excerpt || product.description}</p>
+
+                                    <div className="mt-2 flex min-w-0 items-center justify-between gap-2 border-t border-foreground/8 pt-2 text-[10px] text-muted-foreground">
+                                        <span className="inline-flex min-w-0 items-center gap-1"><Download className="h-3 w-3 shrink-0" /> <span className="truncate">Digital download</span></span>
                                         <span className="shrink-0">{product.fileCount} {product.fileCount === 1 ? 'file' : 'files'}</span>
                                     </div>
                                 </div>
