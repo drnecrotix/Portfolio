@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Copy, X } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type HeadingItem = {
@@ -90,11 +90,10 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
                 try {
                     await navigator.clipboard.writeText(code.replace(/Copy$/, '').trim());
                     button.textContent = 'Copied';
-                    window.setTimeout(() => { button.textContent = 'Copy'; }, 1200);
                 } catch {
                     button.textContent = 'Unable to copy';
-                    window.setTimeout(() => { button.textContent = 'Copy'; }, 1200);
                 }
+                window.setTimeout(() => { button.textContent = 'Copy'; }, 1200);
             };
             button.addEventListener('click', copy);
             pre.append(button);
@@ -108,10 +107,9 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
             image.setAttribute('aria-label', image.alt ? `Open image: ${image.alt}` : 'Open image');
             const open = () => setPreviewImage({ src: image.currentSrc || image.src, alt: image.alt || '' });
             const onKey = (event: KeyboardEvent) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    open();
-                }
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                open();
             };
             image.addEventListener('click', open);
             image.addEventListener('keydown', onKey);
