@@ -129,24 +129,44 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
     }, [html]);
 
     useEffect(() => {
+        const root = articleRef.current;
+        if (!root) return;
+
+        let frame = 0;
         const updateProgress = () => {
-            const root = articleRef.current;
-            if (!root) return;
-            const rect = root.getBoundingClientRect();
-            const absoluteTop = window.scrollY + rect.top;
-            const start = absoluteTop - 96;
-            const end = absoluteTop + root.offsetHeight - Math.max(window.innerHeight * 0.62, 320);
-            const ratio = end <= start ? 1 : (window.scrollY - start) / (end - start);
-            const visible = rect.top <= window.innerHeight - 96 && rect.bottom >= 96;
-            setProgress(Math.max(0, Math.min(100, ratio * 100)));
-            setProgressVisible(visible);
+            if (frame) return;
+            frame = window.requestAnimationFrame(() => {
+                frame = 0;
+                const rect = root.getBoundingClientRect();
+                const viewportHeight = Math.max(1, window.innerHeight);
+                const topReadingLine = Math.min(112, Math.max(72, viewportHeight * 0.14));
+                const bottomInset = Math.min(132, Math.max(84, viewportHeight * 0.12));
+                const bottomReadingLine = Math.max(topReadingLine + 1, viewportHeight - bottomInset);
+                const readableViewportHeight = Math.max(1, bottomReadingLine - topReadingLine);
+                const scrollableArticleHeight = Math.max(1, rect.height - readableViewportHeight);
+
+                const ratio = rect.height <= readableViewportHeight
+                    ? (rect.top <= topReadingLine ? 1 : 0)
+                    : (topReadingLine - rect.top) / scrollableArticleHeight;
+                const nextProgress = Math.max(0, Math.min(100, ratio * 100));
+                const visible = rect.top <= topReadingLine && rect.bottom > topReadingLine;
+
+                setProgress(nextProgress);
+                setProgressVisible(visible);
+            });
         };
+
         updateProgress();
         window.addEventListener('scroll', updateProgress, { passive: true });
         window.addEventListener('resize', updateProgress);
+        const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateProgress) : null;
+        resizeObserver?.observe(root);
+
         return () => {
+            if (frame) window.cancelAnimationFrame(frame);
             window.removeEventListener('scroll', updateProgress);
             window.removeEventListener('resize', updateProgress);
+            resizeObserver?.disconnect();
         };
     }, [html]);
 
