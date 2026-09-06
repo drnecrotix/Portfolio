@@ -1,9 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, BarChart3, CheckCircle2, FlaskConical, Globe2, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+    Activity,
+    AlertTriangle,
+    BarChart3,
+    CheckCircle2,
+    FlaskConical,
+    Globe2,
+    RefreshCw,
+    ShieldCheck,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    Users,
+} from 'lucide-react';
 import { TrafficAnalyticsPanel } from './TrafficAnalyticsPanel';
 import { cn } from '@/lib/utils';
+
+type Interval = [number, number];
+type DecisionState = 'COLLECTING' | 'QUALITY_ISSUE' | 'FAVORS_A' | 'FAVORS_B' | 'INCONCLUSIVE';
 
 type VariantSummary = {
     variant: 'A' | 'B';
@@ -11,19 +27,93 @@ type VariantSummary = {
     exposure: number;
     primary: number;
     conversionRate: number;
+    interval: Interval;
     events: Record<string, number | undefined>;
+};
+
+type Comparison = {
+    controlRate: number;
+    variantRate: number;
+    absoluteDelta: number;
+    relativeLift: number | null;
+    pValue: number | null;
+    confidence: number | null;
+    controlInterval: Interval;
+    variantInterval: Interval;
+    differenceInterval: Interval;
+    significant: boolean;
+    evidence: string;
+};
+
+type SampleRatio = {
+    expectedA: number;
+    expectedB: number;
+    observedA: number;
+    observedB: number;
+    shareA: number;
+    shareB: number;
+    chiSquare: number | null;
+    pValue: number | null;
+    healthy: boolean;
+};
+
+type SecondaryMetric = {
+    event: string;
+    label: string;
+    controlSuccesses: number;
+    variantSuccesses: number;
+    controlRate: number;
+    variantRate: number;
+    absoluteDelta: number;
+    relativeLift: number | null;
+    pValue: number | null;
+    confidence: number | null;
+    differenceInterval: Interval;
+    significant: boolean;
+    evidence: string;
+};
+
+type TrendRow = {
+    key: string;
+    label: string;
+    exposureA: number;
+    exposureB: number;
+    primaryA: number;
+    primaryB: number;
 };
 
 type ExperimentSummary = {
     id: string;
     name: string;
     hypothesis: string;
+    scope: string;
+    status: 'RUNNING' | 'PAUSED' | 'ENDED';
     primaryEvent: string;
+    primaryLabel: string;
+    minimumSamplePerVariant: number;
+    expectedAllocation: { A: number; B: number };
     variants: VariantSummary[];
-    lift: number | null;
+    comparison: Comparison;
+    srm: SampleRatio;
+    decision: {
+        state: DecisionState;
+        label: string;
+        note: string;
+        progress: number;
+    };
+    secondaryMetrics: SecondaryMetric[];
+    trend: TrendRow[];
 };
 
 type Payload = {
+    summary: {
+        running: number;
+        totalExposures: number;
+        decisionReady: number;
+        qualityIssues: number;
+        retentionDays: number;
+        measurementStartedAt: string | null;
+    };
     experiments: ExperimentSummary[];
     updatedAt: string;
 };
@@ -39,53 +129,89 @@ function percentagePoints(value: number) {
     return `${points >= 0 ? '+' : ''}${points.toFixed(2)} pp`;
 }
 
-function metricLabel(value: string) {
-    return value.replaceAll('_', ' ');
+function pValueLabel(value: number | null) {
+    if (value === null) return 'Not available';
+    if (value < 0.001) return '< 0.001';
+    return value.toFixed(3);
 }
 
-function wilsonInterval(successes: number, total: number) {
-    if (!total) return [0, 0] as const;
-    const z = 1.96;
-    const p = successes / total;
-    const denominator = 1 + (z * z) / total;
-    const center = (p + (z * z) / (2 * total)) / denominator;
-    const margin = (z * Math.sqrt((p * (1 - p)) / total + (z * z) / (4 * total * total))) / denominator;
-    return [Math.max(0, center - margin), Math.min(1, center + margin)] as const;
+function intervalLabel(interval: Interval, asDelta = false) {
+    return `${asDelta ? percentagePoints(interval[0]) : percent(interval[0])} to ${asDelta ? percentagePoints(interval[1]) : percent(interval[1])}`;
 }
 
-function erf(value: number) {
-    const sign = value < 0 ? -1 : 1;
-    const x = Math.abs(value);
-    const t = 1 / (1 + 0.3275911 * x);
-    const polynomial = (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t;
-    return sign * (1 - polynomial * Math.exp(-x * x));
+function decisionTone(state: DecisionState) {
+    if (state === 'FAVORS_B') return 'border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-700 dark:text-emerald-300';
+    if (state === 'FAVORS_A') return 'border-rose-500/25 bg-rose-500/[0.07] text-rose-700 dark:text-rose-300';
+    if (state === 'QUALITY_ISSUE') return 'border-amber-500/30 bg-amber-500/[0.08] text-amber-700 dark:text-amber-300';
+    return 'border-foreground/10 bg-foreground/[0.035] text-muted-foreground';
 }
 
-function twoProportionPValue(aSuccess: number, aTotal: number, bSuccess: number, bTotal: number) {
-    if (!aTotal || !bTotal) return null;
-    const pooled = (aSuccess + bSuccess) / (aTotal + bTotal);
-    const variance = pooled * (1 - pooled) * (1 / aTotal + 1 / bTotal);
-    if (variance <= 0) return null;
-    const z = Math.abs((bSuccess / bTotal - aSuccess / aTotal) / Math.sqrt(variance));
-    const cdf = 0.5 * (1 + erf(z / Math.sqrt(2)));
-    return Math.max(0, Math.min(1, 2 * (1 - cdf)));
+function DecisionIcon({ state }: { state: DecisionState }) {
+    if (state === 'FAVORS_B') return <TrendingUp className="size-4" />;
+    if (state === 'FAVORS_A') return <TrendingDown className="size-4" />;
+    if (state === 'QUALITY_ISSUE') return <AlertTriangle className="size-4" />;
+    if (state === 'INCONCLUSIVE') return <CheckCircle2 className="size-4" />;
+    return <Activity className="size-4" />;
 }
 
-function sampleState(aExposure: number, bExposure: number, pValue: number | null) {
-    const total = aExposure + bExposure;
-    const minimumArm = Math.min(aExposure, bExposure);
-    if (minimumArm < 20) return { label: 'Collecting data', note: 'Both variants need more traffic before the comparison is useful.' };
-    if (total < 120) return { label: 'Early signal', note: 'The direction is useful, but the sample is still small.' };
-    if (pValue !== null && pValue < 0.05) return { label: 'Meaningful signal', note: 'The observed difference has stronger statistical evidence. Keep monitoring stability.' };
-    return { label: 'Ready to evaluate', note: 'The sample is useful, but there is no strong difference yet.' };
+function ExperimentTrend({ rows }: { rows: TrendRow[] }) {
+    const maxExposure = Math.max(1, ...rows.map((row) => Math.max(row.exposureA, row.exposureB)));
+    return (
+        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4">
+            <div className="flex items-end justify-between gap-3">
+                <div>
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Last 14 days</p>
+                    <h4 className="mt-1 text-sm font-semibold">Exposure velocity</h4>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-foreground/75" /> A</span>
+                    <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-emerald-500" /> B</span>
+                </div>
+            </div>
+            <div className="mt-4 flex h-24 items-end gap-1.5">
+                {rows.map((row, index) => {
+                    const showLabel = index === 0 || index === rows.length - 1 || index % 4 === 0;
+                    return (
+                        <div key={row.key} className="flex min-w-0 flex-1 flex-col items-center justify-end self-stretch" title={`${row.label} - A ${row.exposureA} exposures / ${row.primaryA} primary events, B ${row.exposureB} exposures / ${row.primaryB} primary events`}>
+                            <div className="flex w-full flex-1 items-end justify-center gap-[2px]">
+                                <div className="w-[42%] rounded-t-sm bg-foreground/70" style={{ height: `${row.exposureA ? Math.max(6, row.exposureA / maxExposure * 100) : 2}%` }} />
+                                <div className="w-[42%] rounded-t-sm bg-emerald-500/80" style={{ height: `${row.exposureB ? Math.max(6, row.exposureB / maxExposure * 100) : 2}%` }} />
+                            </div>
+                            <span className="mt-1 h-3 truncate text-[8px] text-muted-foreground">{showLabel ? row.label : ''}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
 }
 
-function evidenceLabel(pValue: number | null, aExposure: number, bExposure: number) {
-    if (Math.min(aExposure, bExposure) < 20 || pValue === null) return 'Not enough data';
-    if (pValue < 0.01) return 'Strong evidence';
-    if (pValue < 0.05) return 'Likely difference';
-    if (pValue < 0.15) return 'Directional signal';
-    return 'No clear difference';
+function VariantCard({ variant, primaryLabel }: { variant: VariantSummary; primaryLabel: string }) {
+    return (
+        <div className={cn('rounded-2xl border p-4', variant.variant === 'B' ? 'border-emerald-500/20 bg-emerald-500/[0.025]' : 'border-foreground/10 bg-foreground/[0.015]')}>
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className={cn('rounded-md px-2 py-1 text-[10px] font-bold', variant.variant === 'B' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-foreground/[0.06]')}>Variant {variant.variant}</span>
+                        {variant.variant === 'A' ? <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Control</span> : null}
+                    </div>
+                    <p className="mt-2 text-sm font-medium">{variant.label}</p>
+                </div>
+                <p className="text-right text-2xl font-semibold tabular-nums">{percent(variant.conversionRate)}</p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-xl border border-foreground/8 bg-background/40 px-3 py-2.5">
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Exposed</p>
+                    <p className="mt-1 font-mono font-semibold">{variant.exposure}</p>
+                </div>
+                <div className="rounded-xl border border-foreground/8 bg-background/40 px-3 py-2.5">
+                    <p className="truncate text-[9px] uppercase tracking-[0.12em] text-muted-foreground">{primaryLabel}</p>
+                    <p className="mt-1 font-mono font-semibold">{variant.primary}</p>
+                </div>
+            </div>
+            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">95% CI {intervalLabel(variant.interval)}</p>
+        </div>
+    );
 }
 
 export function ExperimentsDashboard() {
@@ -110,46 +236,29 @@ export function ExperimentsDashboard() {
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => void refresh());
-        const timer = window.setInterval(() => void refresh(), 5000);
+        const timer = window.setInterval(() => void refresh(), 10000);
         return () => {
             window.cancelAnimationFrame(frame);
             window.clearInterval(timer);
         };
     }, [refresh]);
 
-    const overview = useMemo(() => {
-        const experiments = data?.experiments || [];
-        let exposures = 0;
-        let ready = 0;
-        const warnings: Array<{ id: string; name: string; aShare: number; bShare: number }> = [];
-
-        for (const experiment of experiments) {
-            const a = experiment.variants.find((variant) => variant.variant === 'A');
-            const b = experiment.variants.find((variant) => variant.variant === 'B');
-            const total = (a?.exposure || 0) + (b?.exposure || 0);
-            exposures += total;
-            if (total >= 120 && Math.min(a?.exposure || 0, b?.exposure || 0) >= 20) ready += 1;
-            if (total >= 20 && a && b) {
-                const aShare = a.exposure / total;
-                const bShare = b.exposure / total;
-                if (aShare < 0.4 || aShare > 0.6) warnings.push({ id: experiment.id, name: experiment.name, aShare, bShare });
-            }
-        }
-
-        return { tests: experiments.length, exposures, ready, warnings };
-    }, [data]);
+    const qualityExperiments = useMemo(
+        () => data?.experiments.filter((experiment) => !experiment.srm.healthy && experiment.srm.observedA + experiment.srm.observedB >= 40) || [],
+        [data],
+    );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Measurement</p>
-                    <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Experiments</h1>
-                    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">A/B test performance and audience analytics are separated into focused views. Each test shows the primary result first, then statistical context and supporting events.</p>
+                    <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Experimentation</p>
+                    <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">A/B tests</h1>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">Decision-focused experiments with unique browser-session measurement, sample-ratio checks, confidence intervals and secondary metrics.</p>
                 </div>
                 <button type="button" onClick={() => void refresh(true)} disabled={isRefreshing} className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/10 bg-foreground/[0.035] px-4 py-2.5 text-sm font-medium transition hover:bg-foreground/[0.065] disabled:opacity-50">
                     <RefreshCw className={cn('size-4', isRefreshing && 'animate-spin')} />
-                    Refresh tests
+                    Refresh
                 </button>
             </div>
 
@@ -163,116 +272,140 @@ export function ExperimentsDashboard() {
                     showMap
                     refreshIntervalMs={5000}
                     title="Audience & traffic"
-                    description="Interactive traffic, country and device analytics. Country headers are used first; if they are missing, a short-lived raw client IP is used only to resolve the country. No city or precise location is collected."
+                    description="Live and period traffic analytics with pages, visits, countries, optional live city headers and device distribution."
                 />
             ) : (
                 <>
                     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Active tests</p><p className="mt-2 text-2xl font-semibold tabular-nums">{overview.tests}</p></div>
-                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Total exposures</p><p className="mt-2 text-2xl font-semibold tabular-nums">{overview.exposures}</p></div>
-                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Ready to evaluate</p><p className="mt-2 text-2xl font-semibold tabular-nums">{overview.ready}</p></div>
-                        <div className={cn('rounded-2xl border p-4', overview.warnings.length ? 'border-amber-500/25 bg-amber-500/[0.055]' : 'border-emerald-500/20 bg-emerald-500/[0.045]')}><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Split health</p><p className="mt-2 text-lg font-semibold">{overview.warnings.length ? `${overview.warnings.length} need attention` : 'Balanced'}</p></div>
+                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"><div className="flex items-center justify-between text-muted-foreground"><p className="text-[10px] uppercase tracking-[0.14em]">Running</p><FlaskConical className="size-4" /></div><p className="mt-2 text-2xl font-semibold tabular-nums">{data?.summary.running ?? 0}</p></div>
+                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"><div className="flex items-center justify-between text-muted-foreground"><p className="text-[10px] uppercase tracking-[0.14em]">Clean exposures</p><Users className="size-4" /></div><p className="mt-2 text-2xl font-semibold tabular-nums">{data?.summary.totalExposures ?? 0}</p></div>
+                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-4"><div className="flex items-center justify-between text-muted-foreground"><p className="text-[10px] uppercase tracking-[0.14em]">Decision ready</p><Target className="size-4" /></div><p className="mt-2 text-2xl font-semibold tabular-nums">{data?.summary.decisionReady ?? 0}</p></div>
+                        <div className={cn('rounded-2xl border p-4', data?.summary.qualityIssues ? 'border-amber-500/25 bg-amber-500/[0.06]' : 'border-emerald-500/20 bg-emerald-500/[0.045]')}><div className="flex items-center justify-between text-muted-foreground"><p className="text-[10px] uppercase tracking-[0.14em]">Data quality</p><ShieldCheck className="size-4" /></div><p className="mt-2 text-lg font-semibold">{data?.summary.qualityIssues ? `${data.summary.qualityIssues} issue${data.summary.qualityIssues === 1 ? '' : 's'}` : 'Healthy'}</p></div>
                     </div>
 
-                    {overview.warnings.length ? (
-                        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.055] p-4 sm:p-5">
-                            <div className="flex items-start gap-3">
+                    <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.018] px-4 py-3 text-[11px] leading-5 text-muted-foreground sm:px-5">
+                        <strong className="text-foreground">Methodology:</strong> unique browser-session events, configured 50/50 allocation, 95% confidence intervals, two-sided proportion tests and an SRM warning when split probability falls below 0.01. Statistical decisions use only the clean session-level measurement introduced in v1.2.24, not older raw event counters.
+                        {data?.summary.measurementStartedAt ? <span className="ml-1">Clean sample started {new Date(data.summary.measurementStartedAt).toLocaleString()} and is retained for {data.summary.retentionDays} days.</span> : <span className="ml-1">Clean sample will begin after the first post-update experiment event.</span>}
+                    </div>
+
+                    {qualityExperiments.length ? (
+                        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-4">
+                            <div className="flex gap-3">
                                 <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-500" />
                                 <div>
-                                    <p className="font-semibold">A/B split warning</p>
-                                    <p className="mt-1 text-xs leading-5 text-foreground/70">These tests are outside the expected 40/60 range. The affected tests are listed here so you do not need to open every card to find the source.</p>
+                                    <p className="font-semibold">Sample ratio mismatch detected</p>
+                                    <p className="mt-1 text-xs leading-5 text-muted-foreground">Do not make a rollout decision from an experiment with an unexpected A/B allocation. Check assignment and exposure instrumentation first.</p>
                                     <div className="mt-3 flex flex-wrap gap-2">
-                                        {overview.warnings.map((warning) => <span key={warning.id} className="rounded-lg border border-amber-500/20 bg-background/45 px-3 py-2 text-xs"><strong>{warning.name}</strong> · A {(warning.aShare * 100).toFixed(0)}% / B {(warning.bShare * 100).toFixed(0)}%</span>)}
+                                        {qualityExperiments.map((experiment) => <span key={experiment.id} className="rounded-lg border border-amber-500/20 bg-background/50 px-3 py-2 text-xs"><strong>{experiment.name}</strong> - A {percent(experiment.srm.shareA, 0)} / B {percent(experiment.srm.shareB, 0)}, p {pValueLabel(experiment.srm.pValue)}</span>)}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : null}
 
-                    <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] px-4 py-3 text-xs leading-5 text-muted-foreground sm:px-5">
-                        <span className="font-medium text-foreground">How to read a test:</span> compare conversion rate first, then the confidence interval and sample balance. Relative lift is useful context, but it can look dramatic when the sample is small.
-                        {data?.updatedAt ? <span className="ml-2">Last update: {new Date(data.updatedAt).toLocaleTimeString()}</span> : null}
-                    </div>
-
                     {error ? <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-600 dark:text-red-300">{error}</div> : null}
                     {!data && !error ? <div className="rounded-2xl border border-foreground/10 p-8 text-sm text-muted-foreground">Loading experiment data…</div> : null}
 
                     <div className="space-y-4">
                         {data?.experiments.map((experiment) => {
-                            const a = experiment.variants.find((variant) => variant.variant === 'A')!;
-                            const b = experiment.variants.find((variant) => variant.variant === 'B')!;
-                            const totalExposure = a.exposure + b.exposure;
-                            const aShare = totalExposure > 0 ? a.exposure / totalExposure : 0.5;
-                            const bShare = totalExposure > 0 ? b.exposure / totalExposure : 0.5;
-                            const imbalance = totalExposure >= 20 && (aShare < 0.4 || aShare > 0.6);
-                            const pValue = twoProportionPValue(a.primary, a.exposure, b.primary, b.exposure);
-                            const state = sampleState(a.exposure, b.exposure, pValue);
-                            const leader = a.conversionRate === b.conversionRate ? null : a.conversionRate > b.conversionRate ? 'A' : 'B';
-                            const liftPositive = (experiment.lift ?? 0) >= 0;
-                            const absoluteDelta = b.conversionRate - a.conversionRate;
-                            const confidence = pValue === null ? null : 1 - pValue;
-                            const aInterval = wilsonInterval(a.primary, a.exposure);
-                            const bInterval = wilsonInterval(b.primary, b.exposure);
-                            const evidence = evidenceLabel(pValue, a.exposure, b.exposure);
+                            const control = experiment.variants.find((variant) => variant.variant === 'A')!;
+                            const treatment = experiment.variants.find((variant) => variant.variant === 'B')!;
+                            const samplePercent = Math.round(experiment.decision.progress * 100);
+                            const maxSample = Math.max(experiment.minimumSamplePerVariant, control.exposure, treatment.exposure);
 
                             return (
-                                <article key={experiment.id} className="rounded-3xl border border-foreground/10 bg-background p-5 sm:p-6">
-                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                        <div className="max-w-3xl">
+                                <article key={experiment.id} className="rounded-3xl border border-foreground/10 bg-background p-4 sm:p-5">
+                                    <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                                        <div className="min-w-0 max-w-4xl">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <FlaskConical className="size-4 text-muted-foreground" />
                                                 <h2 className="text-lg font-semibold sm:text-xl">{experiment.name}</h2>
-                                                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Live</span>
-                                                <span className="rounded-full border border-foreground/10 bg-foreground/[0.035] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{state.label}</span>
-                                                {imbalance ? <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">Split A {(aShare * 100).toFixed(0)} / B {(bShare * 100).toFixed(0)}</span> : null}
+                                                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">{experiment.status}</span>
+                                                <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.1em]', decisionTone(experiment.decision.state))}><DecisionIcon state={experiment.decision.state} /> {experiment.decision.label}</span>
                                             </div>
                                             <p className="mt-2 text-sm leading-6 text-muted-foreground">{experiment.hypothesis}</p>
+                                            <p className="mt-1 text-[10px] text-muted-foreground">Scope: {experiment.scope} · ID: <span className="font-mono">{experiment.id}</span></p>
                                         </div>
-                                        <div className="text-left lg:text-right"><p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Primary metric</p><p className="mt-1 text-sm font-medium capitalize">{metricLabel(experiment.primaryEvent)}</p></div>
+                                        <div className="shrink-0 text-left xl:text-right">
+                                            <p className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground">Primary metric</p>
+                                            <p className="mt-1 text-sm font-semibold">{experiment.primaryLabel}</p>
+                                        </div>
                                     </div>
 
-                                    <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                                        {[a, b].map((variant) => {
-                                            const isA = variant.variant === 'A';
-                                            const isLeader = leader === variant.variant;
-                                            const interval = isA ? aInterval : bInterval;
-                                            return (
-                                                <div key={variant.variant} className={cn('rounded-2xl border p-4 sm:p-5', isA ? 'border-violet-500/25 bg-violet-500/[0.06]' : 'border-sky-500/25 bg-sky-500/[0.06]')}>
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div><p className={cn('font-mono text-xs font-bold', isA ? 'text-violet-700 dark:text-violet-300' : 'text-sky-700 dark:text-sky-300')}>Variant {variant.variant}</p><p className="mt-1 text-xs leading-5 text-foreground/70">{variant.label}</p></div>
-                                                        {isLeader ? <span className={cn('rounded-full px-2 py-1 text-[10px] font-semibold', isA ? 'bg-violet-500/15 text-violet-700 dark:text-violet-200' : 'bg-sky-500/15 text-sky-700 dark:text-sky-200')}>Ahead</span> : null}
-                                                    </div>
-                                                    <div className="mt-4 flex items-end justify-between gap-3"><div><p className="text-3xl font-semibold tabular-nums text-foreground">{percent(variant.conversionRate)}</p><p className="mt-1 text-[10px] uppercase tracking-[0.13em] text-foreground/60">conversion rate</p></div><div className="text-right text-xs text-foreground/65"><p><strong className="text-foreground">{variant.primary}</strong> conversions</p><p className="mt-1"><strong className="text-foreground">{variant.exposure}</strong> exposures</p></div></div>
-                                                    <div className="mt-4 border-t border-foreground/10 pt-3 text-xs text-foreground/65"><span className="font-medium text-foreground">95% interval:</span> {percent(interval[0])} - {percent(interval[1])}</div>
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                        <div className="rounded-xl border border-foreground/10 bg-foreground/[0.018] px-3 py-3">
+                                            <div className="flex items-center justify-between"><span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Sample progress</span><span className="font-mono text-[10px]">{samplePercent}%</span></div>
+                                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-foreground/10"><div className="h-full rounded-full bg-foreground/70" style={{ width: `${Math.min(100, samplePercent)}%` }} /></div>
+                                            <p className="mt-2 text-[10px] text-muted-foreground">A {control.exposure}/{experiment.minimumSamplePerVariant} · B {treatment.exposure}/{experiment.minimumSamplePerVariant}</p>
+                                        </div>
+                                        <div className={cn('rounded-xl border px-3 py-3', experiment.srm.healthy ? 'border-foreground/10 bg-foreground/[0.018]' : 'border-amber-500/25 bg-amber-500/[0.055]')}>
+                                            <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Traffic split / SRM</span>
+                                            <p className="mt-1 font-mono text-sm font-semibold">A {percent(experiment.srm.shareA, 0)} · B {percent(experiment.srm.shareB, 0)}</p>
+                                            <p className="mt-1 text-[10px] text-muted-foreground">SRM p {pValueLabel(experiment.srm.pValue)}</p>
+                                        </div>
+                                        <div className="rounded-xl border border-foreground/10 bg-foreground/[0.018] px-3 py-3">
+                                            <span className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground">Evidence</span>
+                                            <p className="mt-1 text-sm font-semibold">{experiment.comparison.evidence}</p>
+                                            <p className="mt-1 text-[10px] text-muted-foreground">p {pValueLabel(experiment.comparison.pValue)}</p>
+                                        </div>
+                                        <div className={cn('rounded-xl border px-3 py-3', decisionTone(experiment.decision.state))}>
+                                            <span className="text-[9px] uppercase tracking-[0.12em] opacity-70">Decision</span>
+                                            <p className="mt-1 text-sm font-semibold">{experiment.decision.label}</p>
+                                            <p className="mt-1 line-clamp-2 text-[10px] leading-4 opacity-75">{experiment.decision.note}</p>
+                                        </div>
                                     </div>
 
-                                    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                                        <div className="rounded-xl border border-foreground/10 bg-foreground/[0.018] p-3"><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Absolute difference</p><p className="mt-1 text-sm font-semibold">{percentagePoints(absoluteDelta)}</p><p className="mt-1 text-[10px] text-muted-foreground">B minus A conversion</p></div>
-                                        <div className="rounded-xl border border-foreground/10 bg-foreground/[0.018] p-3"><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Relative lift</p><div className="mt-1 flex items-center gap-2 text-sm font-semibold">{experiment.lift === null ? 'Not available' : `${experiment.lift >= 0 ? '+' : ''}${percent(experiment.lift)}`}{experiment.lift === null ? null : liftPositive ? <TrendingUp className="size-4 text-emerald-500" /> : <TrendingDown className="size-4 text-rose-500" />}</div><p className="mt-1 text-[10px] text-muted-foreground">B compared with A</p></div>
-                                        <div className="rounded-xl border border-foreground/10 bg-foreground/[0.018] p-3"><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Evidence</p><p className="mt-1 text-sm font-semibold">{evidence}</p><p className="mt-1 text-[10px] text-muted-foreground">{confidence === null ? 'Waiting for usable samples' : `${percent(confidence, 1)} descriptive confidence`}</p></div>
-                                        <div className={cn('rounded-xl border p-3', imbalance ? 'border-amber-500/25 bg-amber-500/[0.05]' : 'border-emerald-500/20 bg-emerald-500/[0.035]')}><p className="text-[10px] uppercase tracking-[0.13em] text-muted-foreground">Sample balance</p><p className="mt-1 text-sm font-semibold">A {(aShare * 100).toFixed(0)}% / B {(bShare * 100).toFixed(0)}%</p><p className="mt-1 text-[10px] text-muted-foreground">{imbalance ? 'Outside expected 40/60 range' : 'Within expected range'}</p></div>
-                                    </div>
-
-                                    <div className="mt-4 rounded-xl border border-foreground/10 bg-foreground/[0.012] px-4 py-3 text-xs leading-5 text-muted-foreground">
-                                        {imbalance ? <span className="inline-flex items-start gap-2 text-amber-700 dark:text-amber-300"><AlertTriangle className="mt-0.5 size-4 shrink-0" />This test is the source of a split warning. Avoid choosing a winner until the allocation moves closer to 50/50.</span> : <span className="inline-flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />{state.note}</span>}
-                                    </div>
-
-                                    <details className="mt-4 rounded-2xl border border-foreground/10 bg-foreground/[0.012]">
-                                        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium">Supporting events and method</summary>
-                                        <div className="border-t border-foreground/10 p-4">
-                                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                                                {['engaged', 'projects_seen', 'project_open', 'blog_open', 'gallery_open'].map((event) => <div key={event} className="rounded-xl bg-foreground/[0.025] px-3 py-2.5"><p className="text-[10px] text-muted-foreground">{metricLabel(event)}</p><p className="mt-1 font-mono text-sm font-semibold">{(a.events[event] ?? 0) + (b.events[event] ?? 0)}</p></div>)}
+                                    <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.52fr)_minmax(0,1fr)]">
+                                        <VariantCard variant={control} primaryLabel={experiment.primaryLabel} />
+                                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.025] p-4 text-center">
+                                            <p className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground">B vs A</p>
+                                            <div className="mt-3 grid grid-cols-2 gap-2">
+                                                <div><p className="text-xl font-semibold tabular-nums">{percentagePoints(experiment.comparison.absoluteDelta)}</p><p className="mt-1 text-[9px] text-muted-foreground">absolute delta</p></div>
+                                                <div><p className="text-xl font-semibold tabular-nums">{experiment.comparison.relativeLift === null ? '—' : percent(experiment.comparison.relativeLift)}</p><p className="mt-1 text-[9px] text-muted-foreground">relative lift</p></div>
                                             </div>
-                                            <p className="mt-4 text-[11px] leading-5 text-muted-foreground">Intervals use a 95% Wilson interval. Evidence uses an approximate two-proportion z-test. These are decision aids, not an automatic stopping rule; traffic quality, sample balance and stability over time still matter.</p>
+                                            <div className="mt-4 space-y-2 border-t border-foreground/10 pt-3 text-left text-[10px] text-muted-foreground">
+                                                <p><strong className="text-foreground">95% delta CI:</strong> {intervalLabel(experiment.comparison.differenceInterval, true)}</p>
+                                                <p><strong className="text-foreground">p-value:</strong> {pValueLabel(experiment.comparison.pValue)}</p>
+                                                <p><strong className="text-foreground">Expected split:</strong> A {percent(experiment.expectedAllocation.A, 0)} / B {percent(experiment.expectedAllocation.B, 0)}</p>
+                                            </div>
                                         </div>
-                                    </details>
+                                        <VariantCard variant={treatment} primaryLabel={experiment.primaryLabel} />
+                                    </div>
+
+                                    <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
+                                        <ExperimentTrend rows={experiment.trend} />
+                                        <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4">
+                                            <div className="flex items-end justify-between gap-3">
+                                                <div><p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Guardrails</p><h4 className="mt-1 text-sm font-semibold">Secondary metrics</h4></div>
+                                                <span className="text-[9px] text-muted-foreground">Rates use exposed sessions as denominator</span>
+                                            </div>
+                                            <div className="mt-3 overflow-x-auto rounded-xl border border-foreground/10">
+                                                <div className="grid min-w-[610px] grid-cols-[minmax(180px,1fr)_90px_90px_90px_100px] bg-foreground/[0.035] px-3 py-2 text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
+                                                    <span>Metric</span><span className="text-right">A</span><span className="text-right">B</span><span className="text-right">Delta</span><span className="text-right">Evidence</span>
+                                                </div>
+                                                {experiment.secondaryMetrics.map((metric) => (
+                                                    <div key={metric.event} className="grid min-w-[610px] grid-cols-[minmax(180px,1fr)_90px_90px_90px_100px] border-t border-foreground/8 px-3 py-2.5 text-xs">
+                                                        <div className="min-w-0"><p className="truncate font-medium">{metric.label}</p><p className="mt-0.5 font-mono text-[9px] text-muted-foreground">{metric.event}</p></div>
+                                                        <span className="text-right font-mono">{percent(metric.controlRate)}</span>
+                                                        <span className="text-right font-mono">{percent(metric.variantRate)}</span>
+                                                        <span className={cn('text-right font-mono', metric.absoluteDelta > 0 ? 'text-emerald-600 dark:text-emerald-400' : metric.absoluteDelta < 0 ? 'text-rose-600 dark:text-rose-400' : '')}>{percentagePoints(metric.absoluteDelta)}</span>
+                                                        <span className="truncate text-right text-[10px] text-muted-foreground" title={`${metric.evidence}; p ${pValueLabel(metric.pValue)}`}>{metric.evidence}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className={cn('mt-4 flex flex-col gap-2 rounded-xl border px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between', experiment.srm.healthy ? 'border-foreground/10 bg-foreground/[0.018]' : 'border-amber-500/25 bg-amber-500/[0.055]')}>
+                                        <div className="flex items-start gap-2"><DecisionIcon state={experiment.decision.state} /><p className="leading-5"><strong>{experiment.decision.label}.</strong> <span className="text-muted-foreground">{experiment.decision.note}</span></p></div>
+                                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">sample scale {Math.min(control.exposure, treatment.exposure)}/{maxSample}</span>
+                                    </div>
                                 </article>
                             );
                         })}
                     </div>
+
+                    <p className="text-[10px] leading-5 text-muted-foreground">A/B results are decision support, not proof of causality beyond the configured randomized experiment. A statistically significant primary metric should still be checked against secondary metrics and data-quality warnings before a rollout decision.{data?.updatedAt ? ` Last refresh ${new Date(data.updatedAt).toLocaleTimeString()}.` : ''}</p>
                 </>
             )}
         </div>
