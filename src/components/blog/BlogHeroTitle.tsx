@@ -15,11 +15,6 @@ export function BlogHeroTitle({ settings, className }: { settings: BlogSettings;
         return () => window.clearInterval(timer);
     }, [settings.rotatingEnabled, settings.rotationIntervalMs, words.length]);
 
-    useEffect(() => {
-        if (index < words.length) return;
-        setIndex(0);
-    }, [index, words.length]);
-
     const gradient = settings.titleEffect === 'gradient';
     const glitch = settings.titleEffect === 'glitch';
     const titleClass = cn(
@@ -42,7 +37,8 @@ export function BlogHeroTitle({ settings, className }: { settings: BlogSettings;
         );
     }
 
-    const word = words[index] ?? words[0];
+    const safeIndex = index % words.length;
+    const word = words[safeIndex] ?? words[0];
     const wordInitial = settings.titleEffect === 'fade'
         ? { opacity: 0 }
         : settings.titleEffect === 'none' || settings.titleEffect === 'gradient'
@@ -58,7 +54,7 @@ export function BlogHeroTitle({ settings, className }: { settings: BlogSettings;
             <span className="inline-grid align-baseline">
                 <AnimatePresence mode="wait" initial={false}>
                     <motion.span
-                        key={`${word}-${index}`}
+                        key={`${word}-${safeIndex}`}
                         className="col-start-1 row-start-1 inline-block"
                         initial={wordInitial}
                         animate={wordAnimate}
