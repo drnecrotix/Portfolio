@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { GripVertical, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
+import { GripVertical, Plus, Save, Trash2, X } from 'lucide-react';
 import {
     createNavigationItemAjax,
     deleteNavigationItemAjax,
@@ -23,17 +23,62 @@ export type NavigationEditorItem = {
 };
 
 type EditableState = NavigationEditorItem & { itemType: 'link' | 'dropdown' };
+type DropdownStyleValue = 'auto' | 'compact' | 'standard' | 'mega';
 
 const input = 'mt-1.5 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-white/25';
-const dropdownStyles = [
-    ['auto', 'Auto'],
-    ['compact', 'Compact'],
-    ['standard', 'Standard'],
-    ['mega', 'Mega'],
-] as const;
+const dropdownStyles: ReadonlyArray<{ value: DropdownStyleValue; label: string; description: string }> = [
+    { value: 'auto', label: 'Auto', description: 'Chooses the best layout from the number of links.' },
+    { value: 'compact', label: 'Minimal', description: 'Compact popover list for short menus.' },
+    { value: 'standard', label: 'Glass', description: 'Balanced glass panel with richer link rows.' },
+    { value: 'mega', label: 'Mega cards', description: 'Wide two-column cards for larger navigation groups.' },
+];
 
 function normalize(items: NavigationEditorItem[]): EditableState[] {
     return items.map((item) => ({ ...item, itemType: item.isDropdown ? 'dropdown' : 'link' }));
+}
+
+function DropdownVariantPreview({ value, active }: { value: DropdownStyleValue; active: boolean }) {
+    const line = active ? 'bg-white/75' : 'bg-white/25';
+    const surface = active ? 'border-white/25 bg-white/[0.08]' : 'border-white/[0.08] bg-white/[0.025]';
+
+    if (value === 'compact') {
+        return (
+            <div className={`h-16 rounded-xl border p-2 ${surface}`}>
+                <div className="space-y-1.5">
+                    {[0, 1, 2].map((item) => <div key={item} className={`h-2 rounded ${line}`} style={{ width: `${78 - item * 10}%` }} />)}
+                </div>
+            </div>
+        );
+    }
+
+    if (value === 'standard') {
+        return (
+            <div className={`grid h-16 gap-1.5 rounded-xl border p-2 ${surface}`}>
+                {[0, 1].map((item) => (
+                    <div key={item} className="flex items-center gap-1.5 rounded-md border border-white/[0.08] px-1.5">
+                        <span className={`size-3 rounded ${line}`} />
+                        <span className={`h-1.5 flex-1 rounded ${line}`} />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    if (value === 'mega') {
+        return (
+            <div className={`grid h-16 grid-cols-2 gap-1.5 rounded-xl border p-2 ${surface}`}>
+                {[0, 1, 2, 3].map((item) => <div key={item} className="rounded-md border border-white/[0.08] bg-white/[0.025]" />)}
+            </div>
+        );
+    }
+
+    return (
+        <div className={`flex h-16 items-end gap-1.5 rounded-xl border p-2 ${surface}`}>
+            <div className="flex-1 space-y-1"><div className={`h-1.5 w-2/3 rounded ${line}`} /><div className={`h-5 rounded ${line}`} /></div>
+            <div className="flex-1 space-y-1"><div className={`h-1.5 w-1/2 rounded ${line}`} /><div className={`h-8 rounded ${line}`} /></div>
+            <div className="flex-1 space-y-1"><div className={`h-1.5 w-3/4 rounded ${line}`} /><div className={`h-11 rounded ${line}`} /></div>
+        </div>
+    );
 }
 
 export function NavigationEditor({ initialItems }: { initialItems: NavigationEditorItem[] }) {
@@ -160,6 +205,8 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
     const renderRow = (item: EditableState, position: number, total: number, depth = 0) => {
         const hasChildren = childCount(item.id) > 0;
         const isEditing = editingId === item.id;
+        const currentStyle = dropdownStyles.some((style) => style.value === item.dropdownStyle) ? item.dropdownStyle as DropdownStyleValue : 'auto';
+
         return (
             <div
                 key={item.id}
@@ -177,6 +224,7 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
                             <span className="truncate text-sm font-medium text-white/85">{item.label || 'Untitled item'}</span>
                             {!item.isVisible && <span className="rounded-full border border-white/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.15em] text-white/30">Hidden</span>}
                             {hasChildren && <span className="text-[10px] text-white/30">{childCount(item.id)} subitem{childCount(item.id) === 1 ? '' : 's'}</span>}
+                            {item.isDropdown && <span className="rounded-full border border-white/[0.08] px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] text-white/30">{dropdownStyles.find((style) => style.value === currentStyle)?.label}</span>}
                         </div>
                     </div>
                     <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-white/25">{position}/{total}</span>
@@ -189,29 +237,55 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
                     <div className="border-t border-white/[0.07] p-4 md:p-5">
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <label className="text-xs text-white/45">Type
-                                <select value={item.itemType} disabled={hasChildren} onChange={(e) => patch(item.id, { itemType: e.target.value as 'link' | 'dropdown', isDropdown: e.target.value === 'dropdown', parentId: e.target.value === 'dropdown' ? null : item.parentId })} className={input}>
+                                <select value={item.itemType} disabled={hasChildren} onChange={(event) => patch(item.id, { itemType: event.target.value as 'link' | 'dropdown', isDropdown: event.target.value === 'dropdown', parentId: event.target.value === 'dropdown' ? null : item.parentId })} className={input}>
                                     <option value="link">Link</option>
                                     <option value="dropdown">Dropdown menu</option>
                                 </select>
                             </label>
-                            <label className="text-xs text-white/45">Label<input value={item.label} onChange={(e) => patch(item.id, { label: e.target.value })} className={input} /></label>
-                            <label className="text-xs text-white/45 xl:col-span-2">URL<input value={item.href === '#' ? '' : item.href} onChange={(e) => patch(item.id, { href: e.target.value })} placeholder={item.itemType === 'dropdown' ? 'Optional' : '/projects'} className={input} /></label>
+                            <label className="text-xs text-white/45">Label<input value={item.label} onChange={(event) => patch(item.id, { label: event.target.value })} className={input} /></label>
+                            <label className="text-xs text-white/45 xl:col-span-2">URL<input value={item.href === '#' ? '' : item.href} onChange={(event) => patch(item.id, { href: event.target.value })} placeholder={item.itemType === 'dropdown' ? 'Optional' : '/projects'} className={input} /></label>
                             <label className="text-xs text-white/45">Parent
-                                <select value={item.parentId ?? ''} disabled={item.itemType === 'dropdown' || hasChildren} onChange={(e) => patch(item.id, { parentId: e.target.value || null })} className={input}>
+                                <select value={item.parentId ?? ''} disabled={item.itemType === 'dropdown' || hasChildren} onChange={(event) => patch(item.id, { parentId: event.target.value || null })} className={input}>
                                     <option value="">Top level</option>
                                     {dropdowns.filter((candidate) => candidate.id !== item.id).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.label}</option>)}
                                 </select>
                             </label>
-                            <label className="text-xs text-white/45">Dropdown style
-                                <select value={item.dropdownStyle} disabled={item.itemType !== 'dropdown'} onChange={(e) => patch(item.id, { dropdownStyle: e.target.value })} className={input}>
-                                    {dropdownStyles.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                                </select>
-                            </label>
-                            <div className="flex items-end gap-5 pb-2 md:col-span-2">
-                                <label className="flex items-center gap-2 text-xs text-white/55"><input type="checkbox" checked={item.isVisible} onChange={(e) => patch(item.id, { isVisible: e.target.checked })} /> Visible</label>
-                                <label className="flex items-center gap-2 text-xs text-white/55"><input type="checkbox" checked={item.isExternal} disabled={item.itemType === 'dropdown'} onChange={(e) => patch(item.id, { isExternal: e.target.checked })} /> External</label>
+                            <div className="flex items-end gap-5 pb-2 md:col-span-1 xl:col-span-3">
+                                <label className="flex items-center gap-2 text-xs text-white/55"><input type="checkbox" checked={item.isVisible} onChange={(event) => patch(item.id, { isVisible: event.target.checked })} /> Visible</label>
+                                <label className="flex items-center gap-2 text-xs text-white/55"><input type="checkbox" checked={item.isExternal} disabled={item.itemType === 'dropdown'} onChange={(event) => patch(item.id, { isExternal: event.target.checked })} /> External</label>
                                 <button type="button" onClick={() => remove(item.id)} className="ml-auto inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-300 transition hover:bg-red-500/[0.06]"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
                             </div>
+
+                            {item.itemType === 'dropdown' && (
+                                <div className="md:col-span-2 xl:col-span-4">
+                                    <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+                                        <div>
+                                            <p className="text-xs text-white/55">Dropdown variant</p>
+                                            <p className="mt-1 text-[10px] leading-4 text-white/30">Select the presentation used by this dropdown on desktop navigation.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                        {dropdownStyles.map((style) => {
+                                            const active = currentStyle === style.value;
+                                            return (
+                                                <button
+                                                    key={style.value}
+                                                    type="button"
+                                                    onClick={() => patch(item.id, { dropdownStyle: style.value })}
+                                                    aria-pressed={active}
+                                                    className={`rounded-2xl border p-2.5 text-left transition ${active ? 'border-white/25 bg-white/[0.07] shadow-[0_0_0_1px_rgba(255,255,255,0.03)]' : 'border-white/[0.07] bg-black/10 hover:border-white/15 hover:bg-white/[0.03]'}`}
+                                                >
+                                                    <DropdownVariantPreview value={style.value} active={active} />
+                                                    <div className="mt-2.5">
+                                                        <div className={`text-xs font-semibold ${active ? 'text-white' : 'text-white/65'}`}>{style.label}</div>
+                                                        <div className="mt-1 text-[10px] leading-4 text-white/30">{style.description}</div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -227,7 +301,7 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
                 <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-white/35">Structure</p>
                     <h2 className="mt-2 text-4xl font-semibold">Navigation</h2>
-                    <p className="mt-2 max-w-2xl text-sm text-white/40">Drag items to reorder them instantly. Open Edit only when you need the full menu settings.</p>
+                    <p className="mt-2 max-w-2xl text-sm text-white/40">Drag items to reorder them instantly. Dropdowns can use Auto, Minimal, Glass or Mega cards independently.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button type="button" onClick={() => setShowAdd((value) => !value)} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white/70 hover:bg-white/[0.05]"><Plus className="h-4 w-4" /> Add item</button>
@@ -243,7 +317,7 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
                         <label className="text-xs text-white/45">Label<input name="label" required className={input} /></label>
                         <label className="text-xs text-white/45 xl:col-span-2">URL<input name="href" placeholder="/projects" className={input} /></label>
                         <label className="text-xs text-white/45">Parent<select name="parentId" className={input}><option value="">Top level</option>{dropdowns.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-                        <label className="text-xs text-white/45">Dropdown style<select name="dropdownStyle" defaultValue="auto" className={input}>{dropdownStyles.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+                        <label className="text-xs text-white/45">Dropdown variant<select name="dropdownStyle" defaultValue="auto" className={input}>{dropdownStyles.map((style) => <option key={style.value} value={style.value}>{style.label}</option>)}</select></label>
                         <div className="flex items-end gap-5 pb-2"><label className="flex items-center gap-2 text-xs text-white/55"><input name="isVisible" type="checkbox" defaultChecked /> Visible</label><label className="flex items-center gap-2 text-xs text-white/55"><input name="isExternal" type="checkbox" /> External</label></div>
                         <button disabled={isPending} className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black">Create item</button>
                     </div>
