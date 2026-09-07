@@ -142,12 +142,14 @@ jobs:
           fi
       - name: Standard build
         run: npm run build
-      - name: Audit client bundle leakage
+      - name: Audit standard client bundle leakage
         run: npm run security:client-bundle
       - name: N0C WASM compatibility build
         run: |
           rm -rf .next
           npm run build:n0c
+      - name: Audit N0C client bundle leakage
+        run: npm run security:client-bundle
       - name: Staged updater build with stale route types
         run: |
           set -euo pipefail
@@ -159,6 +161,10 @@ jobs:
           EOF
           NEXT_DIST_DIR=.next-update NEXT_N0C_WASM_SWC=1 NODE_OPTIONS='--max-old-space-size=6144' npx next build --webpack
           test -d .next-update
+      - name: Audit staged updater client bundle leakage
+        env:
+          NEXT_DIST_DIR: .next-update
+        run: npm run security:client-bundle
 
   visual-smoke:
     name: Frontend visual smoke
