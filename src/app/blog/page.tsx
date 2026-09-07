@@ -2,11 +2,12 @@ import { getLocale } from 'next-intl/server';
 import { prisma } from '@/lib/prisma';
 import { cmsPostToArchivePost } from '@/lib/cms-posts';
 import { BlogArchiveClient } from '@/components/blog/BlogArchiveClient';
+import { blogSettingsFromSiteEnvelope } from '@/lib/blog-settings';
 
 export const dynamic = 'force-dynamic';
 
 export default async function BlogPage() {
-    const [cmsPosts, locale] = await Promise.all([
+    const [cmsPosts, locale, siteSettings] = await Promise.all([
         prisma.post.findMany({
             where: {
                 status: 'PUBLISHED',
@@ -22,7 +23,13 @@ export default async function BlogPage() {
             orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
         }),
         getLocale(),
+        prisma.siteSettings.findUnique({ where: { id: 'default' }, select: { integrationSettings: true } }),
     ]);
 
-    return <BlogArchiveClient posts={cmsPosts.map((post) => cmsPostToArchivePost(post, locale))} />;
+    return (
+        <BlogArchiveClient
+            posts={cmsPosts.map((post) => cmsPostToArchivePost(post, locale))}
+            settings={blogSettingsFromSiteEnvelope(siteSettings?.integrationSettings)}
+        />
+    );
 }
