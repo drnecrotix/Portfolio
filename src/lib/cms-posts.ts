@@ -2,6 +2,8 @@ import type { Post as PrismaPost, PostType } from '@prisma/client';
 import { safeCmsMediaUrl, sanitizeCmsHtml } from '@/lib/sanitize-cms-html';
 import { estimateReadingMinutes } from '@/lib/reading-time';
 
+export const NOTE_SYSTEM_IMAGE = '/api/blog/note-cover';
+
 export type BlogLocale = 'en' | 'bg';
 
 export type CmsPostTranslation = {
@@ -63,6 +65,14 @@ function contentRecord(value: unknown): CmsPostContent {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as CmsPostContent : {};
 }
 
+function sanitizePostHtml(type: PostType, value: string) {
+    const html = sanitizeCmsHtml(value);
+    if (type !== 'NOTE') return html;
+    return html
+        .replace(/<figure\b[^>]*>\s*(?:<img\b[^>]*>\s*)?(?:<figcaption\b[^>]*>.*?<\/figcaption>\s*)?<\/figure>/gis, '')
+        .replace(/<img\b[^>]*>/gi, '');
+}
+
 function cleanTranslation(type: PostType, value: unknown): CmsPostTranslation | undefined {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
     const source = value as CmsPostTranslation;
@@ -74,7 +84,7 @@ function cleanTranslation(type: PostType, value: unknown): CmsPostTranslation | 
     if (type === 'POETRY') {
         if (source.text?.trim()) translation.text = source.text;
     } else if (source.html?.trim()) {
-        translation.html = sanitizeCmsHtml(source.html);
+        translation.html = sanitizePostHtml(type, source.html);
     }
     return Object.keys(translation).length ? translation : undefined;
 }
@@ -99,8 +109,8 @@ function safePublicContent(type: PostType, value: unknown, locale?: string): Cms
     const localized = requestedLocale !== primaryLocale ? cleanTranslation(type, source.translations?.[requestedLocale]) : undefined;
     const content: CmsPostContent = type === 'POETRY'
         ? { text: localized?.text ?? String(source.text ?? '') }
-        : { html: localized?.html ?? sanitizeCmsHtml(source.html ?? '') };
-    const featuredImage = safeCmsMediaUrl(source.featuredImage);
+        : { html: localized?.html ?? sanitizePostHtml(type, source.html ?? '') };
+    const featuredImage = type === 'NOTE' ? '' : safeCmsMediaUrl(source.featuredImage);
     if (featuredImage) content.featuredImage = featuredImage;
     content.primaryLocale = primaryLocale;
     return content;
@@ -168,7 +178,7 @@ export function cmsPostToArchivePost(post: CmsPostRecord, locale?: string): Blog
         type: post.type,
         authorName: post.authorName,
         date: (post.publishedAt ?? post.createdAt).toISOString(),
-        featuredImage: localized.content.featuredImage ?? '',
+        featuredImage: post.type === 'NOTE' ? NOTE_SYSTEM_IMAGE : localized.content.featuredImage ?? '',
         readingMinutes: estimateReadingMinutes(readingSource, post.type === 'POETRY' ? 180 : 220),
     };
 }
@@ -182,8 +192,8 @@ export function csvToList(value: FormDataEntryValue | null) {
 
 export function parsePostContent(type: PostType, value: FormDataEntryValue | null, featuredImage?: FormDataEntryValue | null): CmsPostContent {
     const raw = String(value ?? '');
-    const image = safeCmsMediaUrl(featuredImage);
-    const content: CmsPostContent = type === 'POETRY' ? { text: raw } : { html: sanitizeCmsHtml(raw) };
+    const image = type === 'NOTE' ? '' : safeCmsMediaUrl(featuredImage);
+    const content: CmsPostContent = type === 'POETRY' ? { text: raw } : { html: sanitizePostHtml(type, raw) };
     if (image) content.featuredImage = image;
     return content;
 }

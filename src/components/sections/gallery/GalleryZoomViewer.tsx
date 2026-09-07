@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Minus, Plus, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -110,14 +109,16 @@ export function GalleryZoomViewer({
           className="absolute inset-0 transition-transform duration-150 ease-out will-change-transform"
           style={{ transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${rotation}deg) scale(${zoom})` }}
         >
-          <Image
+          {/* CMS media can live on a configurable R2/custom domain. Use the validated
+              public URL directly instead of routing it through Next's fixed remotePatterns. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={activeImage}
             alt={activeIndex === 0 ? alt : `${alt} - ${activeIndex + 1}`}
-            fill
-            priority={activeIndex === 0}
             draggable={false}
-            className="pointer-events-none object-contain [-webkit-user-drag:none]"
-            sizes="(max-width: 768px) 100vw, 1180px"
+            loading={activeIndex === 0 ? 'eager' : 'lazy'}
+            fetchPriority={activeIndex === 0 ? 'high' : 'auto'}
+            className="pointer-events-none absolute inset-0 h-full w-full object-contain [-webkit-user-drag:none]"
           />
         </div>
 
@@ -150,7 +151,8 @@ export function GalleryZoomViewer({
               className={cn('relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border bg-black transition sm:h-20 sm:w-28', activeIndex === index ? 'border-foreground/70 ring-1 ring-foreground/20' : 'border-foreground/10 opacity-60 hover:opacity-100')}
               aria-label={`View image ${index + 1}`}
             >
-              <Image src={image} alt="" fill draggable={false} className="pointer-events-none object-cover [-webkit-user-drag:none]" sizes="112px" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image} alt="" loading="lazy" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-cover [-webkit-user-drag:none]" />
             </button>
           ))}
         </div>

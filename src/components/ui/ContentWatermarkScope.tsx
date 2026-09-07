@@ -5,7 +5,21 @@ import type { ContentWatermarkSettings } from '@/lib/content-watermark';
 
 type WatermarkMode = 'all' | 'first';
 
-export function ContentWatermarkScope({ settings, children, mode = 'all' }: { settings: ContentWatermarkSettings; children: ReactNode; mode?: WatermarkMode }) {
+type ContentWatermarkScopeProps = {
+    settings: ContentWatermarkSettings;
+    children: ReactNode;
+    mode?: WatermarkMode;
+    protectImages?: boolean;
+    ignoreSelector?: string;
+};
+
+export function ContentWatermarkScope({
+    settings,
+    children,
+    mode = 'all',
+    protectImages = false,
+    ignoreSelector,
+}: ContentWatermarkScopeProps) {
     const rootRef = useRef<HTMLDivElement>(null);
     const label = `© ${settings.text}`;
     const style = {
@@ -17,18 +31,29 @@ export function ContentWatermarkScope({ settings, children, mode = 'all' }: { se
         if (!root || !settings.enabled) return;
 
         const marked = new Set<HTMLElement>();
+        const protectedImages = new Set<HTMLImageElement>();
+        const protectedHosts = new Set<HTMLElement>();
+
         const clearMarked = () => {
             marked.forEach((host) => {
                 host.removeAttribute('data-content-watermark-host');
                 host.removeAttribute('data-content-watermark-label');
             });
+            protectedHosts.forEach((host) => host.removeAttribute('data-content-protected-host'));
+            protectedImages.forEach((image) => {
+                image.removeAttribute('data-content-protected-image');
+                image.removeAttribute('draggable');
+            });
             marked.clear();
+            protectedHosts.clear();
+            protectedImages.clear();
         };
 
         const applyWatermarks = () => {
             clearMarked();
             const images = Array.from(root.querySelectorAll<HTMLImageElement>('img'))
-                .filter((image) => !image.closest('[data-watermark-ignore="true"]'));
+                .filter((image) => !image.closest('[data-watermark-ignore="true"]'))
+                .filter((image) => !ignoreSelector || !image.closest(ignoreSelector));
             const targets = mode === 'first' ? images.slice(0, 1) : images;
 
             targets.forEach((image) => {
@@ -38,18 +63,60 @@ export function ContentWatermarkScope({ settings, children, mode = 'all' }: { se
                 host.setAttribute('data-content-watermark-host', 'true');
                 host.setAttribute('data-content-watermark-label', label);
                 marked.add(host);
+
+                if (protectImages) {
+                    host.setAttribute('data-content-protected-host', 'true');
+                    image.setAttribute('data-content-protected-image', 'true');
+                    image.setAttribute('draggable', 'false');
+                    protectedHosts.add(host);
+                    protectedImages.add(image);
+                }
             });
+        };
+
+        const findProtectedHost = (target: EventTarget | null) => {
+            if (!protectImages || !(target instanceof Element)) return null;
+            const host = target.closest<HTMLElement>('[data-content-protected-host="true"]');
+            return host && root.contains(host) ? host : null;
+        };
+
+        const stopProtectedInteraction = (event: Event) => {
+            if (!findProtectedHost(event.target)) return;
+            event.preventDefault();
+            event.stopPropagation();
+        };
+
+        const stopProtectedKeyboardInteraction = (event: KeyboardEvent) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            if (!findProtectedHost(event.target)) return;
+            event.preventDefault();
+            event.stopPropagation();
         };
 
         applyWatermarks();
         const observer = new MutationObserver(applyWatermarks);
         observer.observe(root, { childList: true, subtree: true });
 
+        if (protectImages) {
+            root.addEventListener('click', stopProtectedInteraction, true);
+            root.addEventListener('auxclick', stopProtectedInteraction, true);
+            root.addEventListener('contextmenu', stopProtectedInteraction, true);
+            root.addEventListener('dragstart', stopProtectedInteraction, true);
+            root.addEventListener('keydown', stopProtectedKeyboardInteraction, true);
+        }
+
         return () => {
             observer.disconnect();
+            if (protectImages) {
+                root.removeEventListener('click', stopProtectedInteraction, true);
+                root.removeEventListener('auxclick', stopProtectedInteraction, true);
+                root.removeEventListener('contextmenu', stopProtectedInteraction, true);
+                root.removeEventListener('dragstart', stopProtectedInteraction, true);
+                root.removeEventListener('keydown', stopProtectedKeyboardInteraction, true);
+            }
             clearMarked();
         };
-    }, [label, mode, settings.enabled]);
+    }, [ignoreSelector, label, mode, protectImages, settings.enabled]);
 
     return (
         <div
@@ -64,6 +131,17 @@ export function ContentWatermarkScope({ settings, children, mode = 'all' }: { se
             <style jsx global>{`
                 [data-content-watermark-scope='true'] [data-content-watermark-host='true'] {
                     position: relative !important;
+                }
+
+                [data-content-watermark-scope='true'] [data-content-protected-host='true'],
+                [data-content-watermark-scope='true'] [data-content-protected-image='true'] {
+                    cursor: default !important;
+                    -webkit-user-select: none !important;
+                    user-select: none !important;
+                }
+
+                [data-content-watermark-scope='true'] [data-content-protected-image='true'] {
+                    -webkit-user-drag: none !important;
                 }
 
                 [data-content-watermark-scope='true'] [data-content-watermark-host='true']::after {

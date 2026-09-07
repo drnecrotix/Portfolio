@@ -10,7 +10,7 @@ import { TagInput } from '@/components/admin/TagInput';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { UnsavedContentPreview } from '@/components/admin/UnsavedContentPreview';
 import { FormDraftGuard, markDraftCommitted } from '@/components/admin/FormDraftGuard';
-import type { BlogLocale, CmsPostTranslation } from '@/lib/cms-posts';
+import { NOTE_SYSTEM_IMAGE, type BlogLocale, type CmsPostTranslation } from '@/lib/cms-posts';
 
 export type BlogTypeOption = { id: string; name: string; slug: string; editorMode: PostType };
 export type BlogCategoryOption = { id: string; name: string; slug: string };
@@ -87,6 +87,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
     const selectedType = useMemo(() => postTypes.find((item) => item.id === selectedTypeId) || postTypes[0], [postTypes, selectedTypeId]);
     const editorMode = selectedType?.editorMode ?? value.type ?? 'ARTICLE';
     const poetry = editorMode === 'POETRY';
+    const note = editorMode === 'NOTE';
     const initialContent = poetry ? value.content?.text ?? '' : value.content?.html ?? '';
     const secondaryLocale: BlogLocale = primaryLocale === 'bg' ? 'en' : 'bg';
     const secondaryLabel = secondaryLocale === 'bg' ? 'Bulgarian (BG)' : 'English (EN)';
@@ -99,9 +100,15 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
         if (!slugTouched) setSlug(slugify(next));
     };
 
+    const changeType = (nextId: string) => {
+        setSelectedTypeId(nextId);
+        if (postTypes.find((item) => item.id === nextId)?.editorMode === 'NOTE') setFeaturedImage('');
+    };
+
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
+        if (note) formData.set('featuredImage', '');
         if (!translationOpen) {
             for (const key of ['translationTitle', 'translationExcerpt', 'translationContent', 'translationSeoTitle', 'translationSeoDescription']) formData.set(key, '');
         }
@@ -151,12 +158,12 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                     <section>
                         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                             <div><p className="text-sm font-semibold text-white/75">Writing canvas</p><p className="mt-1 max-w-2xl text-xs leading-relaxed text-white/35">Write the original article in {primaryLabel}.</p></div>
-                            {!poetry && <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/25">Text · Quote · Pause · Image</span>}
+                            {!poetry && <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/25">{note ? 'Text · Quote · Pause' : 'Text · Quote · Pause · Image'}</span>}
                         </div>
                         <PostEditor key={`primary-${selectedTypeId || editorMode}`} name="content" initialValue={initialContent} poetry={poetry} variant="journal" />
                     </section>
 
-                    <SeoEditor sourceTitle={title} sourceDescription={excerpt} slug={slug} hasImage={Boolean(featuredImage)} initialTitle={value.seoTitle} initialDescription={value.seoDescription} />
+                    <SeoEditor sourceTitle={title} sourceDescription={excerpt} slug={slug} hasImage={note || Boolean(featuredImage)} initialTitle={value.seoTitle} initialDescription={value.seoDescription} />
 
                     <section className="rounded-3xl border border-cyan-400/15 bg-cyan-400/[0.025] p-6 md:p-8">
                         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -201,13 +208,25 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                     <section className={panelClass}>
                         <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Type & Category</h3><Link href="/admin/blog/taxonomies" className="text-[11px] text-white/40 hover:text-white">Manage</Link></div>
                         <div className="mt-4 space-y-4">
-                            <label className="block text-xs text-white/45">Type<select name="postTypeId" value={selectedTypeId} onChange={(event) => setSelectedTypeId(event.target.value)} className={selectClass} required>{postTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+                            <label className="block text-xs text-white/45">Type<select name="postTypeId" value={selectedTypeId} onChange={(event) => changeType(event.target.value)} className={selectClass} required>{postTypes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
                             <label className="block text-xs text-white/45">Category<select name="categoryId" defaultValue={value.categoryId ?? ''} className={selectClass}><option value="">Uncategorized</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
                             <TagInput name="tags" initialTags={value.tags ?? []} />
                         </div>
                     </section>
 
-                    <section className={panelClass}><MediaPicker value={featuredImage} onChange={setFeaturedImage} inputName="featuredImage" label="Featured image" initialKind="image" lockKind /><p className="mt-3 text-[11px] text-white/30">The same featured image is used for both language versions.</p></section>
+                    {note ? (
+                        <section className={panelClass}>
+                            <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Note cover</h3><span className="font-mono text-[9px] uppercase tracking-[0.16em] text-fuchsia-200/45">Automatic</span></div>
+                            <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={NOTE_SYSTEM_IMAGE} alt="Necrotix Lab Note system cover" className="aspect-[1200/630] w-full object-cover" />
+                            </div>
+                            <p className="mt-3 text-[11px] leading-5 text-white/35">Notes are text-only. This system cover is used automatically in the Blog archive and social sharing, but is not displayed inside the Note itself.</p>
+                            <input type="hidden" name="featuredImage" value="" />
+                        </section>
+                    ) : (
+                        <section className={panelClass}><MediaPicker value={featuredImage} onChange={setFeaturedImage} inputName="featuredImage" label="Featured image" initialKind="image" lockKind /><p className="mt-3 text-[11px] text-white/30">The same featured image is used for both language versions.</p></section>
+                    )}
 
                     <section className={panelClass}>
                         <h3 className="text-sm font-semibold">Opening thought</h3>

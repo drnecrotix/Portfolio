@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComments';
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
 import { ContentWatermarkScope } from '@/components/ui/ContentWatermarkScope';
-import { getAvailablePostLocales, getLocalizedPostFields } from '@/lib/cms-posts';
+import { getAvailablePostLocales, getLocalizedPostFields, NOTE_SYSTEM_IMAGE } from '@/lib/cms-posts';
 import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from '@/lib/content-watermark';
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
@@ -37,8 +37,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const localized = getLocalizedPostFields(cmsPost, locale);
     const homepage = normalizeHomepageContent(settings?.homepageContent);
     const seo = normalizeSeoDefaults(settings?.seoDefaults);
-    const ogImage = absoluteSocialMediaUrl(localized.content.featuredImage || seo.ogImage || homepage.socialImage);
-    const twitterImage = absoluteSocialMediaUrl(localized.content.featuredImage || seo.twitterImage || seo.ogImage || homepage.socialImage);
+    const publicationImage = cmsPost.type === 'NOTE' ? NOTE_SYSTEM_IMAGE : localized.content.featuredImage;
+    const ogImage = absoluteSocialMediaUrl(publicationImage || seo.ogImage || homepage.socialImage);
+    const twitterImage = absoluteSocialMediaUrl(publicationImage || seo.twitterImage || seo.ogImage || homepage.socialImage);
     const title = localized.seoTitle?.trim() || localized.title;
     const description = localized.seoDescription?.trim() || localized.excerpt || undefined;
     const publishedTime = (cmsPost.publishedAt ?? cmsPost.createdAt).toISOString();
@@ -140,7 +141,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             slug: post.slug,
             title: relatedLocalized.title,
             excerpt: relatedLocalized.excerpt,
-            image: relatedLocalized.content.featuredImage || null,
+            image: post.type === 'NOTE' ? NOTE_SYSTEM_IMAGE : relatedLocalized.content.featuredImage || null,
             category: post.categoryRef?.name ?? post.category ?? 'Publication',
             author: post.authorName,
             date: (post.publishedAt ?? post.createdAt).toISOString(),
@@ -150,35 +151,58 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     const availableLocales = getAvailablePostLocales(cmsPost);
     const currentLocale = locale === 'bg' ? 'bg' : 'en';
     const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
-    const featuredWatermark = {
+    const articleWatermark = {
         ...watermark,
-        enabled: watermark.enabled && Boolean(content.featuredImage),
+        enabled: watermark.enabled,
         position: 'bottom-right' as const,
     };
+    const isNote = cmsPost.type === 'NOTE';
 
     return (
-        <ContentWatermarkScope settings={featuredWatermark} mode="first">
-            <BlogArticleFrame
-                postId={cmsPost.id}
-                slug={cmsPost.slug}
-                postType={cmsPost.type}
-                initialLikeCount={cmsPost._count.likes}
-                initialViewCount={cmsPost.viewCount}
-                initiallyLiked={cmsPost.likes.length > 0}
-                title={localized.title}
-                excerpt={localized.excerpt}
-                initialContent={content}
-                featuredImage={content.featuredImage || null}
-                typeLabel={typeLabel}
-                categoryLabel={categoryLabel}
-                author={cmsPost.authorName}
-                publishedAt={publishedAt}
-                tags={cmsPost.tags}
-                relatedPosts={relatedPosts}
-                currentLocale={currentLocale}
-                availableLocales={availableLocales}
-                comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
-            />
-        </ContentWatermarkScope>
+        <div data-note-publication={isNote ? 'true' : undefined}>
+            <ContentWatermarkScope
+                settings={articleWatermark}
+                mode="all"
+                protectImages
+                ignoreSelector='a[href^="/blog/"]'
+            >
+                <BlogArticleFrame
+                    postId={cmsPost.id}
+                    slug={cmsPost.slug}
+                    postType={cmsPost.type}
+                    initialLikeCount={cmsPost._count.likes}
+                    initialViewCount={cmsPost.viewCount}
+                    initiallyLiked={cmsPost.likes.length > 0}
+                    title={localized.title}
+                    excerpt={localized.excerpt}
+                    initialContent={content}
+                    featuredImage={content.featuredImage || null}
+                    typeLabel={typeLabel}
+                    categoryLabel={categoryLabel}
+                    author={cmsPost.authorName}
+                    publishedAt={publishedAt}
+                    tags={cmsPost.tags}
+                    relatedPosts={relatedPosts}
+                    currentLocale={currentLocale}
+                    availableLocales={availableLocales}
+                    comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
+                />
+            </ContentWatermarkScope>
+
+            {isNote && (
+                <style>{`
+                    [data-note-publication='true'] main > header > div {
+                        max-width: 48rem !important;
+                    }
+
+                    @media (min-width: 1024px) {
+                        [data-note-publication='true'] main > header h1 {
+                            font-size: 3.75rem !important;
+                            line-height: 1 !important;
+                        }
+                    }
+                `}</style>
+            )}
+        </div>
     );
 }
