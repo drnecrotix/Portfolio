@@ -61,6 +61,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://portfolio:portfolio@127.0.0.1:5432/portfolio?schema=public
       AUTH_SECRET: ci-only-auth-secret-not-for-production
+      AI_CREDENTIALS_SECRET: ci-ai-credentials-secret-not-for-production
+      INTEGRATION_CREDENTIALS_SECRET: ci-integration-secret-not-for-production
       AUTH_TRUST_HOST: true
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
     steps:
@@ -140,6 +142,8 @@ jobs:
           fi
       - name: Standard build
         run: npm run build
+      - name: Audit client bundle leakage
+        run: npm run security:client-bundle
       - name: N0C WASM compatibility build
         run: |
           rm -rf .next
