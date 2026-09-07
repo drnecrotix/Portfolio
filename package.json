@@ -12,6 +12,7 @@
         "test:visual": "playwright test",
         "postinstall": "prisma generate",
         "production:preflight": "node scripts/check-production-env.mjs",
+        "security:client-boundaries": "node scripts/audit-client-boundaries.mjs",
         "security:client-bundle": "node scripts/audit-client-bundle.mjs",
         "db:generate": "prisma generate",
         "db:validate": "prisma validate",
