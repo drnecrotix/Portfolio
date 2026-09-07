@@ -22,8 +22,9 @@ export default async function AdminBlogPage() {
                     <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Write and manage publications with reusable post types, categories, media, scheduling and revisions.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                    <Link href="/admin/blog/settings" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-foreground/10 px-3 py-2.5 text-center text-sm text-muted-foreground transition hover:bg-foreground/[0.04] hover:text-foreground sm:px-4">Journal appearance</Link>
                     <Link href="/admin/blog/taxonomies" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-foreground/10 px-3 py-2.5 text-center text-sm text-muted-foreground transition hover:bg-foreground/[0.04] hover:text-foreground sm:px-4">Types & Categories</Link>
-                    <Link href="/admin/blog/new" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-foreground px-3 py-2.5 text-center text-sm font-semibold text-background sm:px-4">Add new post</Link>
+                    <Link href="/admin/blog/new" className="col-span-2 inline-flex min-h-11 items-center justify-center rounded-xl bg-foreground px-3 py-2.5 text-center text-sm font-semibold text-background sm:px-4">Add new post</Link>
                 </div>
             </div>
 
