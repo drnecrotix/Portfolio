@@ -1,3 +1,19 @@
+.blog-tag-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.blog-tag-rail::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+@keyframes blog-title-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 @media (max-width: 639px) {
   main:has([aria-label="Publication tags"]) > section {
     padding-top: 5rem;
@@ -44,25 +60,10 @@
     margin-bottom: 0.5rem;
   }
 
-  [aria-label="Publication tags"] nav {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  [aria-label="Publication tags"] nav::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-
   [aria-label="Publication tags"] nav > div {
-    gap: 1.5rem;
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-  }
-
-  [aria-label="Publication tags"] nav button > span.absolute {
-    bottom: -0.75rem !important;
+    gap: 0.5rem;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
   }
 
   [aria-label="Publication tags"] + div {
@@ -89,5 +90,63 @@
     gap: 0.5rem;
     padding-top: 0.75rem;
     padding-bottom: 0.75rem;
+  }
+
+  /* Individual publication hero - keep the pre-image hierarchy clean on phones. */
+  main:has(> header a[href="/blog"]) {
+    padding-top: 5.5rem;
+    padding-bottom: 7rem;
+  }
+
+  main:has(> header a[href="/blog"]) > header {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  main:has(> header a[href="/blog"]) > header a[href="/blog"] {
+    margin-bottom: 1.5rem;
+    font-size: 0.8125rem;
+  }
+
+  main:has(> header a[href="/blog"]) > header a[href="/blog"] + div {
+    margin-bottom: 0.875rem;
+    gap: 0.35rem 0.5rem;
+    font-size: 0.5625rem;
+    line-height: 1.35;
+    letter-spacing: 0.13em;
+  }
+
+  main:has(> header a[href="/blog"]) > header h1 {
+    overflow-wrap: anywhere;
+    font-size: clamp(2rem, 10vw, 2.65rem);
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+  }
+
+  main:has(> header a[href="/blog"]) > header h1 + p {
+    margin-top: 1.1rem;
+    font-size: 1rem;
+    line-height: 1.65;
+  }
+
+  main:has(> header a[href="/blog"]) > header > div > div:last-child {
+    margin-top: 1.35rem;
+    gap: 0.35rem 0.65rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  main:has(> header a[href="/blog"]) > header > div > div:last-child > span[aria-hidden="true"] {
+    display: none;
+  }
+
+  main:has(> header a[href="/blog"]) > div:has(> button[aria-label="Open featured image"]) {
+    margin-top: 2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  main:has(> header a[href="/blog"]) > div:has(> button[aria-label="Open featured image"]) > button {
+    border-radius: 1.25rem;
   }
 }
