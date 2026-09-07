@@ -68,3 +68,14 @@ export function normalizeBlogSettings(value: unknown): BlogSettings {
         rotationIntervalMs: integer(source.rotationIntervalMs, defaultBlogSettings.rotationIntervalMs, 1200, 10000),
     };
 }
+
+export function blogSettingsFromSiteEnvelope(value: unknown): BlogSettings {
+    return normalizeBlogSettings(object(value).blogContent);
+}
+
+export function withBlogSettingsInSiteEnvelope(value: unknown, settings: BlogSettings) {
+    return {
+        ...object(value),
+        blogContent: settings,
+    };
+}
