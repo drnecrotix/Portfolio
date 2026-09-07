@@ -138,27 +138,39 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
             frame = window.requestAnimationFrame(() => {
                 frame = 0;
                 const rect = root.getBoundingClientRect();
-                const viewportHeight = Math.max(1, window.innerHeight);
-                const topReadingLine = Math.min(112, Math.max(72, viewportHeight * 0.14));
-                const bottomInset = Math.min(132, Math.max(84, viewportHeight * 0.12));
-                const bottomReadingLine = Math.max(topReadingLine + 1, viewportHeight - bottomInset);
+                const visualViewport = window.visualViewport;
+                const viewportTop = visualViewport?.offsetTop ?? 0;
+                const viewportHeight = Math.max(1, visualViewport?.height ?? window.innerHeight);
+                const topReadingLine = viewportTop + Math.min(112, Math.max(64, viewportHeight * 0.12));
+                const bottomInset = Math.min(124, Math.max(72, viewportHeight * 0.1));
+                const bottomReadingLine = Math.max(topReadingLine + 1, viewportTop + viewportHeight - bottomInset);
                 const readableViewportHeight = Math.max(1, bottomReadingLine - topReadingLine);
-                const scrollableArticleHeight = Math.max(1, rect.height - readableViewportHeight);
+                const shortArticle = rect.height <= readableViewportHeight;
 
-                const ratio = rect.height <= readableViewportHeight
-                    ? (rect.top <= topReadingLine ? 1 : 0)
-                    : (topReadingLine - rect.top) / scrollableArticleHeight;
+                let ratio: number;
+                let visible: boolean;
+                if (shortArticle) {
+                    const travelDistance = Math.max(1, readableViewportHeight + rect.height);
+                    ratio = (bottomReadingLine - rect.top) / travelDistance;
+                    visible = rect.bottom > topReadingLine && rect.top < bottomReadingLine;
+                } else {
+                    const scrollableArticleHeight = Math.max(1, rect.height - readableViewportHeight);
+                    ratio = (topReadingLine - rect.top) / scrollableArticleHeight;
+                    visible = rect.top <= topReadingLine && rect.bottom > bottomReadingLine;
+                }
+
                 const nextProgress = Math.max(0, Math.min(100, ratio * 100));
-                const visible = rect.top <= topReadingLine && rect.bottom > bottomReadingLine;
-
                 setProgress(nextProgress);
                 setProgressVisible(visible);
             });
         };
 
+        const visualViewport = window.visualViewport;
         updateProgress();
         window.addEventListener('scroll', updateProgress, { passive: true });
         window.addEventListener('resize', updateProgress);
+        visualViewport?.addEventListener('scroll', updateProgress, { passive: true });
+        visualViewport?.addEventListener('resize', updateProgress);
         const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateProgress) : null;
         resizeObserver?.observe(root);
 
@@ -166,6 +178,8 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
             if (frame) window.cancelAnimationFrame(frame);
             window.removeEventListener('scroll', updateProgress);
             window.removeEventListener('resize', updateProgress);
+            visualViewport?.removeEventListener('scroll', updateProgress);
+            visualViewport?.removeEventListener('resize', updateProgress);
             resizeObserver?.disconnect();
         };
     }, [html]);
@@ -189,7 +203,7 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
     const progressIndicator = mounted ? createPortal(
         <div
             className={cn(
-                'pointer-events-none fixed left-1/2 bottom-[calc(env(safe-area-inset-bottom)+1rem)] z-[120] w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 transition-all duration-200 ease-out sm:bottom-6',
+                'pointer-events-none fixed left-1/2 bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] z-[10050] w-[calc(100vw-1rem)] -translate-x-1/2 transition-all duration-200 ease-out sm:bottom-6 sm:w-[min(42rem,calc(100vw-2rem))]',
                 progressVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0',
             )}
             role="progressbar"
