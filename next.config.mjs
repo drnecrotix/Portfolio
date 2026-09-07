@@ -4,6 +4,7 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const useN0cBuildTuning = process.env.NEXT_N0C_WASM_SWC === '1';
 const buildDistDir = process.env.NEXT_DIST_DIR?.trim() || '.next';
 const isStagedUpdaterBuild = buildDistDir === '.next-update';
+const isDevelopment = process.env.NODE_ENV !== 'production';
 const publicAssetCacheHeader = { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' };
 const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'woff', 'woff2'];
 const contentSecurityPolicy = [
@@ -12,7 +13,7 @@ const contentSecurityPolicy = [
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline' https:",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https:",
@@ -26,9 +27,11 @@ const securityHeaders = [
     { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'X-Frame-Options', value: 'DENY' },
+    { key: 'X-DNS-Prefetch-Control', value: 'off' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
     { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+    { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
 ];
 
 /** @type {import('next').NextConfig} */
@@ -36,6 +39,7 @@ const nextConfig = {
     distDir: buildDistDir,
     reactStrictMode: true,
     poweredByHeader: false,
+    productionBrowserSourceMaps: false,
     transpilePackages: ['three'],
     // The self-updater builds into .next-update while the live .next tree stays in
     // place. Older deployments can therefore still contain stale generated route
