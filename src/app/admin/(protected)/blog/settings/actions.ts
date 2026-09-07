@@ -35,7 +35,7 @@ export async function updateBlogSettings(form: FormData) {
             where: { id: 'default' },
             select: { integrationSettings: true },
         });
-        const envelope = withBlogSettingsInSiteEnvelope(existing?.integrationSettings, next) as Prisma.InputJsonValue;
+        const envelope = JSON.parse(JSON.stringify(withBlogSettingsInSiteEnvelope(existing?.integrationSettings, next))) as Prisma.InputJsonValue;
 
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
