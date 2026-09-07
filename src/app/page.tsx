@@ -26,7 +26,8 @@ export default async function HomePage() {
         const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
         rawContent = settings?.homepageContent;
         const homepage = normalizeHomepageContent(rawContent);
-        identity = buildPublicIdentity(settings, homepage.profileImage);
+        const publicIdentity = buildPublicIdentity(settings, homepage.profileImage);
+        identity = { ...publicIdentity, name: homepage.profileName || publicIdentity.name };
 
         if (homepage.showBlogPosts) {
             const cmsPosts = await prisma.post.findMany({

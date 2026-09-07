@@ -10,6 +10,7 @@ export type HomepageContent = {
     workspaceTooltip: string;
     assistantTooltip: string;
     availabilityLabel: string;
+    profileName: string;
     profileTitle: string;
     profileDescription: string;
     profileImage: string;
@@ -41,6 +42,7 @@ export const defaultHomepageContent: HomepageContent = {
     workspaceTooltip: 'Explore Projects',
     assistantTooltip: 'Talk to my AI Assistant',
     availabilityLabel: 'AVAILABLE FOR OPPORTUNITY',
+    profileName: '',
     profileTitle: 'Developer, Creator & Community Builder',
     profileDescription: 'Dr Necrotix builds software, digital experiences, creative projects and online communities with a focus on practical execution and distinctive identity.',
     profileImage: '',
