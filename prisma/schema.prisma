@@ -63,6 +63,12 @@ enum StoreOrderStatus {
   CANCELLED
 }
 
+enum CommentSource {
+  BLOG
+  GALLERY
+  PRODUCT
+}
+
 model User {
   id           String    @id @default(cuid())
   name         String
@@ -133,19 +139,26 @@ model Post {
 
 model BlogComment {
   id          String        @id @default(cuid())
-  postId      String
-  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId      String?
+  post        Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sourceType  CommentSource @default(BLOG)
+  sourceKey   String
+  sourceTitle String
+  sourcePath  String
   parentId    String?
-  parent      BlogComment?  @relation("BlogCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  parent      BlogComment?  @relation("BlogCommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
   replies     BlogComment[] @relation("BlogCommentReplies")
   authorName  String
   authorEmail String?
   content     String        @db.Text
   status      String        @default("APPROVED")
+  spamAt      DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([postId, status, createdAt])
+  @@index([sourceType, sourceKey, status, createdAt])
+  @@index([status, spamAt])
   @@index([parentId, createdAt])
 }
 
