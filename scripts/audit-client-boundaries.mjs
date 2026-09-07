@@ -18,7 +18,6 @@ const forbiddenImports = [
     '@/lib/store-storage',
     '@/lib/legal-settings',
     '@/lib/social-metadata',
-    '@prisma/client',
 ];
 
 async function walk(directory) {
@@ -38,6 +37,16 @@ function relative(file) {
     return path.relative(appRoot, file).replaceAll(path.sep, '/');
 }
 
+function hasRuntimePrismaImport(content) {
+    const staticImports = content.match(/import\s+(?:type\s+)?[\s\S]*?\sfrom\s+['"]@prisma\/client['"];?/g) || [];
+    if (staticImports.some((statement) => !/^import\s+type\b/.test(statement.trim()))) return true;
+
+    if (/import\s*\(\s*['"]@prisma\/client['"]\s*\)/.test(content)) return true;
+    if (/require\s*\(\s*['"]@prisma\/client['"]\s*\)/.test(content)) return true;
+
+    return false;
+}
+
 const files = await walk(srcRoot);
 const violations = [];
 let clientFiles = 0;
@@ -54,6 +63,10 @@ for (const file of files) {
         if (importPattern.test(content)) {
             violations.push(`${relative(file)} imports server-only module ${moduleName}`);
         }
+    }
+
+    if (hasRuntimePrismaImport(content)) {
+        violations.push(`${relative(file)} imports Prisma runtime from @prisma/client`);
     }
 
     for (const match of content.matchAll(/process\.env\.([A-Z0-9_]+)/g)) {
@@ -78,4 +91,4 @@ if (violations.length > 0) {
     process.exit(1);
 }
 
-console.log(`[client-boundary-audit] Passed. Inspected ${clientFiles} Client Components with no private env or server-only imports.`);
+console.log(`[client-boundary-audit] Passed. Inspected ${clientFiles} Client Components with no private env or runtime server-only imports.`);
