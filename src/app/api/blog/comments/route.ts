@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyCommentChallenge } from '@/lib/comment-challenge';
+import { cleanupExpiredSpamComments, containsPublicLink } from '@/lib/comment-engine';
 
 const MAX_NAME = 80;
 const MAX_EMAIL = 160;
@@ -15,6 +16,8 @@ function cleanComment(value: unknown) {
 }
 
 export async function POST(request: Request) {
+    void cleanupExpiredSpamComments().catch(() => undefined);
+
     let body: Record<string, unknown>;
     try {
         body = await request.json() as Record<string, unknown>;
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
     const challengeAnswer = String(body.challengeAnswer ?? '');
     const website = cleanText(body.website, 200);
 
-    if (website) return NextResponse.json({ error: 'Comment rejected.' }, { status: 400 });
+    if (website) return NextResponse.json({ accepted: true }, { status: 202 });
     if (!postId || !authorName || !content) {
         return NextResponse.json({ error: 'Name and comment are required.' }, { status: 400 });
     }
@@ -44,7 +47,7 @@ export async function POST(request: Request) {
 
     const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true, status: true, publishedAt: true },
+        select: { id: true, slug: true, title: true, status: true, publishedAt: true },
     });
     if (!post || post.status !== 'PUBLISHED' || (post.publishedAt && post.publishedAt > new Date())) {
         return NextResponse.json({ error: 'This publication is not accepting comments.' }, { status: 404 });
@@ -52,32 +55,42 @@ export async function POST(request: Request) {
 
     if (parentId) {
         const parent = await prisma.blogComment.findFirst({
-            where: { id: parentId, postId, status: 'APPROVED' },
-            select: { id: true, parentId: true },
+            where: { id: parentId, postId, sourceType: 'BLOG', sourceKey: post.slug, status: 'APPROVED' },
+            select: { id: true },
         });
         if (!parent) return NextResponse.json({ error: 'The comment you are replying to is unavailable.' }, { status: 404 });
-        if (parent.parentId) return NextResponse.json({ error: 'Replies can only be added to top-level comments.' }, { status: 400 });
     }
 
+    const spam = containsPublicLink(content);
     const comment = await prisma.blogComment.create({
         data: {
             postId,
+            sourceType: 'BLOG',
+            sourceKey: post.slug,
+            sourceTitle: post.title,
+            sourcePath: `/blog/${post.slug}`,
             parentId,
             authorName,
             authorEmail: authorEmail || null,
             content,
-            status: 'APPROVED',
+            status: spam ? 'SPAM' : 'APPROVED',
+            spamAt: spam ? new Date() : null,
         },
         select: {
             id: true,
             parentId: true,
             authorName: true,
             content: true,
+            status: true,
             createdAt: true,
         },
     });
 
+    if (spam) return NextResponse.json({ accepted: true, status: 'SPAM' }, { status: 202 });
+
     return NextResponse.json({
+        accepted: true,
+        status: 'APPROVED',
         comment: {
             ...comment,
             createdAt: comment.createdAt.toISOString(),
