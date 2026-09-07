@@ -45,6 +45,7 @@ export async function updateHomepage(form: FormData) {
         workspaceTooltip: getString(form, 'workspaceTooltip', 120) || defaultHomepageContent.workspaceTooltip,
         assistantTooltip: getString(form, 'assistantTooltip', 120) || defaultHomepageContent.assistantTooltip,
         availabilityLabel: getString(form, 'availabilityLabel', 120) || defaultHomepageContent.availabilityLabel,
+        profileName: getString(form, 'profileName', 120),
         profileTitle: getString(form, 'profileTitle', 160) || defaultHomepageContent.profileTitle,
         profileDescription: getString(form, 'profileDescription', 600) || defaultHomepageContent.profileDescription,
         profileImage: safeCmsMediaUrl(getString(form, 'profileImage', 2048)),

@@ -42,6 +42,7 @@ export default async function HomepageAdminPage() {
                     <label className="text-sm text-white/60">Workspace tooltip<input name="workspaceTooltip" defaultValue={content.workspaceTooltip} className={input} /></label>
                     <label className="text-sm text-white/60">Assistant tooltip<input name="assistantTooltip" defaultValue={content.assistantTooltip} className={input} /></label>
                     <label className="text-sm text-white/60">Availability tab<input name="availabilityLabel" defaultValue={content.availabilityLabel} className={input} /></label>
+                    <label className="text-sm text-white/60">Profile card name<input name="profileName" defaultValue={content.profileName} placeholder="Use site name" className={input} /><span className="mt-2 block text-xs leading-relaxed text-white/30">Independent from the site name. Leave empty to use the public site identity.</span></label>
                     <label className="text-sm text-white/60">Profile card title<input name="profileTitle" defaultValue={content.profileTitle} className={input} /></label>
                     <label className="text-sm text-white/60 md:col-span-2">Profile card description<textarea name="profileDescription" defaultValue={content.profileDescription} rows={4} className={input} /></label>
                     <div className="md:col-span-2"><MediaPicker value={content.profileImage} inputName="profileImage" label="Profile card image" /></div>
