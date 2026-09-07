@@ -46,9 +46,13 @@ function externalLink(link: CardNavLink) {
 }
 
 function panelWidth(style: ResolvedDropdownStyle) {
-    if (style === 'compact') return 'w-[min(360px,calc(100vw-24px))]';
-    if (style === 'standard') return 'w-[min(520px,calc(100vw-28px))]';
-    return 'w-[min(820px,calc(100vw-32px))]';
+    if (style === 'compact') return 'w-[min(390px,calc(100vw-24px))]';
+    if (style === 'standard') return 'w-[min(570px,calc(100vw-28px))]';
+    return 'w-[min(860px,calc(100vw-32px))]';
+}
+
+function DirectionIcon({ external, className }: { external: boolean; className?: string }) {
+    return external ? <ExternalLink className={className} /> : <ArrowUpRight className={className} />;
 }
 
 function MenuLink({
@@ -69,6 +73,7 @@ function MenuLink({
     const external = externalLink(link);
     const active = isLinkActive(pathname, link.href);
     const dark = theme === 'dark';
+    const number = String(index + 1).padStart(2, '0');
 
     if (style === 'compact') {
         return (
@@ -79,25 +84,36 @@ function MenuLink({
                 onClick={onNavigate}
                 role="menuitem"
                 className={cn(
-                    'group flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-primary/40',
+                    'group relative grid min-h-[54px] grid-cols-[36px_minmax(0,1fr)_34px] items-center gap-3 overflow-hidden rounded-[14px] px-2 py-2 outline-none transition duration-300 focus-visible:ring-2 focus-visible:ring-primary/40',
                     active
-                        ? dark ? 'bg-white/[0.08] text-white' : 'bg-black/[0.06] text-black'
-                        : dark ? 'text-white/72 hover:bg-white/[0.055] hover:text-white' : 'text-black/70 hover:bg-black/[0.045] hover:text-black',
+                        ? dark ? 'text-white' : 'text-black'
+                        : dark ? 'text-white/64 hover:text-white' : 'text-black/62 hover:text-black',
                 )}
             >
                 <span className={cn(
-                    'grid size-7 shrink-0 place-items-center rounded-lg border font-mono text-[9px] tabular-nums transition',
+                    'pointer-events-none absolute inset-0 origin-left scale-x-0 rounded-[14px] transition-transform duration-300 ease-out group-hover:scale-x-100',
+                    dark ? 'bg-white/[0.055]' : 'bg-black/[0.045]',
+                    active && 'scale-x-100 bg-primary/[0.075]',
+                )} />
+                <span className={cn(
+                    'relative z-10 grid size-8 place-items-center rounded-full border font-mono text-[8px] tracking-[0.08em] transition duration-300',
                     active
                         ? 'border-primary/30 bg-primary/10 text-primary'
-                        : dark ? 'border-white/[0.08] bg-white/[0.025] text-white/32 group-hover:text-white/60' : 'border-black/[0.08] bg-black/[0.02] text-black/35 group-hover:text-black/60',
+                        : dark ? 'border-white/[0.08] text-white/28 group-hover:border-white/[0.16] group-hover:text-white/55' : 'border-black/[0.08] text-black/30 group-hover:border-black/[0.16] group-hover:text-black/58',
                 )}>
-                    {String(index + 1).padStart(2, '0')}
+                    {number}
                 </span>
-                <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-semibold tracking-[-0.015em]">{link.label}</span>
-                    <span className={cn('mt-0.5 block truncate font-mono text-[9px]', dark ? 'text-white/28' : 'text-black/36')}>{link.description || link.href}</span>
+                <span className={cn(
+                    'relative z-10 truncate text-[13px] font-semibold tracking-[-0.02em] transition-transform duration-300 group-hover:translate-x-1',
+                    active && 'text-primary',
+                )}>{link.label}</span>
+                <span className={cn(
+                    'relative z-10 grid size-8 place-items-center rounded-full transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5',
+                    dark ? 'text-white/25 group-hover:bg-white/[0.05] group-hover:text-white/72' : 'text-black/28 group-hover:bg-black/[0.04] group-hover:text-black/72',
+                    active && 'text-primary',
+                )}>
+                    <DirectionIcon external={external} className="size-3.5" />
                 </span>
-                {external ? <ExternalLink className="size-3.5 shrink-0 opacity-35 transition group-hover:opacity-75" /> : <ArrowUpRight className="size-3.5 shrink-0 opacity-35 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-75" />}
             </Link>
         );
     }
@@ -111,26 +127,44 @@ function MenuLink({
                 onClick={onNavigate}
                 role="menuitem"
                 className={cn(
-                    'group relative flex min-h-[68px] items-center gap-4 overflow-hidden rounded-2xl border px-4 py-3 outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-primary/40',
+                    'group relative min-h-[78px] overflow-hidden rounded-[19px] border px-4 py-3.5 outline-none transition duration-300 focus-visible:ring-2 focus-visible:ring-primary/40',
                     active
-                        ? dark ? 'border-primary/25 bg-primary/[0.07] text-white' : 'border-primary/25 bg-primary/[0.06] text-black'
-                        : dark ? 'border-white/[0.07] bg-white/[0.025] text-white hover:border-white/[0.13] hover:bg-white/[0.05]' : 'border-black/[0.075] bg-black/[0.018] text-black hover:border-black/[0.14] hover:bg-black/[0.035]',
+                        ? dark ? 'border-primary/25 bg-primary/[0.065] text-white' : 'border-primary/25 bg-primary/[0.055] text-black'
+                        : dark ? 'border-white/[0.065] bg-white/[0.018] text-white hover:border-white/[0.14] hover:bg-white/[0.045]' : 'border-black/[0.065] bg-black/[0.014] text-black hover:border-black/[0.14] hover:bg-black/[0.035]',
                 )}
             >
-                <div className={cn('absolute inset-y-0 left-0 w-px transition-opacity', active ? 'bg-primary opacity-100' : 'bg-primary opacity-0 group-hover:opacity-45')} />
                 <span className={cn(
-                    'grid size-9 shrink-0 place-items-center rounded-xl border transition',
-                    active
-                        ? 'border-primary/25 bg-primary/10 text-primary'
-                        : dark ? 'border-white/[0.08] bg-black/20 text-white/35 group-hover:text-white/70' : 'border-black/[0.08] bg-white/70 text-black/35 group-hover:text-black/70',
-                )}>
-                    {external ? <ExternalLink className="size-4" /> : <ArrowUpRight className="size-4" />}
-                </span>
-                <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold tracking-[-0.02em]">{link.label}</span>
-                    <span className={cn('mt-1 block truncate font-mono text-[9px]', dark ? 'text-white/30' : 'text-black/38')}>{link.description || link.href}</span>
-                </span>
-                <span className={cn('font-mono text-[9px] tabular-nums', dark ? 'text-white/20' : 'text-black/24')}>{String(index + 1).padStart(2, '0')}</span>
+                    'pointer-events-none absolute -right-3 -top-8 select-none font-mono text-[72px] font-black leading-none tracking-[-0.08em] transition duration-500 group-hover:-translate-x-2 group-hover:translate-y-2',
+                    dark ? 'text-white/[0.025]' : 'text-black/[0.025]',
+                    active && 'text-primary/[0.055]',
+                )}>{number}</span>
+                <span className={cn(
+                    'pointer-events-none absolute inset-y-3 left-0 w-px origin-center scale-y-0 transition-transform duration-300 group-hover:scale-y-100',
+                    active ? 'scale-y-100 bg-primary' : dark ? 'bg-white/35' : 'bg-black/30',
+                )} />
+                <div className="relative z-10 flex items-center gap-4">
+                    <span className={cn(
+                        'font-mono text-[9px] tracking-[0.18em] transition-colors',
+                        active ? 'text-primary' : dark ? 'text-white/28 group-hover:text-white/52' : 'text-black/30 group-hover:text-black/52',
+                    )}>{number}</span>
+                    <span className="min-w-0 flex-1">
+                        <span className={cn(
+                            'block truncate text-[15px] font-semibold tracking-[-0.025em] transition-transform duration-300 group-hover:translate-x-1',
+                            active && 'text-primary',
+                        )}>{link.label}</span>
+                    </span>
+                    {external && (
+                        <span className={cn('font-mono text-[7px] uppercase tracking-[0.18em]', dark ? 'text-white/20' : 'text-black/24')}>external</span>
+                    )}
+                    <span className={cn(
+                        'grid size-9 shrink-0 place-items-center rounded-full border transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:rotate-3',
+                        active
+                            ? 'border-primary/25 bg-primary/10 text-primary'
+                            : dark ? 'border-white/[0.08] bg-white/[0.018] text-white/32 group-hover:border-white/[0.18] group-hover:text-white/78' : 'border-black/[0.08] bg-black/[0.012] text-black/32 group-hover:border-black/[0.18] group-hover:text-black/78',
+                    )}>
+                        <DirectionIcon external={external} className="size-3.5" />
+                    </span>
+                </div>
             </Link>
         );
     }
@@ -143,24 +177,52 @@ function MenuLink({
             onClick={onNavigate}
             role="menuitem"
             className={cn(
-                'group relative min-h-[108px] overflow-hidden rounded-[22px] border p-4 outline-none transition duration-300 focus-visible:ring-2 focus-visible:ring-primary/40',
+                'group relative min-h-[132px] overflow-hidden rounded-[24px] border p-5 outline-none transition duration-500 focus-visible:ring-2 focus-visible:ring-primary/40',
                 active
-                    ? dark ? 'border-primary/25 bg-primary/[0.065] text-white' : 'border-primary/25 bg-primary/[0.055] text-black'
-                    : dark ? 'border-white/[0.075] bg-white/[0.022] text-white hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.05]' : 'border-black/[0.075] bg-black/[0.018] text-black hover:-translate-y-0.5 hover:border-black/[0.14] hover:bg-black/[0.035]',
+                    ? dark ? 'border-primary/25 bg-primary/[0.06] text-white' : 'border-primary/25 bg-primary/[0.05] text-black'
+                    : dark ? 'border-white/[0.07] bg-white/[0.018] text-white hover:-translate-y-1 hover:border-white/[0.15] hover:bg-white/[0.045]' : 'border-black/[0.07] bg-black/[0.014] text-black hover:-translate-y-1 hover:border-black/[0.15] hover:bg-black/[0.035]',
             )}
         >
-            <div className="flex items-start justify-between gap-5">
-                <span className={cn('font-mono text-[9px] tracking-[0.16em]', active ? 'text-primary' : dark ? 'text-white/26' : 'text-black/30')}>{String(index + 1).padStart(2, '0')}</span>
-                <span className={cn(
-                    'grid size-8 shrink-0 place-items-center rounded-full border transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5',
-                    dark ? 'border-white/[0.09] bg-white/[0.025] text-white/38 group-hover:text-white/75' : 'border-black/[0.09] bg-black/[0.02] text-black/38 group-hover:text-black/75',
-                )}>
-                    {external ? <ExternalLink className="size-3.5" /> : <ArrowUpRight className="size-3.5" />}
-                </span>
-            </div>
-            <div className="mt-4 min-w-0">
-                <span className={cn('block truncate text-base font-semibold tracking-[-0.025em]', active && 'text-primary')}>{link.label}</span>
-                <span className={cn('mt-1.5 block truncate font-mono text-[9px]', dark ? 'text-white/30' : 'text-black/38')}>{link.description || link.href}</span>
+            <span className={cn(
+                'pointer-events-none absolute -bottom-8 -left-2 select-none font-mono text-[104px] font-black leading-none tracking-[-0.1em] transition duration-700 group-hover:-translate-y-2 group-hover:translate-x-2',
+                dark ? 'text-white/[0.025]' : 'text-black/[0.025]',
+                active && 'text-primary/[0.05]',
+            )}>{number}</span>
+            <span className={cn(
+                'pointer-events-none absolute -right-10 -top-12 size-32 rounded-full blur-3xl transition duration-700 group-hover:scale-150',
+                active ? 'bg-primary/[0.14]' : dark ? 'bg-white/[0.035]' : 'bg-black/[0.03]',
+            )} />
+            <span className={cn(
+                'pointer-events-none absolute right-5 top-5 h-px w-12 origin-right transition-all duration-500 group-hover:w-20',
+                active ? 'bg-primary/55' : dark ? 'bg-white/14' : 'bg-black/14',
+            )} />
+
+            <div className="relative z-10 flex h-full min-h-[90px] flex-col justify-between">
+                <div className="flex items-start justify-between gap-5">
+                    <div className="flex items-center gap-2.5">
+                        <span className={cn('font-mono text-[9px] tracking-[0.2em]', active ? 'text-primary' : dark ? 'text-white/28' : 'text-black/30')}>{number}</span>
+                        {external && <span className={cn('font-mono text-[7px] uppercase tracking-[0.18em]', dark ? 'text-white/20' : 'text-black/24')}>external</span>}
+                    </div>
+                    <span className={cn(
+                        'grid size-9 place-items-center rounded-full border transition duration-500 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:rotate-6',
+                        active
+                            ? 'border-primary/25 bg-primary/10 text-primary'
+                            : dark ? 'border-white/[0.09] bg-white/[0.02] text-white/35 group-hover:border-white/[0.2] group-hover:text-white/80' : 'border-black/[0.09] bg-black/[0.015] text-black/35 group-hover:border-black/[0.2] group-hover:text-black/80',
+                    )}>
+                        <DirectionIcon external={external} className="size-3.5" />
+                    </span>
+                </div>
+
+                <div className="mt-7">
+                    <span className={cn(
+                        'block truncate text-[17px] font-semibold tracking-[-0.035em] transition-transform duration-500 group-hover:translate-x-1',
+                        active && 'text-primary',
+                    )}>{link.label}</span>
+                    <span className={cn(
+                        'mt-3 block h-px w-8 transition-all duration-500 group-hover:w-16',
+                        active ? 'bg-primary/65' : dark ? 'bg-white/18 group-hover:bg-white/38' : 'bg-black/18 group-hover:bg-black/38',
+                    )} />
+                </div>
             </div>
         </Link>
     );
@@ -234,10 +296,10 @@ export default function CardNav({ items, theme = 'dark', pathname = '/' }: CardN
     if (!menu || links.length === 0) return null;
 
     const panelClass = style === 'compact'
-        ? 'rounded-[18px] p-2'
+        ? 'rounded-[20px] p-2'
         : style === 'standard'
-            ? 'rounded-[24px] p-3'
-            : 'rounded-[28px] p-4';
+            ? 'rounded-[26px] p-3'
+            : 'rounded-[30px] p-4';
 
     return (
         <Popover.Root open={isExpanded} onOpenChange={setIsExpanded} modal={false}>
@@ -248,7 +310,7 @@ export default function CardNav({ items, theme = 'dark', pathname = '/' }: CardN
                         onPointerEnter={() => { cancelClose(); setIsExpanded(true); }}
                         onKeyDown={handleTriggerKeyDown}
                         className={cn(
-                            'relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/40',
+                            'relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary/40',
                             isActive
                                 ? dark ? 'bg-white/10 text-white' : 'bg-black/5 text-black'
                                 : dark ? 'text-white/70 hover:bg-white/[0.04] hover:text-white' : 'text-black/70 hover:bg-black/[0.03] hover:text-black',
@@ -257,7 +319,7 @@ export default function CardNav({ items, theme = 'dark', pathname = '/' }: CardN
                         aria-haspopup="menu"
                     >
                         <span>{menu.label}</span>
-                        <ChevronDown className={cn('size-3.5 opacity-45 transition-transform duration-200', isExpanded && 'rotate-180')} />
+                        <ChevronDown className={cn('size-3.5 opacity-45 transition-transform duration-300', isExpanded && 'rotate-180')} />
                     </button>
                 </Popover.Trigger>
 
@@ -266,47 +328,48 @@ export default function CardNav({ items, theme = 'dark', pathname = '/' }: CardN
                         ref={contentRef}
                         side="bottom"
                         align="center"
-                        sideOffset={10}
+                        sideOffset={11}
                         collisionPadding={16}
                         onPointerEnter={cancelClose}
                         onPointerLeave={scheduleClose}
                         onKeyDown={handleMenuKeyDown}
                         onOpenAutoFocus={(event) => event.preventDefault()}
                         className={cn(
-                            'z-[180] outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2',
+                            'z-[180] origin-[var(--radix-popover-content-transform-origin)] outline-none will-change-[transform,opacity] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2',
                             panelWidth(style),
                         )}
                         role="menu"
                         aria-label={menu.label}
                     >
                         <div className={cn(
-                            'relative overflow-hidden border shadow-[0_28px_90px_-36px_rgba(0,0,0,0.72)] backdrop-blur-2xl',
+                            'relative overflow-hidden border shadow-[0_32px_100px_-38px_rgba(0,0,0,0.78)] backdrop-blur-2xl',
                             panelClass,
-                            dark ? 'border-white/[0.09] bg-[#090909]/[0.94]' : 'border-black/[0.09] bg-white/[0.94]',
+                            dark ? 'border-white/[0.09] bg-[#080808]/[0.955]' : 'border-black/[0.09] bg-white/[0.955]',
                         )}>
-                            <div className={cn('pointer-events-none absolute inset-x-10 top-0 h-px', dark ? 'bg-gradient-to-r from-transparent via-white/24 to-transparent' : 'bg-gradient-to-r from-transparent via-black/16 to-transparent')} />
+                            <div className={cn('pointer-events-none absolute inset-x-9 top-0 h-px', dark ? 'bg-gradient-to-r from-transparent via-white/28 to-transparent' : 'bg-gradient-to-r from-transparent via-black/18 to-transparent')} />
+                            <div className={cn('pointer-events-none absolute -right-20 -top-24 size-56 rounded-full blur-3xl', dark ? 'bg-primary/[0.055]' : 'bg-primary/[0.045]')} />
+                            {style === 'mega' && <div className={cn('pointer-events-none absolute -bottom-24 -left-20 size-64 rounded-full blur-3xl', dark ? 'bg-white/[0.025]' : 'bg-black/[0.02]')} />}
 
-                            {style !== 'compact' && (
-                                <div className={cn('mb-3 flex items-end justify-between gap-5 px-2 pt-1', style === 'mega' && 'mb-4 px-1 pt-0.5')}>
-                                    <div>
-                                        <p className={cn('font-mono text-[8px] uppercase tracking-[0.3em]', dark ? 'text-white/28' : 'text-black/32')}>Navigation</p>
-                                        <p className={cn('mt-1 text-sm font-semibold tracking-[-0.02em]', dark ? 'text-white/88' : 'text-black/88')}>{menu.label}</p>
+                            {style !== 'compact' ? (
+                                <div className={cn('relative z-10 mb-3 flex items-end justify-between gap-5 px-2 pt-1', style === 'mega' && 'mb-4 px-1')}>
+                                    <div className="flex items-end gap-3">
+                                        <span className={cn('font-mono text-[8px] uppercase tracking-[0.34em]', dark ? 'text-white/24' : 'text-black/28')}>index</span>
+                                        <span className={cn('text-sm font-semibold tracking-[-0.025em]', dark ? 'text-white/90' : 'text-black/90')}>{menu.label}</span>
                                     </div>
-                                    <span className={cn('rounded-full border px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.16em]', dark ? 'border-white/[0.08] text-white/28' : 'border-black/[0.08] text-black/32')}>{links.length} {links.length === 1 ? 'item' : 'items'}</span>
+                                    <span className={cn('font-mono text-[8px] uppercase tracking-[0.18em]', dark ? 'text-white/24' : 'text-black/28')}>{String(links.length).padStart(2, '0')} entries</span>
+                                </div>
+                            ) : (
+                                <div className="relative z-10 mb-1 flex items-center gap-3 px-2 py-1.5">
+                                    <span className={cn('text-[11px] font-semibold tracking-[-0.02em]', dark ? 'text-white/84' : 'text-black/84')}>{menu.label}</span>
+                                    <span className={cn('h-px flex-1', dark ? 'bg-white/[0.07]' : 'bg-black/[0.07]')} />
+                                    <span className={cn('font-mono text-[8px] tracking-[0.16em]', dark ? 'text-white/24' : 'text-black/28')}>{String(links.length).padStart(2, '0')}</span>
                                 </div>
                             )}
 
-                            {style === 'compact' && (
-                                <div className={cn('mb-1 flex items-center justify-between px-2 py-1.5', dark ? 'text-white/42' : 'text-black/45')}>
-                                    <span className="text-[11px] font-semibold tracking-[-0.01em]">{menu.label}</span>
-                                    <span className="font-mono text-[8px] uppercase tracking-[0.16em]">{links.length}</span>
-                                </div>
-                            )}
-
-                            <div className={cn('overflow-y-auto overscroll-contain', style === 'compact' ? 'max-h-[330px]' : 'max-h-[min(520px,68vh)]')} data-lenis-prevent>
+                            <div className={cn('relative z-10 overflow-y-auto overscroll-contain', style === 'compact' ? 'max-h-[340px]' : 'max-h-[min(540px,70vh)]')} data-lenis-prevent>
                                 <div className={cn(
                                     'grid',
-                                    style === 'compact' ? 'gap-0.5' : style === 'standard' ? 'gap-2' : 'gap-3 sm:grid-cols-2',
+                                    style === 'compact' ? 'gap-1' : style === 'standard' ? 'gap-2' : 'gap-3 sm:grid-cols-2',
                                 )}>
                                     {links.map((link, index) => (
                                         <MenuLink
