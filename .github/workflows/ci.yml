@@ -124,6 +124,8 @@ jobs:
             exit 1
           fi
           echo "Runtime Prisma singleton guard passed."
+      - name: Audit Client Component boundaries
+        run: npm run security:client-boundaries
       - name: Typecheck
         run: npm run typecheck
       - name: Lint changed source files
