@@ -11,13 +11,24 @@ const next = require('next');
 
 const dev = process.env.NODE_ENV !== 'production';
 const port = Number.parseInt(process.env.PORT || '3000', 10);
-const publicUrl = process.env.AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || null;
+const publicUrl = process.env.SITE_URL || process.env.AUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || null;
 const app = next({ dev, port, dir: __dirname });
 const handle = app.getRequestHandler();
 
 app.prepare()
   .then(() => {
     const server = http.createServer((req, res) => {
+      if (!dev) {
+        const pathname = new URL(req.url || '/', 'http://localhost').pathname;
+        if (pathname.endsWith('.map')) {
+          res.statusCode = 404;
+          res.setHeader('Cache-Control', 'no-store');
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+          res.end('Not Found');
+          return;
+        }
+      }
+
       if (!dev && publicUrl) {
         const canonicalUrl = new URL(publicUrl);
         req.headers.host = canonicalUrl.host;
