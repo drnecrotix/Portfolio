@@ -206,7 +206,8 @@ export function BlogArticleFrame({
     const dateLabel = new Date(publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     const readingMinutes = estimateReadingMinutes(postType === 'POETRY' ? displayContent.text ?? '' : displayContent.html ?? '', postType === 'POETRY' ? 180 : 220);
     const showLanguageSwitch = availableLocales.length > 1;
-    const compactPublication = postType === 'NOTE' || postType === 'THOUGHT';
+    const isNote = postType === 'NOTE';
+    const compactPublication = isNote || postType === 'THOUGHT';
 
     return (
         <main className="min-h-screen bg-background pb-24 pt-28 text-foreground sm:pt-32">
@@ -217,7 +218,7 @@ export function BlogArticleFrame({
                         <span>Back to journal</span>
                     </Link>
 
-                    <div className="mb-5 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    <div className={cn('mb-5 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground', isNote && 'justify-center text-center')}>
                         <span className="text-fuchsia-500 dark:text-fuchsia-300">Journal</span>
                         <span aria-hidden="true">/</span>
                         <span>{typeLabel}</span>
@@ -226,13 +227,13 @@ export function BlogArticleFrame({
                     </div>
 
                     <AnimatePresence mode="wait" initial={false}>
-                        <motion.div key={activeLocale} initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }} transition={{ duration: 0.22, ease: 'easeOut' }}>
+                        <motion.div key={activeLocale} initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }} transition={{ duration: 0.22, ease: 'easeOut' }} className={cn(isNote && 'text-center')}>
                             <h1 className={cn('font-black leading-[1.04] tracking-[-0.04em]', compactPublication ? 'text-4xl sm:text-5xl' : 'text-4xl sm:text-5xl lg:text-6xl')}>{displayTitle}</h1>
-                            {displayExcerpt && <p className="mt-7 max-w-2xl text-lg font-light leading-8 text-muted-foreground sm:text-xl">{displayExcerpt}</p>}
+                            {displayExcerpt && <p className={cn('mt-7 max-w-2xl text-lg font-light leading-8 text-muted-foreground sm:text-xl', isNote && 'mx-auto')}>{displayExcerpt}</p>}
                         </motion.div>
                     </AnimatePresence>
 
-                    <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+                    <div className={cn('mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground', isNote && 'justify-center text-center')}>
                         <span className="font-medium text-foreground">{author}</span>
                         <span aria-hidden="true">·</span>
                         <time dateTime={publishedAt}>{dateLabel}</time>
