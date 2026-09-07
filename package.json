@@ -1,6 +1,6 @@
 {
     "name": "personal-portfolio",
-    "version": "1.2.41",
+    "version": "1.2.42",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -12,6 +12,7 @@
         "test:visual": "playwright test",
         "postinstall": "prisma generate",
         "production:preflight": "node scripts/check-production-env.mjs",
+        "security:client-bundle": "node scripts/audit-client-bundle.mjs",
         "db:generate": "prisma generate",
         "db:validate": "prisma validate",
         "db:migrate": "prisma migrate dev",
