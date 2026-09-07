@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { BlogComments, type PublicBlogComment } from '@/components/blog/BlogComments';
+import { CommentsEngine, type PublicComment } from '@/components/comments/CommentsEngine';
 import { BlogArticleFrame, type RelatedBlogPost } from '@/components/blog/BlogArticleFrame';
 import { ContentWatermarkScope } from '@/components/ui/ContentWatermarkScope';
 import { getAvailablePostLocales, getLocalizedPostFields, NOTE_SYSTEM_IMAGE } from '@/lib/cms-posts';
@@ -147,7 +147,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             date: (post.publishedAt ?? post.createdAt).toISOString(),
         };
     });
-    const comments: PublicBlogComment[] = cmsPost.comments.map((comment) => ({ ...comment, createdAt: comment.createdAt.toISOString() }));
+    const comments: PublicComment[] = cmsPost.comments.map((comment) => ({ ...comment, createdAt: comment.createdAt.toISOString() }));
     const availableLocales = getAvailablePostLocales(cmsPost);
     const currentLocale = locale === 'bg' ? 'bg' : 'en';
     const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
@@ -185,7 +185,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                     relatedPosts={relatedPosts}
                     currentLocale={currentLocale}
                     availableLocales={availableLocales}
-                    comments={<BlogComments postId={cmsPost.id} initialComments={comments} />}
+                    comments={<CommentsEngine sourceType="BLOG" sourceKey={cmsPost.slug} initialComments={comments} />}
                 />
             </ContentWatermarkScope>
 

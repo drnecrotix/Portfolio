@@ -1,39 +1,63 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { MessageSquare, Reply } from 'lucide-react';
 import { auth } from '@/auth';
+import { AdminCommentsManager, type AdminCommentRow } from '@/components/admin/AdminCommentsManager';
+import { cleanupExpiredSpamComments, spamExpiresAt } from '@/lib/comment-engine';
 import { prisma } from '@/lib/prisma';
-import { AdminCommentDeleteButton } from '@/components/admin/AdminCommentDeleteButton';
 
 export const dynamic = 'force-dynamic';
 
-type Filter = 'all' | 'roots' | 'replies';
+type SourceFilter = 'all' | 'blog' | 'gallery' | 'product';
+type StatusFilter = 'all' | 'approved' | 'spam';
 
-export default async function AdminCommentsPage({ searchParams }: { searchParams: Promise<{ q?: string; type?: string }> }) {
+function sourceEnum(source: SourceFilter) {
+    if (source === 'blog') return 'BLOG' as const;
+    if (source === 'gallery') return 'GALLERY' as const;
+    if (source === 'product') return 'PRODUCT' as const;
+    return null;
+}
+
+function buildHref({ source, status, q }: { source: SourceFilter; status: StatusFilter; q: string }) {
+    const params = new URLSearchParams();
+    if (source !== 'all') params.set('source', source);
+    if (status !== 'all') params.set('status', status);
+    if (q) params.set('q', q);
+    const query = params.toString();
+    return `/admin/comments${query ? `?${query}` : ''}`;
+}
+
+export default async function AdminCommentsPage({ searchParams }: { searchParams: Promise<{ q?: string; source?: string; status?: string }> }) {
     const session = await auth();
     const role = session?.user?.role;
     if (!session?.user) redirect('/admin/login');
     if (role !== 'OWNER' && role !== 'ADMIN') redirect('/admin');
 
+    await cleanupExpiredSpamComments().catch(() => undefined);
+
     const params = await searchParams;
     const q = String(params.q || '').trim();
-    const requestedType = String(params.type || 'all');
-    const type: Filter = requestedType === 'roots' || requestedType === 'replies' ? requestedType : 'all';
+    const requestedSource = String(params.source || 'all');
+    const source: SourceFilter = requestedSource === 'blog' || requestedSource === 'gallery' || requestedSource === 'product' ? requestedSource : 'all';
+    const requestedStatus = String(params.status || 'all');
+    const status: StatusFilter = requestedStatus === 'approved' || requestedStatus === 'spam' ? requestedStatus : 'all';
+    const selectedSource = sourceEnum(source);
 
     const where = {
-        ...(type === 'roots' ? { parentId: null } : {}),
-        ...(type === 'replies' ? { parentId: { not: null } } : {}),
+        ...(selectedSource ? { sourceType: selectedSource } : {}),
+        ...(status === 'approved' ? { status: 'APPROVED' } : {}),
+        ...(status === 'spam' ? { status: 'SPAM' } : {}),
         ...(q ? {
             OR: [
                 { authorName: { contains: q, mode: 'insensitive' as const } },
                 { authorEmail: { contains: q, mode: 'insensitive' as const } },
                 { content: { contains: q, mode: 'insensitive' as const } },
-                { post: { title: { contains: q, mode: 'insensitive' as const } } },
+                { sourceTitle: { contains: q, mode: 'insensitive' as const } },
+                { sourceKey: { contains: q, mode: 'insensitive' as const } },
             ],
         } : {}),
     };
 
-    const [comments, total, roots, replies] = await prisma.$transaction([
+    const [comments, total, approved, spam, blog, gallery, product] = await prisma.$transaction([
         prisma.blogComment.findMany({
             where,
             orderBy: { createdAt: 'desc' },
@@ -45,88 +69,93 @@ export default async function AdminCommentsPage({ searchParams }: { searchParams
                 authorEmail: true,
                 content: true,
                 status: true,
+                spamAt: true,
                 createdAt: true,
+                sourceType: true,
+                sourceTitle: true,
+                sourcePath: true,
                 parent: { select: { authorName: true } },
-                post: { select: { title: true, slug: true } },
                 _count: { select: { replies: true } },
             },
         }),
         prisma.blogComment.count(),
-        prisma.blogComment.count({ where: { parentId: null } }),
-        prisma.blogComment.count({ where: { parentId: { not: null } } }),
+        prisma.blogComment.count({ where: { status: 'APPROVED' } }),
+        prisma.blogComment.count({ where: { status: 'SPAM' } }),
+        prisma.blogComment.count({ where: { sourceType: 'BLOG' } }),
+        prisma.blogComment.count({ where: { sourceType: 'GALLERY' } }),
+        prisma.blogComment.count({ where: { sourceType: 'PRODUCT' } }),
     ]);
 
-    const filterHref = (next: Filter) => `/admin/comments?type=${next}${q ? `&q=${encodeURIComponent(q)}` : ''}`;
+    const rows: AdminCommentRow[] = comments.map((comment) => ({
+        id: comment.id,
+        parentId: comment.parentId,
+        parentAuthor: comment.parent?.authorName || null,
+        authorName: comment.authorName,
+        authorEmail: comment.authorEmail,
+        content: comment.content,
+        status: comment.status,
+        createdAt: comment.createdAt.toISOString(),
+        sourceType: comment.sourceType,
+        sourceTitle: comment.sourceTitle,
+        sourcePath: comment.sourcePath,
+        replyCount: comment._count.replies,
+        spamExpiresAt: spamExpiresAt(comment.spamAt)?.toISOString() || null,
+    }));
 
     return (
-        <div className="mx-auto w-full max-w-6xl">
+        <div className="mx-auto w-full max-w-7xl">
             <header className="mb-7 sm:mb-9">
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Content moderation</p>
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Comments</h1>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Review blog comments and replies. Delete spam or unwanted content without adding comment data to the main Dashboard.</p>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">One moderation inbox for Blog publications, Gallery works and Store products. Comments containing public links are sent directly to Spam and removed automatically after 7 days.</p>
                     </div>
-                    <div className="flex gap-2 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                         <span className="rounded-full border border-foreground/10 px-3 py-1.5">{total} total</span>
-                        <span className="rounded-full border border-foreground/10 px-3 py-1.5">{replies} replies</span>
+                        <span className="rounded-full border border-foreground/10 px-3 py-1.5">{approved} approved</span>
+                        <span className="rounded-full border border-amber-500/20 px-3 py-1.5 text-amber-500">{spam} spam</span>
                     </div>
                 </div>
             </header>
 
-            <div className="mb-6 rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-3 sm:p-4">
-                <form className="flex flex-col gap-3 md:flex-row md:items-center" action="/admin/comments">
-                    <input type="hidden" name="type" value={type} />
-                    <input name="q" defaultValue={q} placeholder="Search author, email, comment or publication…" className="min-h-11 flex-1 rounded-xl border border-foreground/10 bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground/50 focus:border-foreground/30" />
+            <section className="mb-5 border-y border-foreground/10 py-4">
+                <form className="flex flex-col gap-3 lg:flex-row lg:items-center" action="/admin/comments">
+                    {source !== 'all' ? <input type="hidden" name="source" value={source} /> : null}
+                    {status !== 'all' ? <input type="hidden" name="status" value={status} /> : null}
+                    <input name="q" defaultValue={q} placeholder="Search author, email, comment, title or slug…" className="min-h-11 flex-1 rounded-xl border border-foreground/10 bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground/50 focus:border-foreground/30" />
                     <div className="flex gap-2">
                         <button className="min-h-11 rounded-xl bg-foreground px-5 text-sm font-bold text-background">Search</button>
-                        {q && <Link href={`/admin/comments?type=${type}`} className="inline-flex min-h-11 items-center rounded-xl border border-foreground/10 px-4 text-sm text-muted-foreground transition hover:text-foreground">Clear</Link>}
+                        {q ? <Link href={buildHref({ source, status, q: '' })} className="inline-flex min-h-11 items-center rounded-xl border border-foreground/10 px-4 text-sm text-muted-foreground transition hover:text-foreground">Clear</Link> : null}
                     </div>
                 </form>
-                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                    {([
-                        ['all', `All ${total}`],
-                        ['roots', `Top-level ${roots}`],
-                        ['replies', `Replies ${replies}`],
-                    ] as const).map(([value, label]) => (
-                        <Link key={value} href={filterHref(value)} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${type === value ? 'border-foreground bg-foreground text-background' : 'border-foreground/10 text-muted-foreground hover:text-foreground'}`}>{label}</Link>
-                    ))}
+
+                <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Comment source filter">
+                        {([
+                            ['all', `All sources ${total}`],
+                            ['blog', `Blog ${blog}`],
+                            ['gallery', `Gallery ${gallery}`],
+                            ['product', `Products ${product}`],
+                        ] as const).map(([value, label]) => (
+                            <Link key={value} href={buildHref({ source: value, status, q })} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${source === value ? 'border-foreground bg-foreground text-background' : 'border-foreground/10 text-muted-foreground hover:text-foreground'}`}>{label}</Link>
+                        ))}
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Comment status filter">
+                        {([
+                            ['all', `All ${total}`],
+                            ['approved', `Approved ${approved}`],
+                            ['spam', `Spam ${spam}`],
+                        ] as const).map(([value, label]) => (
+                            <Link key={value} href={buildHref({ source, status: value, q })} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${status === value ? 'border-foreground bg-foreground text-background' : value === 'spam' ? 'border-amber-500/20 text-amber-500 hover:bg-amber-500/[0.05]' : 'border-foreground/10 text-muted-foreground hover:text-foreground'}`}>{label}</Link>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            {comments.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-foreground/10 px-5 py-12 text-center text-sm text-muted-foreground">No comments match this view.</div>
-            ) : (
-                <div className="space-y-3">
-                    {comments.map((comment) => (
-                        <article key={comment.id} className="rounded-2xl border border-foreground/10 bg-foreground/[0.015] p-4 sm:p-5">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="flex size-7 items-center justify-center rounded-full bg-foreground/[0.05]">{comment.parentId ? <Reply className="h-3.5 w-3.5" /> : <MessageSquare className="h-3.5 w-3.5" />}</span>
-                                        <strong className="break-words text-sm">{comment.authorName}</strong>
-                                        {comment.parent && <span className="text-xs text-muted-foreground">reply to {comment.parent.authorName}</span>}
-                                        <span className="rounded-full border border-foreground/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">{comment.status}</span>
-                                    </div>
-                                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                                        {comment.authorEmail && <span className="break-all">{comment.authorEmail}</span>}
-                                        <time dateTime={comment.createdAt.toISOString()}>{comment.createdAt.toLocaleString()}</time>
-                                        {comment._count.replies > 0 && <span>{comment._count.replies} repl{comment._count.replies === 1 ? 'y' : 'ies'}</span>}
-                                    </div>
-                                </div>
-                                <AdminCommentDeleteButton commentId={comment.id} authorName={comment.authorName} />
-                            </div>
-
-                            <p className="mt-4 whitespace-pre-wrap break-words rounded-xl bg-foreground/[0.025] p-3 text-sm leading-6 text-foreground/80 sm:p-4">{comment.content}</p>
-
-                            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-foreground/10 pt-3 text-xs">
-                                <span className="min-w-0 truncate text-muted-foreground">On: {comment.post.title}</span>
-                                <Link href={`/blog/${comment.post.slug}`} target="_blank" rel="noreferrer" className="font-semibold text-foreground/70 transition hover:text-foreground">View publication ↗</Link>
-                            </div>
-                        </article>
-                    ))}
-                </div>
-            )}
+            {status === 'spam' ? <p className="mb-3 text-xs text-muted-foreground">Spam comments are retained for up to 7 days so false positives can be restored, then removed automatically.</p> : null}
+            <AdminCommentsManager comments={rows} />
+            {comments.length === 200 ? <p className="mt-3 text-xs text-muted-foreground">Showing the latest 200 comments matching this view.</p> : null}
         </div>
     );
 }
