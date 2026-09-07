@@ -1,12 +1,13 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import ts from 'typescript';
 
 const appRoot = process.cwd();
 const srcRoot = path.join(appRoot, 'src');
 const sourcePattern = /\.(?:ts|tsx|js|jsx)$/i;
 const clientDirective = /^\s*['"]use client['"];?/;
 
-const forbiddenImports = [
+const forbiddenImports = new Set([
     '@/auth',
     '@/lib/prisma',
     '@/lib/assistant-credentials',
@@ -18,7 +19,8 @@ const forbiddenImports = [
     '@/lib/store-storage',
     '@/lib/legal-settings',
     '@/lib/social-metadata',
-];
+    '@prisma/client',
+]);
 
 async function walk(directory) {
     const entries = await readdir(directory, { withFileTypes: true });
@@ -37,14 +39,61 @@ function relative(file) {
     return path.relative(appRoot, file).replaceAll(path.sep, '/');
 }
 
-function hasRuntimePrismaImport(content) {
-    const staticImports = content.match(/import\s+(?:type\s+)?[\s\S]*?\sfrom\s+['"]@prisma\/client['"];?/g) || [];
-    if (staticImports.some((statement) => !/^import\s+type\b/.test(statement.trim()))) return true;
+function scriptKindFor(file) {
+    if (file.endsWith('.tsx')) return ts.ScriptKind.TSX;
+    if (file.endsWith('.jsx')) return ts.ScriptKind.JSX;
+    if (file.endsWith('.js')) return ts.ScriptKind.JS;
+    return ts.ScriptKind.TS;
+}
 
-    if (/import\s*\(\s*['"]@prisma\/client['"]\s*\)/.test(content)) return true;
-    if (/require\s*\(\s*['"]@prisma\/client['"]\s*\)/.test(content)) return true;
+function isTypeOnlyImport(node) {
+    const clause = node.importClause;
+    if (!clause) return false;
+    if (clause.isTypeOnly) return true;
+    if (clause.name) return false;
 
-    return false;
+    const bindings = clause.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings) || bindings.elements.length === 0) return false;
+    return bindings.elements.every((element) => element.isTypeOnly);
+}
+
+function inspectRuntimeImports(file, content, violations) {
+    const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+
+    for (const statement of sourceFile.statements) {
+        if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+
+        const moduleName = statement.moduleSpecifier.text;
+        if (isTypeOnlyImport(statement)) continue;
+
+        if (forbiddenImports.has(moduleName)) {
+            violations.push(`${relative(file)} imports runtime server-only module ${moduleName}`);
+        }
+
+        if (moduleName.startsWith('node:')) {
+            violations.push(`${relative(file)} imports Node.js runtime module ${moduleName}`);
+        }
+    }
+
+    for (const match of content.matchAll(/import\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+        const moduleName = match[1];
+        if (forbiddenImports.has(moduleName) || moduleName === '@prisma/client') {
+            violations.push(`${relative(file)} dynamically imports runtime server-only module ${moduleName}`);
+        }
+        if (moduleName.startsWith('node:')) {
+            violations.push(`${relative(file)} dynamically imports Node.js runtime module ${moduleName}`);
+        }
+    }
+
+    for (const match of content.matchAll(/require\s*\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+        const moduleName = match[1];
+        if (forbiddenImports.has(moduleName) || moduleName === '@prisma/client') {
+            violations.push(`${relative(file)} requires runtime server-only module ${moduleName}`);
+        }
+        if (moduleName.startsWith('node:')) {
+            violations.push(`${relative(file)} requires Node.js runtime module ${moduleName}`);
+        }
+    }
 }
 
 const files = await walk(srcRoot);
@@ -57,17 +106,7 @@ for (const file of files) {
     if (!clientDirective.test(normalized)) continue;
     clientFiles += 1;
 
-    for (const moduleName of forbiddenImports) {
-        const quoted = moduleName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const importPattern = new RegExp(`(?:from\\s+|import\\s*\\()(['\"])${quoted}\\1`);
-        if (importPattern.test(content)) {
-            violations.push(`${relative(file)} imports server-only module ${moduleName}`);
-        }
-    }
-
-    if (hasRuntimePrismaImport(content)) {
-        violations.push(`${relative(file)} imports Prisma runtime from @prisma/client`);
-    }
+    inspectRuntimeImports(file, content, violations);
 
     for (const match of content.matchAll(/process\.env\.([A-Z0-9_]+)/g)) {
         const envName = match[1];
@@ -78,10 +117,6 @@ for (const file of files) {
 
     if (/process\.env\s*\[/.test(content)) {
         violations.push(`${relative(file)} uses dynamic process.env access in a Client Component`);
-    }
-
-    if (/from\s+['"]node:/.test(content) || /import\s*\(\s*['"]node:/.test(content)) {
-        violations.push(`${relative(file)} imports a Node.js built-in from a Client Component`);
     }
 }
 
