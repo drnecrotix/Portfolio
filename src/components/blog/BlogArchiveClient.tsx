@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Search, SortAsc, SortDesc, X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import FlowingMenu from '@/components/ui/flowing-menu';
+import { BlogHeroTitle } from '@/components/blog/BlogHeroTitle';
 import { cn } from '@/lib/utils';
 import type { BlogArchivePost } from '@/lib/cms-posts';
+import type { BlogSettings } from '@/lib/blog-settings';
 
 const POSTS_PER_PAGE = 9;
 const ROW_HEIGHT = 88;
@@ -21,7 +23,7 @@ function normalizeTag(value: string) {
     return value.replace(/^#/, '').trim();
 }
 
-export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
+export function BlogArchiveClient({ posts, settings }: { posts: BlogArchivePost[]; settings: BlogSettings }) {
     const searchParams = useSearchParams();
     const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
     const [selectedCategory, setSelectedCategory] = useState(() => searchParams.get('category') ?? 'all');
@@ -31,8 +33,11 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
     const [canScrollTagsLeft, setCanScrollTagsLeft] = useState(false);
     const [canScrollTagsRight, setCanScrollTagsRight] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
-    const tagRailRef = useRef<HTMLDivElement>(null);
+    const tagRailRef = useRef<HTMLElement>(null);
     const activeTagRef = useRef<HTMLButtonElement>(null);
+    const tagSelectionMountedRef = useRef(false);
+    const suppressTagClickRef = useRef(false);
+    const tagDragRef = useRef({ active: false, pointerId: -1, startX: 0, scrollLeft: 0, moved: false });
 
     const categories = useMemo(() => {
         const bySlug = new Map<string, { label: string; count: number }>();
@@ -117,6 +122,44 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
         rail.scrollBy({ left: direction * Math.max(240, rail.clientWidth * 0.72), behavior: 'smooth' });
     };
 
+    const chooseTag = (tag: string) => {
+        if (suppressTagClickRef.current) return;
+        setSelectedTag(tag);
+        resetPage();
+    };
+
+    const startTagDrag = (event: ReactPointerEvent<HTMLElement>) => {
+        if (event.pointerType === 'touch' || event.button !== 0) return;
+        const rail = tagRailRef.current;
+        if (!rail) return;
+        tagDragRef.current = { active: true, pointerId: event.pointerId, startX: event.clientX, scrollLeft: rail.scrollLeft, moved: false };
+        rail.setPointerCapture(event.pointerId);
+    };
+
+    const moveTagDrag = (event: ReactPointerEvent<HTMLElement>) => {
+        const rail = tagRailRef.current;
+        const drag = tagDragRef.current;
+        if (!rail || !drag.active || drag.pointerId !== event.pointerId) return;
+        const delta = event.clientX - drag.startX;
+        if (Math.abs(delta) > 4) drag.moved = true;
+        if (!drag.moved) return;
+        event.preventDefault();
+        rail.scrollLeft = drag.scrollLeft - delta;
+    };
+
+    const endTagDrag = (event: ReactPointerEvent<HTMLElement>) => {
+        const rail = tagRailRef.current;
+        const drag = tagDragRef.current;
+        if (!rail || !drag.active || drag.pointerId !== event.pointerId) return;
+        if (rail.hasPointerCapture(event.pointerId)) rail.releasePointerCapture(event.pointerId);
+        if (drag.moved) {
+            suppressTagClickRef.current = true;
+            window.setTimeout(() => { suppressTagClickRef.current = false; }, 0);
+        }
+        tagDragRef.current = { active: false, pointerId: -1, startX: 0, scrollLeft: rail.scrollLeft, moved: false };
+        updateTagRailState();
+    };
+
     useEffect(() => {
         const rail = tagRailRef.current;
         if (!rail) return;
@@ -127,20 +170,30 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
     }, [tags.length]);
 
     useEffect(() => {
-        activeTagRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-        const timer = window.setTimeout(updateTagRailState, 260);
+        const rail = tagRailRef.current;
+        const active = activeTagRef.current;
+        if (!rail || !active) return;
+        const target = Math.max(0, Math.min(active.offsetLeft - (rail.clientWidth - active.offsetWidth) / 2, rail.scrollWidth - rail.clientWidth));
+        const firstPosition = !tagSelectionMountedRef.current;
+        tagSelectionMountedRef.current = true;
+        if (firstPosition && selectedTag === 'all') {
+            updateTagRailState();
+            return;
+        }
+        rail.scrollTo({ left: target, behavior: firstPosition ? 'auto' : 'smooth' });
+        const timer = window.setTimeout(updateTagRailState, firstPosition ? 0 : 260);
         return () => window.clearTimeout(timer);
     }, [selectedTag]);
 
     return (
         <main className="min-h-screen bg-background text-foreground selection:bg-primary/30">
-            <section className="px-4 pb-24 pt-24 sm:px-6 sm:pt-28 md:px-12 md:pt-32 lg:px-10">
+            <section className="px-4 pb-28 pt-24 sm:px-6 sm:pb-32 sm:pt-28 md:px-12 md:pt-32 lg:px-10">
                 <div className="mx-auto max-w-screen-2xl">
                     <header className="grid gap-6 border-b border-foreground/10 pb-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-12">
                         <div className="max-w-3xl">
-                            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-fuchsia-500 dark:text-fuchsia-300">NecrotixLab Journal</p>
-                            <h1 className="mt-4 text-4xl font-black tracking-[-0.04em] sm:text-5xl lg:text-6xl">Writing, notes & field logs.</h1>
-                            <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">A visual archive of publications, notes, poetry and project logs.</p>
+                            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-fuchsia-500 dark:text-fuchsia-300">{settings.eyebrow}</p>
+                            <BlogHeroTitle settings={settings} className="mt-4 text-4xl leading-[1.03] sm:text-5xl lg:text-6xl" />
+                            <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">{settings.subtitle}</p>
                         </div>
                         <div className="text-sm text-muted-foreground lg:text-right">
                             <p className="text-2xl font-semibold tabular-nums text-foreground">{posts.length}</p>
@@ -166,18 +219,26 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
                                 <nav
                                     ref={tagRailRef}
                                     onScroll={updateTagRailState}
-                                    className="scrollbar-none overflow-x-auto overscroll-x-contain scroll-smooth px-2"
+                                    onPointerDown={startTagDrag}
+                                    onPointerMove={moveTagDrag}
+                                    onPointerUp={endTagDrag}
+                                    onPointerCancel={endTagDrag}
+                                    className="blog-tag-rail cursor-grab select-none overflow-x-auto overscroll-x-contain scroll-smooth px-2 active:cursor-grabbing"
                                 >
-                                    <div className="flex w-max min-w-full gap-7 py-5 md:gap-9">
+                                    <div className="flex w-max min-w-full gap-2.5 py-3.5 md:gap-3">
                                         <button
                                             ref={selectedTag === 'all' ? activeTagRef : undefined}
                                             type="button"
-                                            onClick={() => { setSelectedTag('all'); resetPage(); }}
-                                            className={cn('group relative flex shrink-0 items-start gap-1.5 py-1 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:text-xs', selectedTag === 'all' ? 'text-primary' : 'text-muted-foreground/55 hover:text-foreground')}
+                                            onClick={() => chooseTag('all')}
+                                            className={cn(
+                                                'group flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.13em] transition sm:px-3.5 sm:text-[11px]',
+                                                selectedTag === 'all'
+                                                    ? 'border-foreground bg-foreground text-background shadow-sm'
+                                                    : 'border-foreground/10 bg-foreground/[0.02] text-muted-foreground/65 hover:border-foreground/20 hover:bg-foreground/[0.05] hover:text-foreground',
+                                            )}
                                         >
                                             <span>All Publications</span>
-                                            <span className={cn('text-[10px] tabular-nums', selectedTag === 'all' ? 'text-primary/70' : 'text-muted-foreground/35')}>{posts.length}</span>
-                                            {selectedTag === 'all' && <motion.span layoutId="active-blog-tag" className="absolute -bottom-5 left-0 right-0 h-px bg-primary" />}
+                                            <span className={cn('tabular-nums', selectedTag === 'all' ? 'text-background/65' : 'text-muted-foreground/40')}>{posts.length}</span>
                                         </button>
                                         {tags.map(({ tag, count }) => {
                                             const active = selectedTag.toLocaleLowerCase() === tag.toLocaleLowerCase();
@@ -186,12 +247,16 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
                                                     ref={active ? activeTagRef : undefined}
                                                     key={tag}
                                                     type="button"
-                                                    onClick={() => { setSelectedTag(tag); resetPage(); }}
-                                                    className={cn('group relative flex shrink-0 items-start gap-1.5 py-1 text-[11px] font-bold uppercase tracking-[0.15em] transition sm:text-xs', active ? 'text-primary' : 'text-muted-foreground/55 hover:text-foreground')}
+                                                    onClick={() => chooseTag(tag)}
+                                                    className={cn(
+                                                        'group flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.13em] transition sm:px-3.5 sm:text-[11px]',
+                                                        active
+                                                            ? 'border-foreground bg-foreground text-background shadow-sm'
+                                                            : 'border-foreground/10 bg-foreground/[0.02] text-muted-foreground/65 hover:border-foreground/20 hover:bg-foreground/[0.05] hover:text-foreground',
+                                                    )}
                                                 >
                                                     <span>#{tag}</span>
-                                                    <span className={cn('text-[10px] tabular-nums', active ? 'text-primary/70' : 'text-muted-foreground/35')}>{count}</span>
-                                                    {active && <motion.span layoutId="active-blog-tag" className="absolute -bottom-5 left-0 right-0 h-px bg-primary" />}
+                                                    <span className={cn('tabular-nums', active ? 'text-background/65' : 'text-muted-foreground/40')}>{count}</span>
                                                 </button>
                                             );
                                         })}
@@ -245,7 +310,7 @@ export function BlogArchiveClient({ posts }: { posts: BlogArchivePost[] }) {
                         <div className="flex flex-wrap items-center gap-3">
                             <p><span className="font-medium text-foreground">{filteredPosts.length}</span> {filteredPosts.length === 1 ? 'publication' : 'publications'} in this view</p>
                             {selectedTag !== 'all' && (
-                                <button type="button" onClick={() => { setSelectedTag('all'); resetPage(); }} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1 font-mono text-[10px] text-primary transition hover:bg-primary/[0.1]" aria-label={`Clear ${selectedTag} tag filter`}>
+                                <button type="button" onClick={() => chooseTag('all')} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-1 font-mono text-[10px] text-primary transition hover:bg-primary/[0.1]" aria-label={`Clear ${selectedTag} tag filter`}>
                                     #{selectedTag}<X className="size-3" />
                                 </button>
                             )}
