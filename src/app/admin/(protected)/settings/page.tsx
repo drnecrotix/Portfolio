@@ -1,17 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
 import { normalizeManagedPageAccessSettings, PAGE_ACCESS_CONFIG_SLUG } from '@/lib/page-access';
+import { GeneralSettingsWorkbench } from '@/components/admin/GeneralSettingsWorkbench';
 import { StatusToast } from '@/components/admin/StatusToast';
-import { MediaPicker } from '@/components/admin/MediaPicker';
-import { updateGeneralSettings, updatePageAccessSettings } from './actions';
-
-const input = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm outline-none focus:border-white/30';
-const accessLabels = {
-    wiki: { title: 'Wiki', path: '/wiki', description: 'Personal Wiki, Wiki articles and FAQ pages.' },
-    blog: { title: 'Blog', path: '/blog', description: 'Blog archive and all public article pages.' },
-    gallery: { title: 'Gallery', path: '/gallery', description: 'Gallery index and individual gallery work pages.' },
-    store: { title: 'Store', path: '/store', description: 'Digital Store catalog, product pages and checkout entry points.' },
-} as const;
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; pageAccessSaved?: string; error?: string }> }) {
     const [raw, accessConfig, params] = await Promise.all([
@@ -28,88 +19,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             : undefined;
 
     return (
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-[1500px]">
             <StatusToast type={params.error ? 'error' : savedMessage ? 'success' : undefined} message={params.error || savedMessage} />
-            <div className="mb-10">
-                <p className="text-xs uppercase tracking-[0.3em] text-white/35">General Settings</p>
-                <h2 className="mt-2 text-4xl font-semibold">Site identity & preferences</h2>
-                <p className="mt-3 max-w-2xl text-sm text-white/45">Central settings for identity, theme defaults, contact details, page availability, contact-form delivery and social profiles.</p>
-            </div>
-
-            <form action={updatePageAccessSettings} className="mb-8 rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-                <div className="mb-6">
-                    <h3 className="text-lg font-semibold">Page availability & access</h3>
-                    <p className="mt-1 max-w-3xl text-xs leading-5 text-white/40">Temporarily disable selected public sections or make them visible only while signed in as Owner/Admin. This works independently from Site Mode and applies to the whole route section, including its child pages.</p>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                    {(Object.keys(accessLabels) as Array<keyof typeof accessLabels>).map((key) => {
-                        const item = accessLabels[key];
-                        return (
-                            <label key={key} className="rounded-xl border border-white/10 bg-black/10 p-4 text-sm text-white/60">
-                                <span className="flex items-center justify-between gap-3">
-                                    <span className="font-semibold text-white/85">{item.title}</span>
-                                    <span className="rounded-full border border-white/10 px-2 py-1 font-mono text-[10px] text-white/35">{item.path}</span>
-                                </span>
-                                <span className="mt-2 block text-xs leading-5 text-white/35">{item.description}</span>
-                                <select name={`${key}Access`} defaultValue={pageAccess[key]} className={`${input} [color-scheme:dark] [&>option]:bg-[#151515] [&>option]:text-white`}>
-                                    <option value="PUBLIC">Enabled - public</option>
-                                    <option value="ADMIN_ONLY">Admin only - Owner/Admin</option>
-                                    <option value="DISABLED">Disabled - unavailable</option>
-                                </select>
-                            </label>
-                        );
-                    })}
-                </div>
-                <div className="mt-5 rounded-xl border border-amber-300/10 bg-amber-300/[0.035] px-4 py-3 text-xs leading-5 text-amber-100/60">
-                    Disabled and Admin-only sections are removed from the public sitemap. Admin-only access requires an active Owner/Admin login session. Store download grant URLs remain independent so existing paid downloads are not revoked by hiding the Store catalog.
-                </div>
-                <button className="mt-5 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Save page access</button>
-            </form>
-
-            <form action={updateGeneralSettings} className="space-y-8">
-                <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
-                    <label className="text-sm text-white/60 md:col-span-2">Site name<input name="siteName" required defaultValue={settings.siteName} className={input} /></label>
-                    <label className="text-sm text-white/60 md:col-span-2">Site description<textarea name="siteDescription" rows={3} defaultValue={settings.siteDescription} className={input} /></label>
-                    <div className="md:col-span-2">
-                        <MediaPicker value={settings.faviconUrl} inputName="faviconUrl" label="Favicon" initialKind="image" lockKind />
-                        <p className="mt-2 text-xs text-white/30">Choose a square PNG, WebP, ICO or SVG from the Media Library. If cleared, the default Dr Necrotix mark is used.</p>
-                    </div>
-                    <label className="text-sm text-white/60">Locale<input name="locale" defaultValue={settings.locale} className={input} /></label>
-                    <label className="text-sm text-white/60">Timezone<input name="timezone" defaultValue={settings.timezone} className={input} /></label>
-                    <label className="text-sm text-white/60">Default theme<select name="defaultTheme" defaultValue={settings.defaultTheme} className={input}><option value="dark">Night</option><option value="light">Day</option></select></label>
-                    <label className="text-sm text-white/60">Accent color<input name="accentColor" placeholder="#7dd3fc" defaultValue={settings.accentColor} className={input} /></label>
-                    <label className="flex items-center gap-3 text-sm text-white/60 md:col-span-2"><input type="checkbox" name="allowDayMode" defaultChecked={settings.allowDayMode} className="size-4" /> Allow Day mode toggle</label>
-                </section>
-
-                <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
-                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Contact details</h3><p className="mt-1 text-xs text-white/40">Public contact information shown across the portfolio.</p></div>
-                    <label className="text-sm text-white/60">Public email<input type="email" name="email" defaultValue={settings.contactDetails.email} className={input} /></label>
-                    <label className="text-sm text-white/60">Phone<input name="phone" defaultValue={settings.contactDetails.phone} className={input} /></label>
-                    <label className="text-sm text-white/60">Location<input name="location" defaultValue={settings.contactDetails.location} className={input} /></label>
-                    <label className="text-sm text-white/60">Website<input type="url" name="website" defaultValue={settings.contactDetails.website} className={input} /></label>
-                </section>
-
-                <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
-                    <div className="md:col-span-2">
-                        <h3 className="text-lg font-semibold">Contact form delivery</h3>
-                        <p className="mt-1 max-w-2xl text-xs leading-5 text-white/40">Choose where messages submitted through the Contact form are delivered. This address is private and does not have to match the public contact email. If left empty, the public email is used, then EMAIL_USER as the final fallback.</p>
-                    </div>
-                    <label className="text-sm text-white/60 md:col-span-2">Recipient email<input type="email" name="formRecipientEmail" placeholder="inbox@example.com" defaultValue={settings.contactDetails.formRecipientEmail} className={input} /></label>
-                    <div className="md:col-span-2 rounded-xl border border-emerald-400/10 bg-emerald-400/[0.035] px-4 py-3 text-xs leading-5 text-emerald-100/60">Bot protection is enabled on the public form with honeypot fields, same-origin validation, minimum completion time and submission rate limiting.</div>
-                </section>
-
-                <section className="grid gap-5 rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:grid-cols-2">
-                    <div className="md:col-span-2"><h3 className="text-lg font-semibold">Social profiles</h3><p className="mt-1 text-xs text-white/40">Leave a profile empty to hide it where the public component supports it.</p></div>
-                    <label className="text-sm text-white/60">GitHub<input type="url" name="github" defaultValue={settings.socialLinks.github} className={input} /></label>
-                    <label className="text-sm text-white/60">Instagram<input type="url" name="instagram" defaultValue={settings.socialLinks.instagram} className={input} /></label>
-                    <label className="text-sm text-white/60">LinkedIn<input type="url" name="linkedin" defaultValue={settings.socialLinks.linkedin} className={input} /></label>
-                    <label className="text-sm text-white/60">X / Twitter<input type="url" name="twitter" defaultValue={settings.socialLinks.twitter} className={input} /></label>
-                    <label className="text-sm text-white/60">Discord<input type="url" name="discord" defaultValue={settings.socialLinks.discord} className={input} /></label>
-                    <label className="text-sm text-white/60">Spotify<input type="url" name="spotify" defaultValue={settings.socialLinks.spotify} className={input} /></label>
-                </section>
-
-                <button className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black">Save settings</button>
-            </form>
+            <GeneralSettingsWorkbench initialSettings={settings} initialAccess={pageAccess} />
         </div>
     );
 }
