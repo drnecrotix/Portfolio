@@ -9,7 +9,7 @@ const input = 'mt-2 w-full rounded-xl border border-foreground/10 bg-background 
 
 export function BlogSettingsEditor({ initialSettings }: { initialSettings: BlogSettings }) {
     const [settings, setSettings] = useState(initialSettings);
-    const set = <K extends keyof BlogSettings>(key: K, value: BlogSettings[K]) => setSettings((current) => ({ ...current, [key]: value }));
+    const set = <K extends keyof BlogSettings,>(key: K, value: BlogSettings[K]) => setSettings((current) => ({ ...current, [key]: value }));
     const words = Array.from({ length: 8 }, (_, index) => settings.rotatingWords[index] ?? '');
 
     return (
