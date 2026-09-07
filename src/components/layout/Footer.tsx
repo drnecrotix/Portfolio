@@ -196,7 +196,7 @@ export function Footer() {
     return (
         <>
             <footer className={cn(
-                isBlog ? 'absolute bottom-0 z-20 w-full border-t-0 !bg-transparent pointer-events-none' :
+                isBlog ? 'relative z-20 mt-auto w-full border-t-0 !bg-transparent' :
                     isGallery ? 'relative z-20 mt-auto !bg-transparent' : 'relative z-20 mt-auto dark:bg-black',
                 isExpanded && 'pointer-events-none opacity-0',
             )}>
