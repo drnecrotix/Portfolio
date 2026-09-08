@@ -11,7 +11,7 @@ const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp'
 function buildContentSecurityPolicy({ allowWasm = false } = {}) {
     const scriptSources = ["'self'", "'unsafe-inline'"];
     if (isDevelopment) scriptSources.push("'unsafe-eval'");
-    else if (allowWasm) scriptSources.push("'wasm-unsafe-eval'");
+    if (allowWasm) scriptSources.push("'wasm-unsafe-eval'");
 
     return [
         "default-src 'self'",
@@ -87,7 +87,7 @@ const nextConfig = {
             },
             // Spline on The Lab compiles a WebAssembly module in the browser.
             // Allow only the CSP3 WebAssembly capability here instead of restoring
-            // the broader unsafe-eval permission across the whole application.
+            // the broader unsafe-eval permission across the whole production app.
             {
                 source: '/lab',
                 headers: [
