@@ -2,6 +2,8 @@ export type FootprintCategory = 'account' | 'breach' | 'domain' | 'reputation';
 export type FindingStatus = 'found' | 'not-found' | 'uncertain' | 'rate-limited' | 'unavailable' | 'error';
 export type FindingRisk = 'info' | 'low' | 'medium' | 'high' | 'critical';
 
+export type FootprintExposedData = Record<string, string | number | boolean | null | undefined>;
+
 export type FootprintFinding = {
     id: string;
     provider: string;
@@ -13,10 +15,21 @@ export type FootprintFinding = {
     summary: string;
     sourceUrl?: string;
     exposedFields?: string[];
+    exposedData?: FootprintExposedData;
     occurredAt?: string;
     remediation: string[];
     relatedProviders?: string[];
     duplicateCount?: number;
+};
+
+export type FootprintRelatedAccount = {
+    platform: string;
+    username: string;
+    url?: string;
+    linkedVia: 'email' | 'phone' | 'username' | 'profile';
+    confidence: number;
+    summary?: string;
+    exposedData?: FootprintExposedData;
 };
 
 export type FootprintProviderStatus = {
@@ -33,8 +46,10 @@ export type FootprintScan = {
     providersAvailable: number;
     providerStatuses: FootprintProviderStatus[];
     findings: FootprintFinding[];
+    relatedAccounts: FootprintRelatedAccount[];
     riskScore: number;
     notice: string;
+    botCheckRequired?: boolean;
 };
 
 export type ProviderContext = {
