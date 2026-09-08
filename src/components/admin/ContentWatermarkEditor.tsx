@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Save } from 'lucide-react';
-import type { ContentWatermarkPosition, ContentWatermarkSettings, ContentWatermarkSize } from '@/lib/content-watermark';
+import type { ContentWatermarkPosition, ContentWatermarkRenderMode, ContentWatermarkSettings, ContentWatermarkSize } from '@/lib/content-watermark';
 import { saveContentWatermark } from '@/app/admin/(protected)/watermark/actions';
 
 const field = 'w-full rounded-xl border border-foreground/10 bg-foreground/[0.025] px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-sky-400/40 focus:bg-foreground/[0.04]';
@@ -16,6 +16,7 @@ export function ContentWatermarkEditor({ initial, updatedAt }: { initial: Conten
     const [opacity, setOpacity] = useState(initial.opacity);
     const [position, setPosition] = useState<ContentWatermarkPosition>(initial.position);
     const [size, setSize] = useState<ContentWatermarkSize>(initial.size);
+    const [renderMode, setRenderMode] = useState<ContentWatermarkRenderMode>(initial.renderMode);
     const [status, setStatus] = useState<{ ok: boolean; message: string; savedAt?: string } | null>(null);
 
     const submit = () => {
@@ -25,6 +26,7 @@ export function ContentWatermarkEditor({ initial, updatedAt }: { initial: Conten
         form.set('opacity', String(opacity));
         form.set('position', position);
         form.set('size', size);
+        form.set('renderMode', renderMode);
 
         startTransition(async () => {
             const result = await saveContentWatermark(form);
@@ -46,8 +48,8 @@ export function ContentWatermarkEditor({ initial, updatedAt }: { initial: Conten
             <section className="rounded-2xl border border-foreground/10 bg-foreground/[0.018] p-4 sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-foreground/10 pb-4">
                     <div>
-                        <h3 className="text-base font-semibold">Global Blog + Projects watermark</h3>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">One shared watermark for public Blog article images and Project images. Individual posts and projects do not get their own setting.</p>
+                        <h3 className="text-base font-semibold">Global Blog + Gallery + Projects watermark</h3>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">One shared watermark for managed public images in Blog, Gallery and Projects. Wiki, Homepage, Journey, Media Library and Admin remain excluded.</p>
                     </div>
                     <label className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                         <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} className="size-4 accent-sky-500" />
@@ -56,6 +58,15 @@ export function ContentWatermarkEditor({ initial, updatedAt }: { initial: Conten
                 </div>
 
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                    <label className="sm:col-span-2">
+                        <span className="text-xs font-semibold text-muted-foreground">Rendering mode</span>
+                        <select value={renderMode} onChange={(event) => setRenderMode(event.target.value as ContentWatermarkRenderMode)} className={`mt-1.5 ${field}`}>
+                            <option value="css">CSS only - visual watermark</option>
+                            <option value="pixel">Pixel + CSS fallback - retained when saved</option>
+                        </select>
+                        <span className="mt-1.5 block text-[11px] text-muted-foreground">Pixel mode embeds the watermark in protected Blog, Gallery and Projects images and hides the duplicate CSS layer there.</span>
+                    </label>
+
                     <label className="sm:col-span-2">
                         <span className="text-xs font-semibold text-muted-foreground">Watermark text</span>
                         <input value={text} onChange={(event) => setText(event.target.value)} maxLength={120} className={`mt-1.5 ${field}`} placeholder="NecrotixLab" />
@@ -103,7 +114,7 @@ export function ContentWatermarkEditor({ initial, updatedAt }: { initial: Conten
                     <div className="absolute inset-0 grid place-items-center font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">Image preview</div>
                     {enabled && text.trim() ? <span className={`pointer-events-none absolute ${previewPosition} max-w-[72%] truncate rounded-md bg-black/35 px-2 py-1 font-medium tracking-[0.08em] text-white backdrop-blur-[2px] ${size === 'medium' ? 'text-xs' : 'text-[10px]'}`} style={{ opacity }}>© {text.trim()}</span> : null}
                 </div>
-                <p className="mt-4 text-xs leading-5 text-muted-foreground">This is a visual overlay only. Original Media Library files, downloads and OpenGraph/social images remain untouched.</p>
+                <p className="mt-4 text-xs leading-5 text-muted-foreground">{renderMode === 'pixel' ? 'Protected public images use this style in their pixels, so a saved copy keeps the watermark. The duplicate CSS layer is hidden.' : 'CSS-only mode displays this visual overlay without changing the image pixels.'} Original Media Library files and OpenGraph/social images remain untouched.</p>
             </aside>
         </div>
     );

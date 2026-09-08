@@ -26,18 +26,19 @@ export async function saveContentWatermark(form: FormData): Promise<ContentWater
             opacity: Number(form.get('opacity') ?? 0.35),
             position: String(form.get('position') ?? 'bottom-right'),
             size: String(form.get('size') ?? 'small'),
+            renderMode: String(form.get('renderMode') ?? 'pixel'),
         });
 
         const saved = await prisma.page.upsert({
             where: { slug: CONTENT_WATERMARK_CONFIG_SLUG },
             update: {
-                title: 'Blog and Projects watermark',
+                title: 'Content watermark',
                 status: 'DRAFT',
                 content: settings as unknown as Prisma.InputJsonValue,
             },
             create: {
                 slug: CONTENT_WATERMARK_CONFIG_SLUG,
-                title: 'Blog and Projects watermark',
+                title: 'Content watermark',
                 status: 'DRAFT',
                 content: settings as unknown as Prisma.InputJsonValue,
             },
@@ -46,11 +47,12 @@ export async function saveContentWatermark(form: FormData): Promise<ContentWater
 
         revalidatePath('/admin/watermark');
         revalidatePath('/blog');
+        revalidatePath('/gallery');
         revalidatePath('/projects');
 
         return {
             ok: true,
-            message: settings.enabled ? 'Global Blog + Projects watermark saved.' : 'Global Blog + Projects watermark disabled.',
+            message: settings.enabled ? 'Content watermark saved.' : 'Content watermark disabled.',
             savedAt: saved.updatedAt.toISOString(),
         };
     } catch (error) {
