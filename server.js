@@ -38,16 +38,10 @@ function hardenLocalUploads() {
   const uploadsRoot = path.join(__dirname, 'public', 'uploads');
   fs.mkdirSync(uploadsRoot, { recursive: true });
   fs.writeFileSync(path.join(uploadsRoot, '.htaccess'), uploadsHtaccess, 'utf8');
-
-  const pending = [uploadsRoot];
-  while (pending.length > 0) {
-    const directory = pending.pop();
-    fs.writeFileSync(path.join(directory, 'index.html'), uploadsIndex, 'utf8');
-
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      if (entry.isDirectory()) pending.push(path.join(directory, entry.name));
-    }
-  }
+  // Keep Passenger cold starts bounded. The root .htaccess applies below this
+  // directory, while newly written subdirectories receive their own fallback
+  // index file from media-storage.
+  fs.writeFileSync(path.join(uploadsRoot, 'index.html'), uploadsIndex, 'utf8');
 }
 
 if (!dev) {
