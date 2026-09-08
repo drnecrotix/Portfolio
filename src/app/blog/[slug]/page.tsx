@@ -11,6 +11,7 @@ import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from
 import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
 import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
+import { protectBlogMedia } from '@/lib/blog-media-protection';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const localized = getLocalizedPostFields(cmsPost, locale);
     const homepage = normalizeHomepageContent(settings?.homepageContent);
     const seo = normalizeSeoDefaults(settings?.seoDefaults);
-    const publicationImage = cmsPost.type === 'NOTE' ? NOTE_SYSTEM_IMAGE : localized.content.featuredImage;
+    const protectedMetadataContent = await protectBlogMedia(localized.content);
+    const publicationImage = cmsPost.type === 'NOTE' ? NOTE_SYSTEM_IMAGE : protectedMetadataContent.featuredImage;
     const ogImage = absoluteSocialMediaUrl(publicationImage || seo.ogImage || homepage.socialImage);
     const twitterImage = absoluteSocialMediaUrl(publicationImage || seo.twitterImage || seo.ogImage || homepage.socialImage);
     const title = localized.seoTitle?.trim() || localized.title;
@@ -131,22 +133,23 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     const related = [...relatedPrimary, ...relatedFallback];
 
     const localized = getLocalizedPostFields(cmsPost, locale);
-    const content = localized.content as PostContent;
+    const content = await protectBlogMedia(localized.content as PostContent);
     const typeLabel = cmsPost.postType?.name ?? cmsPost.type.replaceAll('_', ' ');
     const categoryLabel = cmsPost.categoryRef?.name ?? cmsPost.category ?? 'Publication';
     const publishedAt = (cmsPost.publishedAt ?? cmsPost.createdAt).toISOString();
-    const relatedPosts: RelatedBlogPost[] = related.map((post) => {
+    const relatedPosts: RelatedBlogPost[] = await Promise.all(related.map(async (post) => {
         const relatedLocalized = getLocalizedPostFields(post, locale);
+        const protectedRelated = await protectBlogMedia(relatedLocalized.content);
         return {
             slug: post.slug,
             title: relatedLocalized.title,
             excerpt: relatedLocalized.excerpt,
-            image: post.type === 'NOTE' ? NOTE_SYSTEM_IMAGE : relatedLocalized.content.featuredImage || null,
+            image: post.type === 'NOTE' ? NOTE_SYSTEM_IMAGE : protectedRelated.featuredImage || null,
             category: post.categoryRef?.name ?? post.category ?? 'Publication',
             author: post.authorName,
             date: (post.publishedAt ?? post.createdAt).toISOString(),
         };
-    });
+    }));
     const comments: PublicComment[] = cmsPost.comments.map((comment) => ({ ...comment, createdAt: comment.createdAt.toISOString() }));
     const availableLocales = getAvailablePostLocales(cmsPost);
     const currentLocale = locale === 'bg' ? 'bg' : 'en';
