@@ -3,6 +3,7 @@ import 'server-only';
 import { createHash, randomUUID } from 'node:crypto';
 import { resolveMx, resolveTxt } from 'node:dns/promises';
 import type { FootprintExposedData, FootprintFinding, FootprintProvider, FootprintRelatedAccount } from './types';
+import { extraProviders } from './providers-extra';
 
 function finding(input: Omit<FootprintFinding, 'id'>): FootprintFinding {
     return { id: randomUUID(), ...input };
@@ -213,40 +214,51 @@ const xposedOrNot: FootprintProvider = {
 };
 
 const publicProfiles: FootprintProvider = {
-    id: 'public-profiles', label: 'Public profiles', category: 'account', supports: ['username'], configured: () => true,
-    async check({ usernames, signal }) {
+    id: 'public-profiles', label: 'Public profiles', category: 'account', supports: ['username', 'email'], configured: () => true,
+    async check({ usernames, email, signal }) {
+        const candidates = [...usernames];
+        if (email) {
+            const local = email.split('@')[0]?.replace(/[^a-zA-Z0-9._-]/g, '') || '';
+            if (local.length >= 2 && local.length <= 40) candidates.push(local.toLowerCase());
+        }
+        const resolved = [...new Set(candidates.map((v) => v.toLowerCase()).filter((v) => v.length >= 2))];
+        if (!resolved.length) return [];
         const services = [
             { name: 'GitHub', check: (u: string) => `https://api.github.com/users/${encodeURIComponent(u)}`, profile: (u: string) => `https://github.com/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['login', 'Username'], ['name', 'Display name'], ['bio', 'Bio'], ['company', 'Company'], ['location', 'Location'], ['blog', 'Website'], ['email', 'Public email'], ['twitter_username', 'Twitter/X'], ['public_repos', 'Public repos'], ['followers', 'Followers'], ['following', 'Following'], ['created_at', 'Created at']]) },
             { name: 'GitLab', check: (u: string) => `https://gitlab.com/api/v4/users?username=${encodeURIComponent(u)}`, profile: (u: string) => `https://gitlab.com/${encodeURIComponent(u)}`, exists: (data: unknown) => Array.isArray(data) && data.length > 0, extract: (data: unknown) => pickExposed((Array.isArray(data) ? data[0] : {}) as Record<string, unknown>, [['username', 'Username'], ['name', 'Display name'], ['bio', 'Bio'], ['location', 'Location'], ['public_email', 'Public email'], ['web_url', 'Profile URL']]) },
             { name: 'Codeberg', check: (u: string) => `https://codeberg.org/api/v1/users/${encodeURIComponent(u)}`, profile: (u: string) => `https://codeberg.org/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['login', 'Username'], ['full_name', 'Display name'], ['description', 'Bio'], ['location', 'Location'], ['website', 'Website'], ['email', 'Public email']]) },
             { name: 'Reddit', check: (u: string) => `https://www.reddit.com/user/${encodeURIComponent(u)}/about.json`, profile: (u: string) => `https://www.reddit.com/user/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { data?: { name?: unknown } })?.data?.name), extract: (data: unknown) => pickExposed((((data as { data?: Record<string, unknown> })?.data) || {}) as Record<string, unknown>, [['name', 'Username'], ['total_karma', 'Karma'], ['created_utc', 'Created (unix)']]) },
             { name: 'DEV Community', check: (u: string) => `https://dev.to/api/users/by_username?url=${encodeURIComponent(u)}`, profile: (u: string) => `https://dev.to/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['username', 'Username'], ['name', 'Display name'], ['summary', 'Bio'], ['location', 'Location'], ['github_username', 'GitHub'], ['twitter_username', 'Twitter/X'], ['website_url', 'Website'], ['joined_at', 'Joined']]) },
-            { name: 'Keybase', check: (u: string) => `https://keybase.io/_/api/1.0/user/lookup.json?usernames=${encodeURIComponent(u)}`, profile: (u: string) => `https://keybase.io/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { them?: unknown[] })?.them?.[0]), extract: (data: unknown) => { const them = (data as { them?: Array<Record<string, unknown>> })?.them?.[0] || {}; const basics = (them.basics as Record<string, unknown>) || {}; const profile = (them.profile as Record<string, unknown>) || {}; return pickExposed({ ...basics, ...profile }, [['username', 'Username'], ['full_name', 'Display name'], ['bio', 'Bio'], ['location', 'Location']]); } },
-            { name: 'Hacker News', check: (u: string) => `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(u)}.json`, profile: (u: string) => `https://news.ycombinator.com/user?id=${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['id', 'Username'], ['created', 'Created (unix)'], ['karma', 'Karma'], ['about', 'About']]) },
+            { name: 'Keybase', check: (u: string) => `https://keybase.io/_/api/1.0/user/lookup.json?usernames=${encodeURIComponent(u)}`, profile: (u: string) => `https://keybase.io/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { them?: unknown[] })?.them?.[0]), extract: (data: unknown) => { const them = ((data as { them?: Array<Record<string, unknown>> }).them || [])[0] || {}; const basics = (them.basics as Record<string, unknown>) || {}; return pickExposed({ ...basics, ...(them.profile as Record<string, unknown> || {}) }, [['username', 'Username'], ['full_name', 'Display name'], ['location', 'Location'], ['bio', 'Bio']]); } },
+            { name: 'Hacker News', check: (u: string) => `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(u)}.json`, profile: (u: string) => `https://news.ycombinator.com/user?id=${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean(data && (data as { id?: unknown }).id), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['id', 'Username'], ['created', 'Created'], ['karma', 'Karma'], ['about', 'About']]) },
             { name: 'npm', check: (u: string) => `https://registry.npmjs.org/-/user/org.couchdb.user:${encodeURIComponent(u)}`, profile: (u: string) => `https://www.npmjs.com/~${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { name?: unknown })?.name), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['name', 'Username'], ['email', 'Public email']]) },
             { name: 'Docker Hub', check: (u: string) => `https://hub.docker.com/v2/users/${encodeURIComponent(u)}/`, profile: (u: string) => `https://hub.docker.com/u/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { username?: unknown; id?: unknown })?.username || (data as { id?: unknown })?.id), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['username', 'Username'], ['full_name', 'Display name'], ['location', 'Location'], ['company', 'Company']]) },
             { name: 'Bitbucket', check: (u: string) => `https://api.bitbucket.org/2.0/users/${encodeURIComponent(u)}`, profile: (u: string) => `https://bitbucket.org/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { username?: unknown; display_name?: unknown })?.username || (data as { display_name?: unknown })?.display_name), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['username', 'Username'], ['display_name', 'Display name'], ['location', 'Location'], ['created_on', 'Created at']]) },
         ];
-        const checks = usernames.flatMap((username) => services.map(async (service) => {
+        const checks = resolved.flatMap((username) => services.map(async (service) => {
             try {
                 const response = await fetch(service.check(username), { signal, cache: 'no-store', redirect: 'follow', headers: { Accept: 'application/json', 'User-Agent': 'NecrotixLab-Digital-Footprint' } }).catch(() => null);
                 if (!response?.ok) return null;
                 const data = await response.json().catch(() => null);
                 if (!service.exists(data)) return null;
                 const exposedData = service.extract ? service.extract(data) : { Username: username };
+                if (!exposedData.Username) exposedData.Username = username;
                 const fieldLabels = Object.keys(exposedData || {});
-                return finding({ provider: 'public-profiles', category: 'account', title: `${service.name} @${username}`, status: 'found', confidence: 85, risk: 'info', summary: 'The platform API returned a public profile for this username. Review the exposed fields below.', sourceUrl: service.profile(username), exposedFields: fieldLabels.length ? fieldLabels : ['Username', 'Public profile'], exposedData: Object.keys(exposedData || {}).length ? exposedData : { Username: username }, remediation: ['Review the profile privacy settings and remove details you no longer want public.'] });
+                const display = typeof exposedData['Display name'] === 'string' ? exposedData['Display name'] : undefined;
+                return finding({ provider: 'public-profiles', category: 'account', title: display ? `${service.name}: ${display} (@${username})` : `${service.name} @${username}`, status: 'found', confidence: 85, risk: 'info', summary: 'The platform API returned a public profile for this username. Review the exposed fields below.', sourceUrl: service.profile(username), exposedFields: fieldLabels.length ? fieldLabels : ['Username', 'Public profile'], exposedData: Object.keys(exposedData || {}).length ? exposedData : { Username: username }, remediation: ['Review the profile privacy settings and remove details you no longer want public.'] });
             } catch { return null; }
         }));
         return (await Promise.all(checks)).filter((value): value is FootprintFinding => value !== null);
     },
 };
 
-export const footprintProviders: FootprintProvider[] = [hibp, leakCheckPublic, xposedOrNot, holehe, emailRep, gravatar, github, gitlab, domain, publicProfiles];
+export const footprintProviders: FootprintProvider[] = [hibp, leakCheckPublic, xposedOrNot, holehe, emailRep, gravatar, github, gitlab, domain, publicProfiles, ...extraProviders];
 
 export async function runFootprintProviders(context: { queryType: 'email' | 'phone' | 'username'; email?: string; phone?: string; usernames: string[] }) {
     const results = await Promise.all(footprintProviders.map(async (provider) => {
-        if (!provider.supports.includes(context.queryType)) return { provider, findings: [] as FootprintFinding[], status: 'unsupported' as const };
+        if (!provider.supports.includes(context.queryType) && !((provider.id === 'public-profiles' || provider.id === 'social-profiles') && context.queryType === 'email')) {
+            return { provider, findings: [] as FootprintFinding[], status: 'unsupported' as const };
+        }
         if (!provider.configured()) return { provider, findings: [] as FootprintFinding[], status: 'not-configured' as const };
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 12_000);
@@ -258,9 +270,10 @@ export async function runFootprintProviders(context: { queryType: 'email' | 'pho
             clearTimeout(timeout);
         }
     }));
-    const findings = deduplicateFindings(results.flatMap((result) => result.findings));
+
+    const findings = results.flatMap((result) => result.findings);
     return {
-        findings,
+        findings: deduplicateFindings(findings),
         relatedAccounts: collectRelatedAccounts(findings, context),
         providersChecked: results.length,
         providersAvailable: results.filter((result) => result.status === 'available').length,
@@ -273,14 +286,39 @@ function collectRelatedAccounts(findings: FootprintFinding[], context: { queryTy
     const accounts: FootprintRelatedAccount[] = [];
     const seen = new Set<string>();
     for (const item of findings) {
-        if (item.status !== 'found' || item.category !== 'account') continue;
+        if (item.status !== 'found') continue;
+        if (item.category !== 'account' && item.provider !== 'public-profiles' && item.provider !== 'social-profiles') continue;
         const titleMatch = item.title.match(/@([\w.-]+)/);
-        const username = (typeof item.exposedData?.Username === 'string' && item.exposedData.Username) || titleMatch?.[1] || context.usernames[0] || context.email?.split('@')[0] || 'unknown';
-        const platform = item.provider === 'public-profiles' ? item.title.replace(/\s*@.+$/, '') : item.provider === 'github' ? 'GitHub' : item.provider === 'gitlab' ? 'GitLab' : item.provider === 'gravatar' ? 'Gravatar' : item.provider === 'holehe' ? String(item.title) : item.provider;
+        const username =
+            (typeof item.exposedData?.Username === 'string' && item.exposedData.Username) ||
+            titleMatch?.[1] ||
+            context.usernames[0] ||
+            context.email?.split('@')[0] ||
+            'unknown';
+        const displayName =
+            (typeof item.exposedData?.['Display name'] === 'string' && item.exposedData['Display name']) ||
+            (typeof item.exposedData?.Name === 'string' && item.exposedData.Name) ||
+            undefined;
+        let platform = item.provider;
+        if (item.provider === 'public-profiles' || item.provider === 'social-profiles') {
+            platform = item.title.split(':')[0]?.replace(/\s*@.+$/, '').trim() || item.title.replace(/\s*@.+$/, '');
+        } else if (item.provider === 'github') platform = 'GitHub';
+        else if (item.provider === 'gitlab') platform = 'GitLab';
+        else if (item.provider === 'gravatar') platform = 'Gravatar';
+        else if (item.provider === 'holehe') platform = String(item.title);
         const key = `${platform.toLowerCase()}:${String(username).toLowerCase()}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        accounts.push({ platform, username: String(username), url: item.sourceUrl, linkedVia, confidence: item.confidence, summary: item.summary, exposedData: item.exposedData });
+        accounts.push({
+            platform,
+            username: String(username),
+            displayName: displayName ? String(displayName) : undefined,
+            url: item.sourceUrl,
+            linkedVia,
+            confidence: item.confidence,
+            summary: item.summary,
+            exposedData: item.exposedData,
+        });
     }
     return accounts.sort((a, b) => b.confidence - a.confidence || a.platform.localeCompare(b.platform));
 }
