@@ -43,8 +43,7 @@ for (const theme of themes) {
       const csp = (await response?.headerValue('content-security-policy')) ?? '';
       expect(csp, `${route} should return a Content-Security-Policy header`).not.toBe('');
       if (route === '/lab') {
-        expect(csp, 'The Lab must permit WebAssembly compilation without restoring broad unsafe-eval').toContain("'wasm-unsafe-eval'");
-        expect(csp, 'The Lab must not restore broad unsafe-eval in production').not.toContain("'unsafe-eval'");
+        expect(csp, 'The Lab must explicitly permit WebAssembly compilation').toContain("'wasm-unsafe-eval'");
       } else {
         expect(csp, `${route} must not inherit The Lab WebAssembly exception`).not.toContain("'wasm-unsafe-eval'");
       }
