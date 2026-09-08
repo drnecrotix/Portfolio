@@ -21,7 +21,7 @@ import {
     type IntegrationTestRecord,
 } from '@/lib/integration-credentials';
 
-export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2' | 'lemonsqueezy' | 'creem' | 'smtp';
+export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2' | 'lemonsqueezy' | 'creem' | 'smtp' | 'hibp' | 'holehe' | 'emailrep';
 export type ApiActionResult = { ok: boolean; message: string; testedAt?: string; latencyMs?: number };
 
 const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
@@ -35,6 +35,9 @@ const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
     lemonsqueezy: ['lemonsqueezy.apiKey', 'lemonsqueezy.storeId', 'lemonsqueezy.webhookSecret'],
     creem: ['creem.apiKey', 'creem.webhookSecret'],
     smtp: ['smtp.user', 'smtp.password', 'smtp.host', 'smtp.port', 'smtp.secure'],
+    hibp: ['hibp.apiKey'],
+    holehe: ['holehe.apiUrl', 'holehe.apiToken'],
+    emailrep: ['emailrep.apiKey'],
 };
 
 const envNames: Record<string, string> = {
@@ -61,6 +64,10 @@ const envNames: Record<string, string> = {
     'smtp.host': 'SMTP_HOST',
     'smtp.port': 'SMTP_PORT',
     'smtp.secure': 'SMTP_SECURE',
+    'hibp.apiKey': 'HIBP_API_KEY',
+    'holehe.apiUrl': 'HOLEHE_API_URL',
+    'holehe.apiToken': 'HOLEHE_API_TOKEN',
+    'emailrep.apiKey': 'EMAILREP_API_KEY',
 };
 
 const aiProviders = new Set<ApiIntegrationId>(['openai', 'groq', 'gemini', 'openrouter']);
@@ -359,31 +366,87 @@ async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, s
         return storeName ? `Connected to Lemon Squeezy store “${storeName}”.` : `Lemon Squeezy store ${storeId} is reachable.`;
     }
 
-    const accountId = values['r2.accountId'];
-    const accessKeyId = values['r2.accessKeyId'];
-    const secretAccessKey = values['r2.secretAccessKey'];
-    const bucket = values['r2.bucket'];
-    const storeBucket = values['r2.storeBucket'];
-    if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
-        throw new Error('R2 requires Account ID, Access Key ID, Secret Access Key and Bucket.');
+    if (id === 'hibp') {
+        const apiKey = values['hibp.apiKey'];
+        if (!apiKey) throw new Error('Have I Been Pwned API key is required.');
+        const response = await fetch('https://haveibeenpwned.com/api/v3/breachedaccount/test%40example.com?truncateResponse=true', {
+            headers: { 'hibp-api-key': apiKey, 'user-agent': 'NecrotixLab-Admin-Test' },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(10_000),
+        });
+        if (response.status === 401 || response.status === 403) throw new Error('HIBP rejected the API key.');
+        if (response.status === 429) throw new Error('HIBP rate limit — key is likely valid, try again later.');
+        if (response.status !== 404 && response.status !== 200) {
+            throw new Error(`HIBP returned HTTP ${response.status}.`);
+        }
+        return 'Have I Been Pwned API key is accepted.';
     }
 
-    const client = new S3Client({
-        region: 'auto',
-        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-        credentials: { accessKeyId, secretAccessKey },
-    });
-    try {
-        await client.send(new HeadBucketCommand({ Bucket: bucket }), { abortSignal: AbortSignal.timeout(10_000) });
-        if (storeBucket && storeBucket !== bucket) {
-            await client.send(new HeadBucketCommand({ Bucket: storeBucket }), { abortSignal: AbortSignal.timeout(10_000) });
+    if (id === 'holehe') {
+        const base = (values['holehe.apiUrl'] || '').replace(/\/+$/, '');
+        const token = values['holehe.apiToken'];
+        if (!base || !token) throw new Error('Holehe API URL and token are required.');
+        const health = await fetchChecked(`${base}/health`);
+        const payload = await health.json().catch(() => ({})) as Record<string, unknown>;
+        if (payload.ok !== true) throw new Error('Holehe health endpoint did not return ok: true.');
+        const scan = await fetch(`${base}/scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ email: 'holehe-admin-test@example.com' }),
+            signal: AbortSignal.timeout(60_000),
+            cache: 'no-store',
+        });
+        if (scan.status === 401 || scan.status === 403) throw new Error('Holehe rejected the API token.');
+        if (scan.status === 504) return 'Holehe is reachable (scan timed out on cold start — normal).';
+        if (!scan.ok && scan.status !== 404) {
+            const detail = await scan.text().catch(() => '');
+            throw new Error(`Holehe scan probe failed (HTTP ${scan.status}). ${detail.slice(0, 120)}`);
         }
-    } finally {
-        client.destroy();
+        const body = await scan.json().catch(() => ({})) as Record<string, unknown>;
+        const checked = Number(body.checked || 0);
+        return checked
+            ? `Holehe sidecar is reachable · ${checked} modules loaded.`
+            : 'Holehe sidecar is reachable and accepted the token.';
     }
-    return storeBucket
-        ? `Cloudflare R2 media bucket “${bucket}” and private Store bucket “${storeBucket}” are reachable.`
-        : `Cloudflare R2 bucket “${bucket}” is reachable. Configure a separate private Store bucket before publishing downloadable products.`;
+
+    if (id === 'emailrep') {
+        const apiKey = values['emailrep.apiKey'];
+        if (!apiKey) throw new Error('EmailRep API key is required.');
+        await fetchChecked('https://emailrep.io/test@example.com', {
+            headers: { Key: apiKey, 'User-Agent': 'NecrotixLab-Admin-Test' },
+        });
+        return 'EmailRep API key is accepted.';
+    }
+
+    if (id === 'r2') {
+        const accountId = values['r2.accountId'];
+        const accessKeyId = values['r2.accessKeyId'];
+        const secretAccessKey = values['r2.secretAccessKey'];
+        const bucket = values['r2.bucket'];
+        const storeBucket = values['r2.storeBucket'];
+        if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+            throw new Error('R2 requires Account ID, Access Key ID, Secret Access Key and Bucket.');
+        }
+
+        const client = new S3Client({
+            region: 'auto',
+            endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+            credentials: { accessKeyId, secretAccessKey },
+        });
+        try {
+            await client.send(new HeadBucketCommand({ Bucket: bucket }), { abortSignal: AbortSignal.timeout(10_000) });
+            if (storeBucket && storeBucket !== bucket) {
+                await client.send(new HeadBucketCommand({ Bucket: storeBucket }), { abortSignal: AbortSignal.timeout(10_000) });
+            }
+        } finally {
+            client.destroy();
+        }
+        return storeBucket
+            ? `Cloudflare R2 media bucket “${bucket}” and private Store bucket “${storeBucket}” are reachable.`
+            : `Cloudflare R2 bucket “${bucket}” is reachable. Configure a separate private Store bucket before publishing downloadable products.`;
+    }
+
+    throw new Error(`Unsupported integration: ${id}`);
 }
 
 export async function testApiIntegration(id: ApiIntegrationId): Promise<ApiActionResult> {
