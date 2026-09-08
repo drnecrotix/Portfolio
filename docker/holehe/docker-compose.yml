@@ -1,0 +1,25 @@
+# Holehe API sidecar for Digital Footprint
+# Usage:
+#   export HOLEHE_API_TOKEN="$(openssl rand -hex 24)"
+#   docker compose -f docker/holehe/docker-compose.yml up -d --build
+# Then in the Next.js app env:
+#   HOLEHE_API_URL=http://127.0.0.1:8787
+#   HOLEHE_API_TOKEN=<same token>
+
+services:
+  holehe-api:
+    build: .
+    container_name: necrotix-holehe
+    ports:
+      - "${HOLEHE_PORT:-8787}:8000"
+    environment:
+      HOLEHE_API_TOKEN: ${HOLEHE_API_TOKEN:?Set HOLEHE_API_TOKEN}
+      HOLEHE_TIMEOUT: ${HOLEHE_TIMEOUT:-90}
+      HOLEHE_MAX_CONCURRENT: ${HOLEHE_MAX_CONCURRENT:-10}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
