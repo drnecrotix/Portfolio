@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAvailablePostLocales, getLocalizedPostFields, type BlogLocale } from '@/lib/cms-posts';
+import { protectBlogMedia } from '@/lib/blog-media-protection';
 
 const supportedLocales = new Set<BlogLocale>(['en', 'bg']);
 
@@ -28,12 +29,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     }
 
     const localized = getLocalizedPostFields(post, locale);
+    const protectedContent = await protectBlogMedia(localized.content);
     const response = NextResponse.json({
         ok: true,
         locale,
         title: localized.title,
         excerpt: localized.excerpt,
-        content: localized.content,
+        content: protectedContent,
         availableLocales,
     });
 
