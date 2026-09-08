@@ -3,7 +3,7 @@ import { DigitalFootprintClient } from '@/components/digital-footprint/DigitalFo
 
 export const metadata: Metadata = {
     title: 'Digital Footprint',
-    description: 'Verify your email and audit the public accounts, breach exposure, domain posture and browser signals connected to your digital identity.',
+    description: 'Check an email address, phone number or username for public account and breach-exposure signals without an email verification step.',
     alternates: { canonical: '/digital-footprint' },
 };
 

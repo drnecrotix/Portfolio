@@ -18,7 +18,8 @@ export type FootprintFinding = {
 };
 
 export type FootprintScan = {
-    email: string;
+    queryType: 'email' | 'phone' | 'username';
+    query: string;
     checkedAt: string;
     providersChecked: number;
     providersAvailable: number;
@@ -28,7 +29,8 @@ export type FootprintScan = {
 };
 
 export type ProviderContext = {
-    email: string;
+    email?: string;
+    phone?: string;
     usernames: string[];
     signal: AbortSignal;
 };
