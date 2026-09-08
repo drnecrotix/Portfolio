@@ -7,7 +7,6 @@ The public `/digital-footprint` route is a privacy exposure lookup for email add
 - No account or verification email is required.
 - Every scan requires an explicit authorization statement, a signed time-bound bot challenge and passes per-IP rate limits.
 - Scan results are returned to the current browser and are not persisted.
-- Password checks hash the password in the browser and send only the first five SHA-1 characters to the HIBP Pwned Passwords range API.
 - Plaintext passwords, tokens, cookies and private messages are never requested, retrieved or displayed.
 - All safe metadata returned by configured providers is available without a premium tier.
 

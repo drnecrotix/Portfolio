@@ -9,7 +9,7 @@ function finding(input: Omit<FootprintFinding, 'id'>): FootprintFinding {
 }
 
 const hibp: FootprintProvider = {
-    id: 'hibp', label: 'Have I Been Pwned', category: 'breach',
+    id: 'hibp', label: 'Have I Been Pwned', category: 'breach', supports: ['email'],
     configured: () => Boolean(process.env.HIBP_API_KEY),
     async check({ email, signal }) {
         if (!process.env.HIBP_API_KEY || !email) return [];
@@ -39,7 +39,7 @@ const hibp: FootprintProvider = {
 };
 
 const holehe: FootprintProvider = {
-    id: 'holehe', label: 'Holehe', category: 'account',
+    id: 'holehe', label: 'Holehe', category: 'account', supports: ['email'],
     configured: () => Boolean(process.env.HOLEHE_API_URL && process.env.HOLEHE_API_TOKEN),
     async check({ email, signal }) {
         if (!process.env.HOLEHE_API_URL || !process.env.HOLEHE_API_TOKEN || !email) return [];
@@ -61,7 +61,7 @@ const holehe: FootprintProvider = {
 };
 
 const emailRep: FootprintProvider = {
-    id: 'emailrep', label: 'EmailRep', category: 'reputation',
+    id: 'emailrep', label: 'EmailRep', category: 'reputation', supports: ['email'],
     configured: () => Boolean(process.env.EMAILREP_API_KEY),
     async check({ email, signal }) {
         if (!process.env.EMAILREP_API_KEY || !email) return [];
@@ -80,7 +80,7 @@ const emailRep: FootprintProvider = {
 };
 
 const gravatar: FootprintProvider = {
-    id: 'gravatar', label: 'Gravatar', category: 'account', configured: () => true,
+    id: 'gravatar', label: 'Gravatar', category: 'account', supports: ['email'], configured: () => true,
     async check({ email, signal }) {
         if (!email) return [];
         const digest = createHash('sha256').update(email).digest('hex');
@@ -94,7 +94,7 @@ const gravatar: FootprintProvider = {
 };
 
 const github: FootprintProvider = {
-    id: 'github', label: 'GitHub', category: 'account', configured: () => true,
+    id: 'github', label: 'GitHub', category: 'account', supports: ['email'], configured: () => true,
     async check({ email, signal }) {
         if (!email) return [];
         const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'NecrotixLab-Digital-Footprint' };
@@ -106,8 +106,25 @@ const github: FootprintProvider = {
     },
 };
 
+const gitlab: FootprintProvider = {
+    id: 'gitlab', label: 'GitLab', category: 'account', supports: ['email'], configured: () => true,
+    async check({ email, signal }) {
+        if (!email) return [];
+        const response = await fetch(`https://gitlab.com/api/v4/users?search=${encodeURIComponent(email)}&per_page=20`, {
+            signal, cache: 'no-store', headers: { Accept: 'application/json', 'User-Agent': 'NecrotixLab-Digital-Footprint' },
+        });
+        if (!response.ok) throw new Error(`GitLab ${response.status}`);
+        const rows = await response.json() as Array<Record<string, unknown>>;
+        return rows.filter((row) => String(row.public_email || '').toLowerCase() === email).map((row) => finding({
+            provider: 'gitlab', category: 'account', title: `GitLab @${String(row.username || 'profile')}`, status: 'found', confidence: 100, risk: 'low',
+            summary: 'A GitLab profile publicly exposes the searched email address.', sourceUrl: safeSourceUrl(row.web_url),
+            exposedFields: ['Email', 'Username', 'Public projects'], remediation: ['Review the public email and profile visibility in GitLab settings.'],
+        }));
+    },
+};
+
 const domain: FootprintProvider = {
-    id: 'domain', label: 'Mail domain posture', category: 'domain', configured: () => true,
+    id: 'domain', label: 'Mail domain posture', category: 'domain', supports: ['email'], configured: () => true,
     async check({ email }) {
         if (!email) return [];
         const domainName = email.split('@')[1];
@@ -132,7 +149,7 @@ function safeSourceUrl(value: unknown) {
 }
 
 const leakCheckPublic: FootprintProvider = {
-    id: 'leakcheck-public', label: 'LeakCheck Public', category: 'breach', configured: () => true,
+    id: 'leakcheck-public', label: 'LeakCheck Public', category: 'breach', supports: ['email', 'phone', 'username'], configured: () => true,
     async check({ email, phone, usernames, signal }) {
         const lookup = email || phone || usernames[0];
         if (!lookup) return [];
@@ -156,7 +173,7 @@ const leakCheckPublic: FootprintProvider = {
 };
 
 const xposedOrNot: FootprintProvider = {
-    id: 'xposedornot', label: 'XposedOrNot', category: 'breach', configured: () => true,
+    id: 'xposedornot', label: 'XposedOrNot', category: 'breach', supports: ['email'], configured: () => true,
     async check({ email, signal }) {
         if (!email) return [];
         const response = await fetch(`https://api.xposedornot.com/v1/breach-analytics?email=${encodeURIComponent(email)}`, {
@@ -182,44 +199,74 @@ const xposedOrNot: FootprintProvider = {
 };
 
 const publicProfiles: FootprintProvider = {
-    id: 'public-profiles', label: 'Public profiles', category: 'account', configured: () => true,
+    id: 'public-profiles', label: 'Public profiles', category: 'account', supports: ['username'], configured: () => true,
     async check({ usernames, signal }) {
         const services = [
-            { name: 'GitHub', url: (username: string) => `https://github.com/${encodeURIComponent(username)}` },
-            { name: 'Reddit', url: (username: string) => `https://www.reddit.com/user/${encodeURIComponent(username)}/about.json` },
-            { name: 'DEV Community', url: (username: string) => `https://dev.to/${encodeURIComponent(username)}` },
-            { name: 'Keybase', url: (username: string) => `https://keybase.io/${encodeURIComponent(username)}` },
+            { name: 'GitHub', check: (username: string) => `https://api.github.com/users/${encodeURIComponent(username)}`, profile: (username: string) => `https://github.com/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login) },
+            { name: 'GitLab', check: (username: string) => `https://gitlab.com/api/v4/users?username=${encodeURIComponent(username)}`, profile: (username: string) => `https://gitlab.com/${encodeURIComponent(username)}`, exists: (data: unknown) => Array.isArray(data) && data.length > 0 },
+            { name: 'Codeberg', check: (username: string) => `https://codeberg.org/api/v1/users/${encodeURIComponent(username)}`, profile: (username: string) => `https://codeberg.org/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login) },
+            { name: 'Reddit', check: (username: string) => `https://www.reddit.com/user/${encodeURIComponent(username)}/about.json`, profile: (username: string) => `https://www.reddit.com/user/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { data?: { name?: unknown } })?.data?.name) },
+            { name: 'DEV Community', check: (username: string) => `https://dev.to/api/users/by_username?url=${encodeURIComponent(username)}`, profile: (username: string) => `https://dev.to/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id) },
+            { name: 'Keybase', check: (username: string) => `https://keybase.io/_/api/1.0/user/lookup.json?usernames=${encodeURIComponent(username)}`, profile: (username: string) => `https://keybase.io/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { them?: unknown[] })?.them?.[0]) },
+            { name: 'Hacker News', check: (username: string) => `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(username)}.json`, profile: (username: string) => `https://news.ycombinator.com/user?id=${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id) },
+            { name: 'npm', check: (username: string) => `https://registry.npmjs.org/-/user/org.couchdb.user:${encodeURIComponent(username)}`, profile: (username: string) => `https://www.npmjs.com/~${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { name?: unknown })?.name) },
         ];
         const checks = usernames.flatMap((username) => services.map(async (service) => {
-            const url = service.url(username);
-            const response = await fetch(url, { signal, cache: 'no-store', redirect: 'follow', headers: { 'User-Agent': 'NecrotixLab-Digital-Footprint' } }).catch(() => null);
+            const response = await fetch(service.check(username), { signal, cache: 'no-store', redirect: 'follow', headers: { Accept: 'application/json', 'User-Agent': 'NecrotixLab-Digital-Footprint' } }).catch(() => null);
             if (!response?.ok) return null;
-            return finding({ provider: 'public-profiles', category: 'account', title: `${service.name} @${username}`, status: 'found', confidence: 75, risk: 'info', summary: 'A public URL responded for this self-declared username. Review the profile to confirm it is yours.', sourceUrl: service.name === 'Reddit' ? `https://www.reddit.com/user/${encodeURIComponent(username)}` : url, exposedFields: ['Username', 'Public profile'], remediation: ['Review the profile privacy settings and remove details you no longer want public.'] });
+            const data = await response.json().catch(() => null);
+            if (!service.exists(data)) return null;
+            return finding({ provider: 'public-profiles', category: 'account', title: `${service.name} @${username}`, status: 'found', confidence: 85, risk: 'info', summary: 'The platform API returned a public profile for this username. Open it to confirm ownership and review the visible information.', sourceUrl: service.profile(username), exposedFields: ['Username', 'Public profile'], remediation: ['Review the profile privacy settings and remove details you no longer want public.'] });
         }));
         return (await Promise.all(checks)).filter((value): value is FootprintFinding => value !== null);
     },
 };
 
-export const footprintProviders: FootprintProvider[] = [hibp, leakCheckPublic, xposedOrNot, holehe, emailRep, gravatar, github, domain, publicProfiles];
+export const footprintProviders: FootprintProvider[] = [hibp, leakCheckPublic, xposedOrNot, holehe, emailRep, gravatar, github, gitlab, domain, publicProfiles];
 
-export async function runFootprintProviders(context: { email?: string; phone?: string; usernames: string[] }) {
+export async function runFootprintProviders(context: { queryType: 'email' | 'phone' | 'username'; email?: string; phone?: string; usernames: string[] }) {
     const results = await Promise.all(footprintProviders.map(async (provider) => {
-        if (!provider.configured()) return { provider, findings: [] as FootprintFinding[], available: false };
+        if (!provider.supports.includes(context.queryType)) return { provider, findings: [] as FootprintFinding[], status: 'unsupported' as const };
+        if (!provider.configured()) return { provider, findings: [] as FootprintFinding[], status: 'not-configured' as const };
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 12_000);
         try {
-            return { provider, findings: await provider.check({ ...context, signal: controller.signal }), available: true };
+            return { provider, findings: await provider.check({ ...context, signal: controller.signal }), status: 'available' as const };
         } catch {
-            return { provider, findings: [finding({ provider: provider.id, category: provider.category, title: `${provider.label} unavailable`, status: 'unavailable', confidence: 0, risk: 'info', summary: 'This provider did not return a usable result during the scan.', remediation: ['Try this provider again later.'] })], available: true };
+            return { provider, findings: [finding({ provider: provider.id, category: provider.category, title: `${provider.label} unavailable`, status: 'unavailable', confidence: 0, risk: 'info', summary: 'This provider did not return a usable result during the scan.', remediation: ['Try this provider again later.'] })], status: 'unavailable' as const };
         } finally {
             clearTimeout(timeout);
         }
     }));
     return {
-        findings: results.flatMap((result) => result.findings),
+        findings: deduplicateFindings(results.flatMap((result) => result.findings)),
         providersChecked: results.length,
-        providersAvailable: results.filter((result) => result.available).length,
+        providersAvailable: results.filter((result) => result.status === 'available').length,
+        providerStatuses: results.map((result) => ({ id: result.provider.id, label: result.provider.label, status: result.status })),
     };
+}
+
+function deduplicateFindings(findings: FootprintFinding[]) {
+    const groups = new Map<string, FootprintFinding[]>();
+    for (const item of findings) {
+        if (item.status !== 'found' || item.category !== 'breach') {
+            groups.set(item.id, [item]);
+            continue;
+        }
+        const key = `${item.category}:${item.title.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+        groups.set(key, [...(groups.get(key) || []), item]);
+    }
+    return [...groups.values()].map((items) => {
+        const primary = items.sort((a, b) => b.confidence - a.confidence)[0];
+        if (items.length === 1) return primary;
+        return {
+            ...primary,
+            relatedProviders: [...new Set(items.map((item) => item.provider))],
+            duplicateCount: items.length,
+            exposedFields: [...new Set(items.flatMap((item) => item.exposedFields || []))],
+            remediation: [...new Set(items.flatMap((item) => item.remediation))],
+        };
+    });
 }
 
 export function calculateRiskScore(findings: FootprintFinding[]) {
