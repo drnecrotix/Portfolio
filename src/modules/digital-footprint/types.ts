@@ -25,6 +25,7 @@ export type FootprintFinding = {
 export type FootprintRelatedAccount = {
     platform: string;
     username: string;
+    displayName?: string;
     url?: string;
     linkedVia: 'email' | 'phone' | 'username' | 'profile';
     confidence: number;
