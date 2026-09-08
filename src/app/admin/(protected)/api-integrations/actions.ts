@@ -1,6 +1,7 @@
 'use server';
 
 import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3';
+import nodemailer from 'nodemailer';
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
@@ -20,7 +21,7 @@ import {
     type IntegrationTestRecord,
 } from '@/lib/integration-credentials';
 
-export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2' | 'lemonsqueezy' | 'creem';
+export type ApiIntegrationId = 'github' | 'wakatime' | 'openai' | 'groq' | 'gemini' | 'openrouter' | 'r2' | 'lemonsqueezy' | 'creem' | 'smtp';
 export type ApiActionResult = { ok: boolean; message: string; testedAt?: string; latencyMs?: number };
 
 const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
@@ -33,6 +34,7 @@ const allowedFields: Record<ApiIntegrationId, readonly string[]> = {
     r2: ['r2.accountId', 'r2.accessKeyId', 'r2.secretAccessKey', 'r2.bucket', 'r2.storeBucket', 'r2.publicBaseUrl'],
     lemonsqueezy: ['lemonsqueezy.apiKey', 'lemonsqueezy.storeId', 'lemonsqueezy.webhookSecret'],
     creem: ['creem.apiKey', 'creem.webhookSecret'],
+    smtp: ['smtp.user', 'smtp.password', 'smtp.host', 'smtp.port', 'smtp.secure'],
 };
 
 const envNames: Record<string, string> = {
@@ -54,6 +56,11 @@ const envNames: Record<string, string> = {
     'lemonsqueezy.webhookSecret': 'LEMON_SQUEEZY_WEBHOOK_SECRET',
     'creem.apiKey': 'CREEM_API_KEY',
     'creem.webhookSecret': 'CREEM_WEBHOOK_SECRET',
+    'smtp.user': 'EMAIL_USER',
+    'smtp.password': 'EMAIL_APP_PASSWORD',
+    'smtp.host': 'SMTP_HOST',
+    'smtp.port': 'SMTP_PORT',
+    'smtp.secure': 'SMTP_SECURE',
 };
 
 const aiProviders = new Set<ApiIntegrationId>(['openai', 'groq', 'gemini', 'openrouter']);
@@ -152,6 +159,16 @@ export async function saveApiIntegration(input: {
             }
         }
 
+        if (input.id === 'smtp') {
+            const portValue = changes['smtp.port'];
+            if (typeof portValue === 'string') {
+                const port = Number(portValue);
+                if (!Number.isInteger(port) || port < 1 || port > 65535) return { ok: false, message: 'SMTP port must be an integer from 1 to 65535.' };
+            }
+            const secureValue = changes['smtp.secure'];
+            if (typeof secureValue === 'string' && !['true', 'false'].includes(secureValue.toLowerCase())) return { ok: false, message: 'SMTP secure must be true or false.' };
+        }
+
         const existing = await prisma.siteSettings.findUnique({
             where: { id: 'default' },
             select: { integrationSettings: true, assistantSettings: true },
@@ -204,6 +221,7 @@ export async function saveApiIntegration(input: {
         revalidatePath('/api/chat');
         revalidatePath('/admin/media');
         revalidatePath('/admin/store');
+        revalidatePath('/digital-footprint');
 
         return { ok: true, message: Object.keys(changes).length > 0 ? 'Integration credentials saved securely. Run Test connection to verify them.' : 'No credential changes were submitted.' };
     } catch (error) {
@@ -262,6 +280,19 @@ async function testGitHub(values: Record<string, string>) {
 
 async function runIntegrationTest(id: ApiIntegrationId, values: Record<string, string>): Promise<string> {
     if (id === 'github') return testGitHub(values);
+
+    if (id === 'smtp') {
+        const user = values['smtp.user'];
+        const password = values['smtp.password'];
+        const host = values['smtp.host'] || 'smtp.gmail.com';
+        const port = Number(values['smtp.port'] || 465);
+        const secure = (values['smtp.secure'] || 'true').toLowerCase() === 'true';
+        if (!user || !password || !host || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('SMTP requires a user, app password, valid host and port.');
+        const transporter = nodemailer.createTransport({ host, port, secure, auth: { user, pass: password } });
+        await transporter.verify();
+        transporter.close();
+        return `SMTP authentication is valid for ${user}.`;
+    }
 
     if (id === 'wakatime') {
         const apiKey = values['wakatime.apiKey'];

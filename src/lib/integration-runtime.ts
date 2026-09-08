@@ -100,3 +100,15 @@ export async function getRuntimeCreemConfig() {
         webhookSecret: stored['creem.webhookSecret'] || String(process.env.CREEM_WEBHOOK_SECRET ?? '').trim(),
     };
 }
+
+export async function getRuntimeSmtpConfig() {
+    const settings = await loadSettings();
+    const stored = getStoredIntegrationValues(settings?.integrationSettings);
+    return {
+        user: stored['smtp.user'] || String(process.env.EMAIL_USER ?? '').trim(),
+        password: stored['smtp.password'] || String(process.env.EMAIL_APP_PASSWORD ?? '').trim(),
+        host: stored['smtp.host'] || String(process.env.SMTP_HOST ?? 'smtp.gmail.com').trim(),
+        port: Number(stored['smtp.port'] || process.env.SMTP_PORT || 465),
+        secure: (stored['smtp.secure'] || String(process.env.SMTP_SECURE ?? 'true')).toLowerCase() === 'true',
+    };
+}

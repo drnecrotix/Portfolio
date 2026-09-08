@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { isPublicWriteBlocked } from '@/lib/public-write-guard';
 import { clientIp, rateLimited, validOrigin } from '@/modules/digital-footprint/http';
 import { createVerification, hashValue, normalizeEmail } from '@/modules/digital-footprint/security';
+import { getRuntimeSmtpConfig } from '@/lib/integration-runtime';
 
 export const runtime = 'nodejs';
 
@@ -24,21 +25,20 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Too many verification requests. Try again later.' }, { status: 429, headers });
     }
 
-    const emailUser = process.env.EMAIL_USER || '';
-    const emailPassword = process.env.EMAIL_APP_PASSWORD || '';
-    if (!emailUser || !emailPassword) return NextResponse.json({ error: 'Email verification is not configured.' }, { status: 503, headers });
+    const smtp = await getRuntimeSmtpConfig();
+    if (!smtp.user || !smtp.password || !smtp.host || !smtp.port) return NextResponse.json({ error: 'Email verification is not configured. Add SMTP in Admin > API Integrations.' }, { status: 503, headers });
 
     const code = String(randomInt(100000, 1000000));
     await createVerification(email, code);
     const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: Number(process.env.SMTP_PORT || 465),
-        secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : true,
-        auth: { user: emailUser, pass: emailPassword },
+        host: smtp.host,
+        port: smtp.port,
+        secure: smtp.secure,
+        auth: { user: smtp.user, pass: smtp.password },
     });
     try {
         await transporter.sendMail({
-            from: `NecrotixLab Digital Footprint <${emailUser}>`, to: email,
+            from: `NecrotixLab Digital Footprint <${smtp.user}>`, to: email,
             subject: `${code} - verify your Digital Footprint scan`,
             text: `Your NecrotixLab verification code is ${code}. It expires in 10 minutes. If you did not request this self-audit, ignore this email.`,
             html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;border:1px solid #27272a;border-radius:18px"><p style="font-size:12px;letter-spacing:.16em;color:#71717a">NECROTIXLAB · DIGITAL FOOTPRINT</p><h1 style="font-size:32px;letter-spacing:.12em">${code}</h1><p>This code expires in 10 minutes. If you did not request this self-audit, ignore this email.</p></div>`,

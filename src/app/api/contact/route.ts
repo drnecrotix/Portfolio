@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { getRuntimeSmtpConfig } from '@/lib/integration-runtime';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
@@ -103,7 +104,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Message received.' }, { status: 200, headers: { 'Cache-Control': 'no-store' } });
         }
 
-        let recipient = process.env.EMAIL_USER || '';
+        const smtp = await getRuntimeSmtpConfig();
+        let recipient = smtp.user;
         try {
             const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
             const contact = normalizeGeneralSiteSettings(settings).contactDetails;
@@ -112,18 +114,16 @@ export async function POST(request: Request) {
             // Fall back to EMAIL_USER when CMS storage is unavailable.
         }
 
-        const emailUser = process.env.EMAIL_USER || '';
-        const emailPassword = process.env.EMAIL_APP_PASSWORD || '';
-        if (!recipient || !emailUser || !emailPassword) {
+        if (!recipient || !smtp.user || !smtp.password) {
             console.error('Contact form email delivery is not configured.');
             return NextResponse.json({ error: 'Message delivery is temporarily unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
         }
 
         const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: Number(process.env.SMTP_PORT || 465),
-            secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : true,
-            auth: { user: emailUser, pass: emailPassword },
+            host: smtp.host,
+            port: smtp.port,
+            secure: smtp.secure,
+            auth: { user: smtp.user, pass: smtp.password },
         });
 
         const safeName = escapeHtml(data.name);
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
         const safeMessage = escapeHtml(data.message).replace(/\n/g, '<br />');
 
         await transporter.sendMail({
-            from: `Portfolio Contact <${emailUser}>`,
+            from: `Portfolio Contact <${smtp.user}>`,
             to: recipient,
             replyTo: data.email,
             subject: `[Portfolio/${data.reason}] ${data.subject}`,
