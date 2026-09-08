@@ -2,10 +2,20 @@ import 'server-only';
 
 import { createHash, randomUUID } from 'node:crypto';
 import { resolveMx, resolveTxt } from 'node:dns/promises';
-import type { FootprintFinding, FootprintProvider } from './types';
+import type { FootprintExposedData, FootprintFinding, FootprintProvider, FootprintRelatedAccount } from './types';
 
 function finding(input: Omit<FootprintFinding, 'id'>): FootprintFinding {
     return { id: randomUUID(), ...input };
+}
+
+function pickExposed(data: Record<string, unknown>, keys: Array<[string, string]>): FootprintExposedData {
+    const out: FootprintExposedData = {};
+    for (const [src, label] of keys) {
+        const value = data[src];
+        if (value === undefined || value === null || value === '') continue;
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') out[label] = value;
+    }
+    return out;
 }
 
 const hibp: FootprintProvider = {
@@ -89,7 +99,9 @@ const gravatar: FootprintProvider = {
         if (!response.ok) throw new Error(`Gravatar ${response.status}`);
         const row = await response.json() as Record<string, unknown>;
         const profileUrl = typeof row.profile_url === 'string' ? row.profile_url : undefined;
-        return [finding({ provider: 'gravatar', category: 'account', title: 'Public Gravatar profile', status: 'found', confidence: 100, risk: 'low', summary: 'A public Gravatar profile is associated with the verified email hash.', sourceUrl: profileUrl, exposedFields: ['Profile image', 'Display name', 'Profile metadata'], remediation: ['Review the public fields in your Gravatar profile.'] })];
+        const exposedData = pickExposed(row, [['display_name', 'Display name'], ['description', 'Bio'], ['location', 'Location'], ['job_title', 'Job title'], ['company', 'Company'], ['profile_url', 'Profile URL']]);
+        if (typeof row.avatar_url === 'string') exposedData['Avatar'] = row.avatar_url;
+        return [finding({ provider: 'gravatar', category: 'account', title: 'Public Gravatar profile', status: 'found', confidence: 100, risk: 'low', summary: 'A public Gravatar profile is associated with the verified email hash.', sourceUrl: profileUrl, exposedFields: Object.keys(exposedData).length ? Object.keys(exposedData) : ['Profile image', 'Display name', 'Profile metadata'], exposedData: Object.keys(exposedData).length ? exposedData : undefined, remediation: ['Review the public fields in your Gravatar profile.'] })];
     },
 };
 
@@ -102,7 +114,7 @@ const github: FootprintProvider = {
         const response = await fetch(`https://api.github.com/search/users?q=${encodeURIComponent(`${email} in:email`)}`, { signal, cache: 'no-store', headers });
         if (!response.ok) throw new Error(`GitHub ${response.status}`);
         const payload = await response.json() as { items?: Array<{ login?: string; html_url?: string }> };
-        return (payload.items || []).slice(0, 5).map((row) => finding({ provider: 'github', category: 'account', title: `GitHub @${row.login || 'profile'}`, status: 'found', confidence: 95, risk: 'low', summary: 'This GitHub account publicly exposes the verified email in searchable profile data.', sourceUrl: row.html_url, exposedFields: ['Email', 'Username', 'Public repositories'], remediation: ['Remove the public email from GitHub profile settings if you do not want it searchable.'] }));
+        return (payload.items || []).slice(0, 5).map((row) => finding({ provider: 'github', category: 'account', title: `GitHub @${row.login || 'profile'}`, status: 'found', confidence: 95, risk: 'low', summary: 'This GitHub account publicly exposes the verified email in searchable profile data.', sourceUrl: row.html_url, exposedFields: ['Email', 'Username', 'Public repositories'], exposedData: { Username: row.login || null, 'Profile URL': row.html_url || null, Email: email }, remediation: ['Remove the public email from GitHub profile settings if you do not want it searchable.'] }));
     },
 };
 
@@ -118,7 +130,9 @@ const gitlab: FootprintProvider = {
         return rows.filter((row) => String(row.public_email || '').toLowerCase() === email).map((row) => finding({
             provider: 'gitlab', category: 'account', title: `GitLab @${String(row.username || 'profile')}`, status: 'found', confidence: 100, risk: 'low',
             summary: 'A GitLab profile publicly exposes the searched email address.', sourceUrl: safeSourceUrl(row.web_url),
-            exposedFields: ['Email', 'Username', 'Public projects'], remediation: ['Review the public email and profile visibility in GitLab settings.'],
+            exposedFields: ['Email', 'Username', 'Public projects'],
+            exposedData: pickExposed(row, [['username', 'Username'], ['name', 'Display name'], ['public_email', 'Public email'], ['web_url', 'Profile URL'], ['bio', 'Bio']]),
+            remediation: ['Review the public email and profile visibility in GitLab settings.'],
         }));
     },
 };
@@ -202,21 +216,27 @@ const publicProfiles: FootprintProvider = {
     id: 'public-profiles', label: 'Public profiles', category: 'account', supports: ['username'], configured: () => true,
     async check({ usernames, signal }) {
         const services = [
-            { name: 'GitHub', check: (username: string) => `https://api.github.com/users/${encodeURIComponent(username)}`, profile: (username: string) => `https://github.com/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login) },
-            { name: 'GitLab', check: (username: string) => `https://gitlab.com/api/v4/users?username=${encodeURIComponent(username)}`, profile: (username: string) => `https://gitlab.com/${encodeURIComponent(username)}`, exists: (data: unknown) => Array.isArray(data) && data.length > 0 },
-            { name: 'Codeberg', check: (username: string) => `https://codeberg.org/api/v1/users/${encodeURIComponent(username)}`, profile: (username: string) => `https://codeberg.org/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login) },
-            { name: 'Reddit', check: (username: string) => `https://www.reddit.com/user/${encodeURIComponent(username)}/about.json`, profile: (username: string) => `https://www.reddit.com/user/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { data?: { name?: unknown } })?.data?.name) },
-            { name: 'DEV Community', check: (username: string) => `https://dev.to/api/users/by_username?url=${encodeURIComponent(username)}`, profile: (username: string) => `https://dev.to/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id) },
-            { name: 'Keybase', check: (username: string) => `https://keybase.io/_/api/1.0/user/lookup.json?usernames=${encodeURIComponent(username)}`, profile: (username: string) => `https://keybase.io/${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { them?: unknown[] })?.them?.[0]) },
-            { name: 'Hacker News', check: (username: string) => `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(username)}.json`, profile: (username: string) => `https://news.ycombinator.com/user?id=${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id) },
-            { name: 'npm', check: (username: string) => `https://registry.npmjs.org/-/user/org.couchdb.user:${encodeURIComponent(username)}`, profile: (username: string) => `https://www.npmjs.com/~${encodeURIComponent(username)}`, exists: (data: unknown) => Boolean((data as { name?: unknown })?.name) },
+            { name: 'GitHub', check: (u: string) => `https://api.github.com/users/${encodeURIComponent(u)}`, profile: (u: string) => `https://github.com/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['login', 'Username'], ['name', 'Display name'], ['bio', 'Bio'], ['company', 'Company'], ['location', 'Location'], ['blog', 'Website'], ['email', 'Public email'], ['twitter_username', 'Twitter/X'], ['public_repos', 'Public repos'], ['followers', 'Followers'], ['following', 'Following'], ['created_at', 'Created at']]) },
+            { name: 'GitLab', check: (u: string) => `https://gitlab.com/api/v4/users?username=${encodeURIComponent(u)}`, profile: (u: string) => `https://gitlab.com/${encodeURIComponent(u)}`, exists: (data: unknown) => Array.isArray(data) && data.length > 0, extract: (data: unknown) => pickExposed((Array.isArray(data) ? data[0] : {}) as Record<string, unknown>, [['username', 'Username'], ['name', 'Display name'], ['bio', 'Bio'], ['location', 'Location'], ['public_email', 'Public email'], ['web_url', 'Profile URL']]) },
+            { name: 'Codeberg', check: (u: string) => `https://codeberg.org/api/v1/users/${encodeURIComponent(u)}`, profile: (u: string) => `https://codeberg.org/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['login', 'Username'], ['full_name', 'Display name'], ['description', 'Bio'], ['location', 'Location'], ['website', 'Website'], ['email', 'Public email']]) },
+            { name: 'Reddit', check: (u: string) => `https://www.reddit.com/user/${encodeURIComponent(u)}/about.json`, profile: (u: string) => `https://www.reddit.com/user/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { data?: { name?: unknown } })?.data?.name), extract: (data: unknown) => pickExposed((((data as { data?: Record<string, unknown> })?.data) || {}) as Record<string, unknown>, [['name', 'Username'], ['total_karma', 'Karma'], ['created_utc', 'Created (unix)']]) },
+            { name: 'DEV Community', check: (u: string) => `https://dev.to/api/users/by_username?url=${encodeURIComponent(u)}`, profile: (u: string) => `https://dev.to/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['username', 'Username'], ['name', 'Display name'], ['summary', 'Bio'], ['location', 'Location'], ['github_username', 'GitHub'], ['twitter_username', 'Twitter/X'], ['website_url', 'Website'], ['joined_at', 'Joined']]) },
+            { name: 'Keybase', check: (u: string) => `https://keybase.io/_/api/1.0/user/lookup.json?usernames=${encodeURIComponent(u)}`, profile: (u: string) => `https://keybase.io/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { them?: unknown[] })?.them?.[0]), extract: (data: unknown) => { const them = (data as { them?: Array<Record<string, unknown>> })?.them?.[0] || {}; const basics = (them.basics as Record<string, unknown>) || {}; const profile = (them.profile as Record<string, unknown>) || {}; return pickExposed({ ...basics, ...profile }, [['username', 'Username'], ['full_name', 'Display name'], ['bio', 'Bio'], ['location', 'Location']]); } },
+            { name: 'Hacker News', check: (u: string) => `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(u)}.json`, profile: (u: string) => `https://news.ycombinator.com/user?id=${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { id?: unknown })?.id), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['id', 'Username'], ['created', 'Created (unix)'], ['karma', 'Karma'], ['about', 'About']]) },
+            { name: 'npm', check: (u: string) => `https://registry.npmjs.org/-/user/org.couchdb.user:${encodeURIComponent(u)}`, profile: (u: string) => `https://www.npmjs.com/~${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { name?: unknown })?.name), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['name', 'Username'], ['email', 'Public email']]) },
+            { name: 'Docker Hub', check: (u: string) => `https://hub.docker.com/v2/users/${encodeURIComponent(u)}/`, profile: (u: string) => `https://hub.docker.com/u/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { username?: unknown; id?: unknown })?.username || (data as { id?: unknown })?.id), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['username', 'Username'], ['full_name', 'Display name'], ['location', 'Location'], ['company', 'Company']]) },
+            { name: 'Bitbucket', check: (u: string) => `https://api.bitbucket.org/2.0/users/${encodeURIComponent(u)}`, profile: (u: string) => `https://bitbucket.org/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { username?: unknown; display_name?: unknown })?.username || (data as { display_name?: unknown })?.display_name), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['username', 'Username'], ['display_name', 'Display name'], ['location', 'Location'], ['created_on', 'Created at']]) },
         ];
         const checks = usernames.flatMap((username) => services.map(async (service) => {
-            const response = await fetch(service.check(username), { signal, cache: 'no-store', redirect: 'follow', headers: { Accept: 'application/json', 'User-Agent': 'NecrotixLab-Digital-Footprint' } }).catch(() => null);
-            if (!response?.ok) return null;
-            const data = await response.json().catch(() => null);
-            if (!service.exists(data)) return null;
-            return finding({ provider: 'public-profiles', category: 'account', title: `${service.name} @${username}`, status: 'found', confidence: 85, risk: 'info', summary: 'The platform API returned a public profile for this username. Open it to confirm ownership and review the visible information.', sourceUrl: service.profile(username), exposedFields: ['Username', 'Public profile'], remediation: ['Review the profile privacy settings and remove details you no longer want public.'] });
+            try {
+                const response = await fetch(service.check(username), { signal, cache: 'no-store', redirect: 'follow', headers: { Accept: 'application/json', 'User-Agent': 'NecrotixLab-Digital-Footprint' } }).catch(() => null);
+                if (!response?.ok) return null;
+                const data = await response.json().catch(() => null);
+                if (!service.exists(data)) return null;
+                const exposedData = service.extract ? service.extract(data) : { Username: username };
+                const fieldLabels = Object.keys(exposedData || {});
+                return finding({ provider: 'public-profiles', category: 'account', title: `${service.name} @${username}`, status: 'found', confidence: 85, risk: 'info', summary: 'The platform API returned a public profile for this username. Review the exposed fields below.', sourceUrl: service.profile(username), exposedFields: fieldLabels.length ? fieldLabels : ['Username', 'Public profile'], exposedData: Object.keys(exposedData || {}).length ? exposedData : { Username: username }, remediation: ['Review the profile privacy settings and remove details you no longer want public.'] });
+            } catch { return null; }
         }));
         return (await Promise.all(checks)).filter((value): value is FootprintFinding => value !== null);
     },
@@ -238,12 +258,31 @@ export async function runFootprintProviders(context: { queryType: 'email' | 'pho
             clearTimeout(timeout);
         }
     }));
+    const findings = deduplicateFindings(results.flatMap((result) => result.findings));
     return {
-        findings: deduplicateFindings(results.flatMap((result) => result.findings)),
+        findings,
+        relatedAccounts: collectRelatedAccounts(findings, context),
         providersChecked: results.length,
         providersAvailable: results.filter((result) => result.status === 'available').length,
         providerStatuses: results.map((result) => ({ id: result.provider.id, label: result.provider.label, status: result.status })),
     };
+}
+
+function collectRelatedAccounts(findings: FootprintFinding[], context: { queryType: 'email' | 'phone' | 'username'; email?: string; phone?: string; usernames: string[] }): FootprintRelatedAccount[] {
+    const linkedVia: FootprintRelatedAccount['linkedVia'] = context.queryType === 'email' ? 'email' : context.queryType === 'phone' ? 'phone' : 'username';
+    const accounts: FootprintRelatedAccount[] = [];
+    const seen = new Set<string>();
+    for (const item of findings) {
+        if (item.status !== 'found' || item.category !== 'account') continue;
+        const titleMatch = item.title.match(/@([\w.-]+)/);
+        const username = (typeof item.exposedData?.Username === 'string' && item.exposedData.Username) || titleMatch?.[1] || context.usernames[0] || context.email?.split('@')[0] || 'unknown';
+        const platform = item.provider === 'public-profiles' ? item.title.replace(/\s*@.+$/, '') : item.provider === 'github' ? 'GitHub' : item.provider === 'gitlab' ? 'GitLab' : item.provider === 'gravatar' ? 'Gravatar' : item.provider === 'holehe' ? String(item.title) : item.provider;
+        const key = `${platform.toLowerCase()}:${String(username).toLowerCase()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        accounts.push({ platform, username: String(username), url: item.sourceUrl, linkedVia, confidence: item.confidence, summary: item.summary, exposedData: item.exposedData });
+    }
+    return accounts.sort((a, b) => b.confidence - a.confidence || a.platform.localeCompare(b.platform));
 }
 
 function deduplicateFindings(findings: FootprintFinding[]) {
