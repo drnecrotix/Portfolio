@@ -128,7 +128,7 @@ export function DigitalFootprintClient() {
                     {scan.relatedAccounts && scan.relatedAccounts.length > 0 ? (
                         <section className="mt-6 rounded-2xl border border-border/70 bg-card/25 p-4 sm:p-5">
                             <h3 className="text-sm font-semibold">Related accounts</h3>
-                            <p className="mt-1 text-xs text-muted-foreground">Public profiles linked to the searched email, phone or username. Matches are leads — confirm ownership before acting.</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Public profiles linked to the searched email, phone or username. Matches are leads - confirm ownership before acting.</p>
                             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                                 {scan.relatedAccounts.map((account) => (
                                     <li key={`${account.platform}-${account.username}`} className="rounded-xl border border-border/70 bg-background/50 p-3">
@@ -176,7 +176,81 @@ function FindingRow({ item, onOpen }: { item: FootprintFinding; onOpen: () => vo
 }
 
 function FindingDialog({ item, onClose }: { item: FootprintFinding; onClose: () => void }) {
-    return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="finding-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><article className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-background p-5 shadow-2xl sm:p-7"><div className="flex items-start justify-between gap-4"><div><p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">{item.category} - {item.provider}</p><h3 id="finding-title" className="mt-2 text-xl font-bold">{item.title}</h3>{item.occurredAt && <p className="mt-1 font-mono text-[10px] text-muted-foreground">Observed / breached: {item.occurredAt}</p></div><button onClick={onClose} className="rounded-lg border border-border p-2" aria-label="Close details"><X className="size-4" /></button></div><div className={`mt-5 rounded-xl border p-4 ${riskColor(item.risk)}`}><div className="flex justify-between gap-3 text-xs"><span className="font-semibold uppercase">{item.risk} risk</span><span>{item.confidence}% confidence</span></div><p className="mt-3 text-sm leading-6 text-muted-foreground">{item.summary}</p></div>{item.relatedProviders?.length ? <DetailSection title="Confirmed by">{item.relatedProviders.map((provider) => <Tag key={provider}>{provider}</Tag>)}</DetailSection> : null}{item.exposedFields?.length ? <DetailSection title="Exposed data types">{item.exposedFields.map((field) => <Tag key={field}>{field}</Tag>)}</DetailSection> : null}{item.exposedData && Object.keys(item.exposedData).length ? (<div className="mt-5"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Full exposed data</p><dl className="mt-2 divide-y divide-border/60 rounded-xl border border-border/70 overflow-hidden">{Object.entries(item.exposedData).map(([key, value]) => (<div key={key} className="grid grid-cols-[minmax(7rem,9rem)_1fr] gap-3 px-3 py-2 text-sm"><dt className="text-muted-foreground">{key}</dt><dd className="break-all font-medium">{value === null || value === undefined ? '—' : String(value)}</dd></div>))}</dl></div>) : null}<div className="mt-6 border-t border-border pt-5"><p className="text-[10px] font-semibold uppercase tracking-wider">Recommended actions</p>{item.remediation.map((step) => <p key={step} className="mt-2 text-sm text-muted-foreground">- {step}</p>)}</div>{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline">Review source <ExternalLink className="size-4" /></a>}</article></div>;
+    return (
+        <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="finding-title"
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) onClose();
+            }}
+        >
+            <article className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-background p-5 shadow-2xl sm:p-7">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+                            {item.category} - {item.provider}
+                        </p>
+                        <h3 id="finding-title" className="mt-2 text-xl font-bold">{item.title}</h3>
+                        {item.occurredAt && (
+                            <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                                Observed / breached: {item.occurredAt}
+                            </p>
+                        )}
+                    </div>
+                    <button onClick={onClose} className="rounded-lg border border-border p-2" aria-label="Close details">
+                        <X className="size-4" />
+                    </button>
+                </div>
+                <div className={`mt-5 rounded-xl border p-4 ${riskColor(item.risk)}`}>
+                    <div className="flex justify-between gap-3 text-xs">
+                        <span className="font-semibold uppercase">{item.risk} risk</span>
+                        <span>{item.confidence}% confidence</span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.summary}</p>
+                </div>
+                {item.relatedProviders?.length ? (
+                    <DetailSection title="Confirmed by">
+                        {item.relatedProviders.map((provider) => (
+                            <Tag key={provider}>{provider}</Tag>
+                        ))}
+                    </DetailSection>
+                ) : null}
+                {item.exposedFields?.length ? (
+                    <DetailSection title="Exposed data types">
+                        {item.exposedFields.map((field) => (
+                            <Tag key={field}>{field}</Tag>
+                        ))}
+                    </DetailSection>
+                ) : null}
+                {item.exposedData && Object.keys(item.exposedData).length ? (
+                    <div className="mt-5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Full exposed data</p>
+                        <dl className="mt-2 divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70">
+                            {Object.entries(item.exposedData).map(([key, value]) => (
+                                <div key={key} className="grid grid-cols-[minmax(7rem,9rem)_1fr] gap-3 px-3 py-2 text-sm">
+                                    <dt className="text-muted-foreground">{key}</dt>
+                                    <dd className="break-all font-medium">{value == null ? '-' : String(value)}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                    </div>
+                ) : null}
+                <div className="mt-6 border-t border-border pt-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider">Recommended actions</p>
+                    {item.remediation.map((step) => (
+                        <p key={step} className="mt-2 text-sm text-muted-foreground">- {step}</p>
+                    ))}
+                </div>
+                {item.sourceUrl && (
+                    <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline">
+                        Review source <ExternalLink className="size-4" />
+                    </a>
+                )}
+            </article>
+        </div>
+    );
 }
 
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
