@@ -1,5 +1,6 @@
 'use server';
 
+import type { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
@@ -24,8 +25,10 @@ export async function updateFootprintSettings(form: FormData) {
             where: { id: 'default' },
             select: { integrationSettings: true },
         });
-        const next = asRecord(existing?.integrationSettings);
-        next['footprint.botCheckEnabled'] = botCheckEnabled;
+        const next = {
+            ...asRecord(existing?.integrationSettings),
+            'footprint.botCheckEnabled': botCheckEnabled,
+        } as Prisma.InputJsonValue;
 
         await prisma.siteSettings.upsert({
             where: { id: 'default' },
