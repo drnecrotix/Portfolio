@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { CONTENT_WATERMARK_CONFIG_SLUG, normalizeContentWatermarkSettings } from '@/lib/content-watermark';
 import { galleryItemHref, galleryItemImages, normalizeGallerySettings } from '@/lib/gallery-settings';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
+import { protectGalleryMedia } from '@/lib/blog-media-protection';
 
 export const dynamic = 'force-dynamic';
 const siteUrl = getPublicSiteUrl();
@@ -29,7 +30,8 @@ async function loadGallery() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { siteName, siteDescription, content } = await loadGallery();
+  const { siteName, siteDescription, content: rawContent } = await loadGallery();
+  const content = await protectGalleryMedia(rawContent);
   const firstImage = content.items
     .filter((item) => item.isVisible && item.type === 'image' && !item.isNsfw)
     .map((item) => item.socialImageUrl || item.mediaUrl)
@@ -60,10 +62,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function GalleryPage() {
-  const [{ siteName, content }, watermarkPage] = await Promise.all([
+  const [{ siteName, content: rawContent }, watermarkPage] = await Promise.all([
     loadGallery(),
     prisma.page.findUnique({ where: { slug: CONTENT_WATERMARK_CONFIG_SLUG }, select: { content: true } }).catch(() => null),
   ]);
+  const content = await protectGalleryMedia(rawContent);
   const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
   const visibleItems = content.items.filter((item) => item.isVisible && item.mediaUrl);
   const indexableItems = visibleItems.filter((item) => item.isIndexable && item.slug);
