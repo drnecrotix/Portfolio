@@ -63,6 +63,39 @@ export default async function ApiIntegrationsPage() {
 
     const cards: ApiIntegrationCard[] = [
         {
+            id: 'hibp',
+            name: 'Have I Been Pwned',
+            category: 'Digital Footprint',
+            description: 'Email breach lookup for the public Digital Footprint tool.',
+            usedBy: ['Digital Footprint · breach checks'],
+            docsHint: 'Get an API key at haveibeenpwned.com/API/Key.',
+            fields: [field('hibp.apiKey', 'API key', 'HIBP_API_KEY', true, 'Server-side only. Never exposed to the browser.')],
+            lastTest: tests.hibp ?? null,
+        },
+        {
+            id: 'holehe',
+            name: 'Holehe',
+            category: 'Digital Footprint',
+            description: 'Email → registered accounts via the Holehe sidecar (120+ services).',
+            usedBy: ['Digital Footprint · related accounts'],
+            docsHint: 'Run docker/holehe (see docs/holehe.md). Set the same token in the sidecar and here.',
+            fields: [
+                field('holehe.apiUrl', 'API URL', 'HOLEHE_API_URL', false, 'Example: http://127.0.0.1:8787 (no trailing slash required).'),
+                field('holehe.apiToken', 'API token', 'HOLEHE_API_TOKEN', true, 'Must match HOLEHE_API_TOKEN on the Holehe sidecar.'),
+            ],
+            lastTest: tests.holehe ?? null,
+        },
+        {
+            id: 'emailrep',
+            name: 'EmailRep',
+            category: 'Digital Footprint',
+            description: 'Email reputation signals for Digital Footprint scans.',
+            usedBy: ['Digital Footprint · reputation'],
+            docsHint: 'API key from emailrep.io.',
+            fields: [field('emailrep.apiKey', 'API key', 'EMAILREP_API_KEY', true)],
+            lastTest: tests.emailrep ?? null,
+        },
+        {
             id: 'smtp',
             name: 'SMTP email delivery',
             category: 'Email & verification',
@@ -190,7 +223,7 @@ export default async function ApiIntegrationsPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Tools</p>
                 <h1 className="mt-2 text-3xl font-bold tracking-tight">API Integrations</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-                    Configure, document and test the external APIs used by the portfolio. Secrets saved here are encrypted before they are stored in PostgreSQL and override environment variables at runtime.
+                    Configure, document and test the external APIs used by the portfolio. Secrets saved here are encrypted before they are stored in PostgreSQL and override environment variables at runtime. Use the category tabs to focus on one area at a time.
                 </p>
             </header>
 
