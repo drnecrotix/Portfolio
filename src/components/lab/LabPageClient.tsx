@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
-import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, ExternalLink, Github, Palette } from 'lucide-react';
+import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, ExternalLink, Fingerprint, Github, Palette } from 'lucide-react';
 import { SplineScene } from '@/components/ui/SplineScene';
 import { DeferredMount } from '@/components/ui/DeferredMount';
 import { portfolioData } from '@/data/portfolio';
@@ -237,6 +237,15 @@ export function LabPageClient() {
                         Explore the lab <ArrowDown className="size-4" />
                     </button>
                 </motion.div>
+            </section>
+
+            <section className="mx-auto max-w-7xl px-5 pt-24 sm:px-8">
+                <Link href="/digital-footprint" className="group block rounded-[2rem] border border-sky-500/20 bg-sky-500/[0.04] p-6 transition hover:border-sky-500/45 sm:p-8">
+                    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-4"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-sky-500/25 bg-background"><Fingerprint className="size-5 text-sky-500" /></span><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-sky-500">Public security module</p><h2 className="mt-2 text-2xl font-black tracking-tight">Digital Footprint self-audit</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Verify your email and inspect public accounts, breach exposure, visible identifiers and browser signals. Full configured-provider results, with no premium lock.</p></div></div>
+                        <span className="inline-flex shrink-0 items-center gap-2 text-sm font-bold">Open tool <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
+                    </div>
+                </Link>
             </section>
 
             <section id="capabilities" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:py-32">
