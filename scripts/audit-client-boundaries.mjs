@@ -17,6 +17,7 @@ const forbiddenImports = new Set([
     '@/lib/creem',
     '@/lib/lemonsqueezy',
     '@/lib/store-storage',
+    '@/lib/media-storage',
     '@/lib/legal-settings',
     '@/lib/social-metadata',
     '@prisma/client',

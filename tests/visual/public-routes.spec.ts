@@ -40,6 +40,14 @@ for (const theme of themes) {
       expect(response?.status(), `${route} should return a successful response`).toBeLessThan(400);
       await expect(page.locator('body')).toBeVisible();
 
+      const csp = (await response?.headerValue('content-security-policy')) ?? '';
+      expect(csp, `${route} should return a Content-Security-Policy header`).not.toBe('');
+      if (route === '/lab') {
+        expect(csp, 'The Lab must explicitly permit WebAssembly compilation').toContain("'wasm-unsafe-eval'");
+      } else {
+        expect(csp, `${route} must not inherit The Lab WebAssembly exception`).not.toContain("'wasm-unsafe-eval'");
+      }
+
       const dimensions = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,
         clientWidth: document.documentElement.clientWidth,
