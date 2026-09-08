@@ -1,10 +1,15 @@
+import 'server-only';
+
 export const SOCIAL_IMAGE_WIDTH = 1200;
 export const SOCIAL_IMAGE_HEIGHT = 630;
 
 const FALLBACK_SITE_URL = 'https://necrotixlab.com';
 
 export function getPublicSiteUrl() {
-    const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim() || FALLBACK_SITE_URL;
+    const configured = process.env.SITE_URL?.trim()
+        || process.env.AUTH_URL?.trim()
+        || process.env.NEXT_PUBLIC_SITE_URL?.trim()
+        || FALLBACK_SITE_URL;
 
     try {
         const url = new URL(configured);

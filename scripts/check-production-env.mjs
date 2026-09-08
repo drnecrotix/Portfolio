@@ -1,4 +1,4 @@
-const required = ['DATABASE_URL', 'AUTH_SECRET', 'NEXT_PUBLIC_SITE_URL'];
+const required = ['DATABASE_URL', 'AUTH_SECRET'];
 const missing = required.filter((name) => !String(process.env[name] || '').trim());
 
 const errors = [];
@@ -12,15 +12,23 @@ if (authSecret && authSecret.length < 32) {
   errors.push('AUTH_SECRET must be at least 32 characters in production.');
 }
 
-const siteUrl = String(process.env.NEXT_PUBLIC_SITE_URL || '');
-if (siteUrl) {
+const siteUrlCandidates = [
+  ['SITE_URL', String(process.env.SITE_URL || '').trim()],
+  ['AUTH_URL', String(process.env.AUTH_URL || '').trim()],
+  ['NEXT_PUBLIC_SITE_URL', String(process.env.NEXT_PUBLIC_SITE_URL || '').trim()],
+];
+const [siteUrlName, siteUrl] = siteUrlCandidates.find(([, value]) => value) || ['', ''];
+
+if (!siteUrl) {
+  errors.push('Missing public site URL. Set SITE_URL, AUTH_URL or NEXT_PUBLIC_SITE_URL.');
+} else {
   try {
     const url = new URL(siteUrl);
     if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
-      errors.push('NEXT_PUBLIC_SITE_URL must use HTTPS in production.');
+      errors.push(`${siteUrlName} must use HTTPS in production.`);
     }
   } catch {
-    errors.push('NEXT_PUBLIC_SITE_URL must be a valid absolute URL.');
+    errors.push(`${siteUrlName} must be a valid absolute URL.`);
   }
 }
 

@@ -61,6 +61,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://portfolio:portfolio@127.0.0.1:5432/portfolio?schema=public
       AUTH_SECRET: ci-only-auth-secret-not-for-production
+      AI_CREDENTIALS_SECRET: ci-ai-credentials-secret-not-for-production
+      INTEGRATION_CREDENTIALS_SECRET: ci-integration-secret-not-for-production
       AUTH_TRUST_HOST: true
       NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
     steps:
@@ -122,6 +124,8 @@ jobs:
             exit 1
           fi
           echo "Runtime Prisma singleton guard passed."
+      - name: Audit Client Component boundaries
+        run: npm run security:client-boundaries
       - name: Typecheck
         run: npm run typecheck
       - name: Lint changed source files
@@ -140,10 +144,14 @@ jobs:
           fi
       - name: Standard build
         run: npm run build
+      - name: Audit standard client bundle leakage
+        run: npm run security:client-bundle
       - name: N0C WASM compatibility build
         run: |
           rm -rf .next
           npm run build:n0c
+      - name: Audit N0C client bundle leakage
+        run: npm run security:client-bundle
       - name: Staged updater build with stale route types
         run: |
           set -euo pipefail
@@ -155,6 +163,10 @@ jobs:
           EOF
           NEXT_DIST_DIR=.next-update NEXT_N0C_WASM_SWC=1 NODE_OPTIONS='--max-old-space-size=6144' npx next build --webpack
           test -d .next-update
+      - name: Audit staged updater client bundle leakage
+        env:
+          NEXT_DIST_DIR: .next-update
+        run: npm run security:client-bundle
 
   visual-smoke:
     name: Frontend visual smoke

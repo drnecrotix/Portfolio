@@ -32,7 +32,7 @@ async function hasValidPrivateAccess(request: NextRequest) {
 }
 
 async function fetchSiteMode(request: NextRequest): Promise<SiteModePayload | null> {
-    const bases = [process.env.NEXT_PUBLIC_SITE_URL, request.nextUrl.origin]
+    const bases = [process.env.SITE_URL, process.env.AUTH_URL, process.env.NEXT_PUBLIC_SITE_URL, request.nextUrl.origin]
         .filter((value): value is string => Boolean(value))
         .map((value) => value.replace(/\/$/, ''));
     const uniqueBases = [...new Set(bases)];
