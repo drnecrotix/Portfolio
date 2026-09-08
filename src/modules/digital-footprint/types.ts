@@ -15,6 +15,14 @@ export type FootprintFinding = {
     exposedFields?: string[];
     occurredAt?: string;
     remediation: string[];
+    relatedProviders?: string[];
+    duplicateCount?: number;
+};
+
+export type FootprintProviderStatus = {
+    id: string;
+    label: string;
+    status: 'available' | 'not-configured' | 'unsupported' | 'unavailable';
 };
 
 export type FootprintScan = {
@@ -23,6 +31,7 @@ export type FootprintScan = {
     checkedAt: string;
     providersChecked: number;
     providersAvailable: number;
+    providerStatuses: FootprintProviderStatus[];
     findings: FootprintFinding[];
     riskScore: number;
     notice: string;
@@ -39,6 +48,7 @@ export type FootprintProvider = {
     id: string;
     label: string;
     category: FootprintCategory;
+    supports: Array<'email' | 'phone' | 'username'>;
     configured(): boolean;
     check(context: ProviderContext): Promise<FootprintFinding[]>;
 };

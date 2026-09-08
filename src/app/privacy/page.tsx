@@ -77,7 +77,7 @@ export default async function PrivacyPage() {
                     </div>
                     <div>
                         <h3>Digital Footprint lookup</h3>
-                        <p className="mt-2">The tool sends the identifier you enter to compatible public-intelligence providers solely to produce the requested report. You must confirm that you are checking your own identifier or have permission. A signed bot challenge, honeypot and short-lived IP rate limits reduce automated misuse. Password hashing stays in the browser; password exposure uses a five-character hash prefix and never sends the password itself. Processing is based on your explicit request and consent (Article 6(1)(a) GDPR).</p>
+                        <p className="mt-2">The tool sends the identifier you enter to compatible public-intelligence providers solely to produce the requested report. You must confirm that you are checking your own identifier or have permission. A signed bot challenge, honeypot and short-lived IP rate limits reduce automated misuse. Passwords and authentication secrets are never requested. Processing is based on your explicit request and consent (Article 6(1)(a) GDPR).</p>
                     </div>
                 </div>
             </section>

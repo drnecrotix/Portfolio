@@ -7,7 +7,6 @@ import { calculateRiskScore, runFootprintProviders } from '@/modules/digital-foo
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 const schema = z.object({
-    queryType: z.enum(['email', 'phone', 'username']),
     query: z.string().trim().min(2).max(160),
     consent: z.literal(true),
     challengeToken: z.string().min(10).max(2000),
@@ -15,13 +14,12 @@ const schema = z.object({
     company: z.string().max(200).optional().default(''),
 });
 
-function normalizeQuery(type: 'email' | 'phone' | 'username', value: string) {
-    if (type === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? value.toLowerCase() : null;
-    if (type === 'phone') {
-        const normalized = value.replace(/[\s().-]/g, '');
-        return /^\+?[1-9]\d{7,14}$/.test(normalized) ? normalized : null;
-    }
-    return /^[a-zA-Z0-9_.-]{2,40}$/.test(value) ? value.toLowerCase() : null;
+function detectQuery(value: string) {
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return { type: 'email' as const, value: value.toLowerCase() };
+    const phone = value.replace(/[\s().-]/g, '');
+    if (/^\+?[1-9]\d{7,14}$/.test(phone)) return { type: 'phone' as const, value: phone };
+    if (/^[a-zA-Z0-9_.-]{2,40}$/.test(value)) return { type: 'username' as const, value: value.toLowerCase() };
+    return null;
 }
 
 export async function POST(request: Request) {
@@ -32,16 +30,18 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: 'The lookup request is invalid.' }, { status: 400, headers });
     if (parsed.data.company) return NextResponse.json({ accepted: true }, { status: 202, headers });
     if (!verifyCommentChallenge(parsed.data.challengeToken, parsed.data.challengeAnswer)) return NextResponse.json({ error: 'Bot check failed or expired. Please try the new question.' }, { status: 400, headers });
-    const query = normalizeQuery(parsed.data.queryType, parsed.data.query);
-    if (!query) return NextResponse.json({ error: `Enter a valid ${parsed.data.queryType}.` }, { status: 400, headers });
+    const detected = detectQuery(parsed.data.query);
+    if (!detected) return NextResponse.json({ error: 'Enter a valid email address, international phone number or username.' }, { status: 400, headers });
+    const { type: queryType, value: query } = detected;
     const result = await runFootprintProviders({
-        email: parsed.data.queryType === 'email' ? query : undefined,
-        phone: parsed.data.queryType === 'phone' ? query : undefined,
-        usernames: parsed.data.queryType === 'username' ? [query] : [],
+        queryType,
+        email: queryType === 'email' ? query : undefined,
+        phone: queryType === 'phone' ? query : undefined,
+        usernames: queryType === 'username' ? [query] : [],
     });
     return NextResponse.json({
         scan: {
-            queryType: parsed.data.queryType,
+            queryType,
             query,
             checkedAt: new Date().toISOString(),
             ...result,

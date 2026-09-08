@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Download, ExternalLink, KeyRound, Loader2, Radar, Search, ShieldCheck, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Clock3, Download, ExternalLink, Loader2, Radar, Search, ShieldCheck, Trash2, X } from 'lucide-react';
 import type { FootprintFinding, FootprintScan } from '@/modules/digital-footprint/types';
-
-type QueryType = 'email' | 'phone' | 'username';
 
 function riskColor(risk: string) {
     if (risk === 'critical') return 'text-rose-400 border-rose-400/25 bg-rose-400/5';
@@ -13,13 +11,7 @@ function riskColor(risk: string) {
     return 'text-emerald-400 border-emerald-400/20 bg-emerald-400/5';
 }
 
-async function sha1(value: string) {
-    const digest = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(value));
-    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
-}
-
 export function DigitalFootprintClient() {
-    const [queryType, setQueryType] = useState<QueryType>('email');
     const [query, setQuery] = useState('');
     const [consent, setConsent] = useState(false);
     const [company, setCompany] = useState('');
@@ -30,10 +22,15 @@ export function DigitalFootprintClient() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [category, setCategory] = useState<'all' | FootprintFinding['category']>('all');
-    const [password, setPassword] = useState('');
-    const [passwordResult, setPasswordResult] = useState<string>('');
+    const [resultSearch, setResultSearch] = useState('');
+    const [resultView, setResultView] = useState<'list' | 'timeline'>('list');
+    const [selectedFinding, setSelectedFinding] = useState<FootprintFinding | null>(null);
 
-    const findings = useMemo(() => scan?.findings.filter((item) => category === 'all' || item.category === category) || [], [category, scan]);
+    const findings = useMemo(() => {
+        const needle = resultSearch.trim().toLowerCase();
+        const rows = scan?.findings.filter((item) => (category === 'all' || item.category === category) && (!needle || `${item.title} ${item.provider} ${item.summary} ${(item.exposedFields || []).join(' ')}`.toLowerCase().includes(needle))) || [];
+        return resultView === 'timeline' ? [...rows].sort((a, b) => String(b.occurredAt || '').localeCompare(String(a.occurredAt || ''))) : rows;
+    }, [category, resultSearch, resultView, scan]);
     const summary = useMemo(() => {
         const found = scan?.findings.filter((item) => item.status === 'found') || [];
         return {
@@ -68,25 +65,11 @@ export function DigitalFootprintClient() {
     async function runScan() {
         setLoading(true); setMessage('Checking configured providers. This can take several seconds.');
         try {
-            const payload = await post('/api/digital-footprint/scan', { queryType, query, consent, company, challengeToken, challengeAnswer }) as { scan?: FootprintScan };
+            const payload = await post('/api/digital-footprint/scan', { query, consent, company, challengeToken, challengeAnswer }) as { scan?: FootprintScan };
             if (!payload.scan) throw new Error('The scanner returned no report.');
             setScan(payload.scan); setMessage('Scan complete. Results exist only in this browser tab.');
         } catch (error) { setMessage(error instanceof Error ? error.message : 'Scan failed.'); }
         finally { setLoading(false); void loadChallenge().catch(() => undefined); }
-    }
-
-    async function checkPassword() {
-        if (!password) return;
-        setPasswordResult('Checking locally...');
-        try {
-            const hash = await sha1(password);
-            const response = await fetch(`/api/digital-footprint/password-range/${hash.slice(0, 5)}`, { cache: 'no-store' });
-            if (!response.ok) throw new Error('Password provider unavailable.');
-            const suffix = hash.slice(5);
-            const match = (await response.text()).split('\n').find((line) => line.startsWith(`${suffix}:`));
-            setPasswordResult(match ? `Exposed ${Number(match.split(':')[1] || 0).toLocaleString()} times. Change it anywhere it is still used.` : 'No match found in the checked corpus. This does not guarantee the password is safe.');
-        } catch (error) { setPasswordResult(error instanceof Error ? error.message : 'Password check failed.'); }
-        finally { setPassword(''); }
     }
 
     function exportReport() {
@@ -118,8 +101,7 @@ export function DigitalFootprintClient() {
                     </div>
 
                     <div className="mt-6 grid gap-4">
-                        <div className="flex flex-wrap gap-2">{(['email', 'phone', 'username'] as const).map((type) => <button key={type} type="button" onClick={() => { setQueryType(type); setQuery(''); setScan(null); }} className={`rounded-full border px-4 py-2 text-xs font-semibold capitalize ${queryType === type ? 'border-sky-500/50 bg-sky-500/10 text-sky-400' : 'border-border text-muted-foreground'}`}>{type}</button>)}</div>
-                        <label><span className="text-xs font-semibold capitalize">{queryType}</span><input value={query} onChange={(event) => setQuery(event.target.value)} type={queryType === 'email' ? 'email' : 'text'} inputMode={queryType === 'phone' ? 'tel' : undefined} autoComplete="off" placeholder={queryType === 'email' ? 'you@example.com' : queryType === 'phone' ? '+359...' : 'username'} className="mt-2 w-full rounded-xl border border-border bg-background/70 px-4 py-3 outline-none focus:border-sky-500/60" /></label>
+                        <label><span className="text-xs font-semibold">Email, phone number or username</span><div className="relative mt-2"><Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input value={query} onChange={(event) => setQuery(event.target.value)} type="text" autoComplete="off" placeholder="you@example.com, +359... or username" className="w-full rounded-xl border border-border bg-background/70 py-3 pl-11 pr-4 outline-none focus:border-sky-500/60" /></div><span className="mt-2 block text-[10px] text-muted-foreground">The identifier type is detected automatically.</span></label>
                         <label className="hidden" aria-hidden="true">Company<input tabIndex={-1} autoComplete="off" value={company} onChange={(event) => setCompany(event.target.value)} /></label>
                         <label><span className="text-xs font-semibold">Bot check: {challengeQuestion || 'Loading...'}</span><input value={challengeAnswer} onChange={(event) => setChallengeAnswer(event.target.value.replace(/\D/g, '').slice(0, 3))} inputMode="numeric" autoComplete="off" className="mt-2 w-full max-w-xs rounded-xl border border-border bg-background/70 px-4 py-3 outline-none focus:border-sky-500/60" /></label>
                         <label className="flex items-start gap-3 text-xs leading-5 text-muted-foreground"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 size-4 accent-sky-500" /><span>I am checking my own identifier or have permission to check it, and I authorize queries to the listed public providers.</span></label>
@@ -131,18 +113,17 @@ export function DigitalFootprintClient() {
                 {scan && <section className="mt-8">
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Metric label="Exposure score" value={`${scan.riskScore}/100`} /><Metric label="Compromised / public records" value={String(summary.records)} /><Metric label="Unique sources" value={String(summary.sources)} /><Metric label="Records mentioning passwords" value={String(summary.passwordBreaches)} /></div>
                     {summary.identifiers.length > 0 && <div className="mt-4 rounded-2xl border border-border/70 bg-card/35 p-5"><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Visible data types</p><div className="mt-3 flex flex-wrap gap-2">{summary.identifiers.map((field) => <span key={field} className="rounded-full border border-border/70 px-2.5 py-1 text-[10px] text-muted-foreground">{field}</span>)}</div></div>}
-                    <p className="mt-3 text-xs text-muted-foreground">{scan.providersAvailable} of {scan.providersChecked} providers were configured and available. Every safe metadata field returned by the integrations is shown - there is no premium result tier. Powered in part by <a href="https://leakcheck.io/" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:underline">LeakCheck</a>.</p>
-                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap gap-2">{(['all', 'account', 'breach', 'domain', 'reputation'] as const).map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full border px-3 py-1.5 text-xs capitalize ${category === item ? 'border-sky-500/50 bg-sky-500/10 text-sky-400' : 'border-border text-muted-foreground'}`}>{item}</button>)}</div><div className="flex gap-2"><button onClick={exportReport} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs"><Download className="size-3.5" /> JSON</button><button onClick={() => window.print()} className="rounded-xl border border-border px-3 py-2 text-xs">Print / PDF</button></div></div>
+                    <div className="mt-4 flex flex-wrap gap-2">{scan.providerStatuses.map((provider) => <span key={provider.id} className="rounded-full border border-border/70 px-2.5 py-1 text-[10px] text-muted-foreground"><span className={`mr-1.5 inline-block size-1.5 rounded-full ${provider.status === 'available' ? 'bg-emerald-400' : provider.status === 'unavailable' ? 'bg-rose-400' : 'bg-zinc-500'}`} />{provider.label} - {provider.status}</span>)}</div>
+                    <p className="mt-3 text-xs text-muted-foreground">Detected as <strong className="text-foreground">{scan.queryType}</strong>. {scan.providersAvailable} of {scan.providersChecked} providers were available. Every safe metadata field returned by the integrations is shown - there is no premium result tier. Powered in part by <a href="https://leakcheck.io/" target="_blank" rel="noreferrer" className="font-semibold text-foreground hover:underline">LeakCheck</a>.</p>
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap gap-2">{(['all', 'account', 'breach', 'domain', 'reputation'] as const).map((item) => <button key={item} onClick={() => setCategory(item)} className={`rounded-full border px-3 py-1.5 text-xs capitalize ${category === item ? 'border-sky-500/50 bg-sky-500/10 text-sky-400' : 'border-border text-muted-foreground'}`}>{item}</button>)}</div><div className="flex gap-2"><button onClick={() => setResultView(resultView === 'list' ? 'timeline' : 'list')} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs"><Clock3 className="size-3.5" /> {resultView === 'list' ? 'Timeline' : 'List'}</button><button onClick={exportReport} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs"><Download className="size-3.5" /> JSON</button><button onClick={() => window.print()} className="rounded-xl border border-border px-3 py-2 text-xs">Print / PDF</button></div></div>
+                    <div className="relative mt-4"><Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" /><input value={resultSearch} onChange={(event) => setResultSearch(event.target.value)} placeholder="Filter results..." className="w-full rounded-xl border border-border bg-card/35 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-sky-500/60" /></div>
                     <p className="mt-4 text-xs leading-5 text-muted-foreground">{scan.notice}</p>
-                    <div className="mt-5 grid gap-4 lg:grid-cols-2">{findings.map((item) => <FindingCard key={item.id} item={item} />)}{findings.length === 0 && <div className="rounded-2xl border border-border p-8 text-sm text-muted-foreground">No findings in this category.</div>}</div>
+                    <div className="mt-5 overflow-hidden rounded-2xl border border-border/70 bg-card/25">{findings.map((item) => <FindingRow key={item.id} item={item} onOpen={() => setSelectedFinding(item)} />)}{findings.length === 0 && <div className="p-8 text-sm text-muted-foreground">No findings match this view.</div>}</div>
                 </section>}
-
-                <section className="mt-10">
-                    <div className="rounded-[2rem] border border-border/70 bg-card/35 p-5 sm:p-7"><div className="flex items-center gap-3"><KeyRound className="size-5 text-amber-400" /><div><h2 className="font-semibold">Pwned password check</h2><p className="text-xs text-muted-foreground">SHA-1 is calculated locally; only a 5-character prefix is sent.</p></div></div><input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="new-password" placeholder="Enter a password to check locally" className="mt-5 w-full rounded-xl border border-border bg-background/70 px-4 py-3 outline-none focus:border-amber-500/60" /><button disabled={!password} onClick={checkPassword} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold disabled:opacity-40"><Search className="size-4" /> Check exposure</button>{passwordResult && <p className="mt-4 rounded-xl border border-border/60 p-4 text-xs leading-5 text-muted-foreground">{passwordResult}</p>}</div>
-                </section>
 
                 <div className="mt-10 flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 text-xs leading-5 text-muted-foreground"><AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" /><p>This tool reports defensive self-audit leads. It never retrieves or displays passwords, tokens, private messages or authentication secrets. Confirm every profile directly before acting on a match.</p></div>
             </div>
+            {selectedFinding && <FindingDialog item={selectedFinding} onClose={() => setSelectedFinding(null)} />}
         </main>
     );
 }
@@ -151,6 +132,18 @@ function Metric({ label, value }: { label: string; value: string }) {
     return <div className="rounded-2xl border border-border/70 bg-card/35 p-5"><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p><p className="mt-3 text-3xl font-black">{value}</p></div>;
 }
 
-function FindingCard({ item }: { item: FootprintFinding }) {
-    return <article className={`rounded-2xl border p-5 ${riskColor(item.risk)}`}><div className="flex items-start justify-between gap-3"><div><p className="font-mono text-[9px] uppercase tracking-[0.16em] opacity-75">{item.category} · {item.provider}</p><h3 className="mt-2 font-semibold text-foreground">{item.title}</h3>{item.occurredAt && <p className="mt-1 font-mono text-[10px] text-muted-foreground">Observed / breached: {item.occurredAt}</p>}</div><span className="rounded-full border border-current/20 px-2 py-1 font-mono text-[9px] uppercase">{item.risk}</span></div><p className="mt-3 text-xs leading-5 text-muted-foreground">{item.summary}</p>{item.exposedFields?.length ? <div className="mt-4 flex flex-wrap gap-1.5">{item.exposedFields.map((field, index) => <span key={`${field}-${index}`} className="rounded-full border border-border/70 bg-background/50 px-2 py-1 text-[10px] text-muted-foreground">{field}</span>)}</div> : null}<div className="mt-4 border-t border-current/10 pt-4"><p className="text-[10px] font-semibold uppercase tracking-wider">Recommended action</p>{item.remediation.map((step) => <p key={step} className="mt-1 text-xs text-muted-foreground">- {step}</p>)}</div>{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-foreground hover:underline">Review source <ExternalLink className="size-3" /></a>}</article>;
+function FindingRow({ item, onOpen }: { item: FootprintFinding; onOpen: () => void }) {
+    return <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 border-b border-border/60 px-4 py-3 text-left last:border-b-0 hover:bg-foreground/[0.03]"><span className={`h-8 w-1 shrink-0 rounded-full ${riskColor(item.risk)}`} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="truncate text-sm font-semibold">{item.title}</span><span className="font-mono text-[9px] uppercase text-muted-foreground">{item.provider}</span>{item.duplicateCount && item.duplicateCount > 1 ? <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[9px] text-sky-400">{item.duplicateCount} sources</span> : null}</div><p className="mt-1 truncate text-[11px] text-muted-foreground">{item.occurredAt || item.category} - {(item.exposedFields || []).slice(0, 4).join(', ') || item.status}</p></div><span className={`rounded-full border px-2 py-1 font-mono text-[9px] uppercase ${riskColor(item.risk)}`}>{item.risk}</span><ChevronRight className="size-4 shrink-0 text-muted-foreground" /></button>;
+}
+
+function FindingDialog({ item, onClose }: { item: FootprintFinding; onClose: () => void }) {
+    return <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="finding-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><article className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-background p-5 shadow-2xl sm:p-7"><div className="flex items-start justify-between gap-4"><div><p className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">{item.category} - {item.provider}</p><h3 id="finding-title" className="mt-2 text-xl font-bold">{item.title}</h3>{item.occurredAt && <p className="mt-1 font-mono text-[10px] text-muted-foreground">Observed / breached: {item.occurredAt}</p>}</div><button onClick={onClose} className="rounded-lg border border-border p-2" aria-label="Close details"><X className="size-4" /></button></div><div className={`mt-5 rounded-xl border p-4 ${riskColor(item.risk)}`}><div className="flex justify-between gap-3 text-xs"><span className="font-semibold uppercase">{item.risk} risk</span><span>{item.confidence}% confidence</span></div><p className="mt-3 text-sm leading-6 text-muted-foreground">{item.summary}</p></div>{item.relatedProviders?.length ? <DetailSection title="Confirmed by">{item.relatedProviders.map((provider) => <Tag key={provider}>{provider}</Tag>)}</DetailSection> : null}{item.exposedFields?.length ? <DetailSection title="Exposed data types">{item.exposedFields.map((field) => <Tag key={field}>{field}</Tag>)}</DetailSection> : null}<div className="mt-6 border-t border-border pt-5"><p className="text-[10px] font-semibold uppercase tracking-wider">Recommended actions</p>{item.remediation.map((step) => <p key={step} className="mt-2 text-sm text-muted-foreground">- {step}</p>)}</div>{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline">Review source <ExternalLink className="size-4" /></a>}</article></div>;
+}
+
+function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+    return <div className="mt-5"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</p><div className="mt-2 flex flex-wrap gap-2">{children}</div></div>;
+}
+
+function Tag({ children }: { children: React.ReactNode }) {
+    return <span className="rounded-full border border-border px-2.5 py-1 text-[10px] text-muted-foreground">{children}</span>;
 }
