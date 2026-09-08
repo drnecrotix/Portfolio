@@ -10,6 +10,7 @@ import { normalizeHomepageContent } from '@/lib/homepage-content';
 import { normalizeSeoDefaults } from '@/lib/seo-settings';
 import { absoluteSocialMediaUrl, getPublicSiteUrl, socialImageDescriptor } from '@/lib/social-metadata';
 import styles from './project-page.module.css';
+import { protectManagedMediaUrls } from '@/lib/blog-media-protection';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const content = (project.content ?? {}) as ProjectContent;
     const homepage = normalizeHomepageContent(settings?.homepageContent);
     const seo = normalizeSeoDefaults(settings?.seoDefaults);
-    const ogImage = absoluteSocialMediaUrl(content.image || seo.ogImage || homepage.socialImage);
-    const twitterImage = absoluteSocialMediaUrl(content.image || seo.twitterImage || seo.ogImage || homepage.socialImage);
+    const replacements = await protectManagedMediaUrls(content.image ? [content.image] : []);
+    const protectedImage = content.image ? replacements.get(content.image) ?? content.image : '';
+    const ogImage = absoluteSocialMediaUrl(protectedImage || seo.ogImage || homepage.socialImage);
+    const twitterImage = absoluteSocialMediaUrl(protectedImage || seo.twitterImage || seo.ogImage || homepage.socialImage);
     const title = project.seoTitle?.trim() || project.title;
     const description = project.seoDescription?.trim() || project.description;
 
@@ -66,10 +69,16 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
     const project = cmsProjectToPortfolioProject(cmsProject);
     const galleryImages = await getProjectImages(slug, project.title);
-    const updatedProject = {
+    const replacements = await protectManagedMediaUrls([project.image ?? '', ...(project.galleryImages ?? [])]);
+    const protectedProject = {
         ...project,
-        image: galleryImages.length > 0 ? galleryImages[0] : project.image,
-        galleryImages: galleryImages.length > 0 ? galleryImages : project.galleryImages,
+        image: project.image ? replacements.get(project.image) ?? project.image : project.image,
+        galleryImages: project.galleryImages?.map((image) => replacements.get(image) ?? image),
+    };
+    const updatedProject = {
+        ...protectedProject,
+        image: galleryImages.length > 0 ? galleryImages[0] : protectedProject.image,
+        galleryImages: galleryImages.length > 0 ? galleryImages : protectedProject.galleryImages,
     };
     const watermark = normalizeContentWatermarkSettings(watermarkPage?.content);
 

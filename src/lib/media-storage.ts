@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, normalize, resolve } from 'node:path';
 import { getRuntimeR2Config } from '@/lib/integration-runtime';
 
@@ -131,6 +131,25 @@ export async function deleteMediaFile(key: string) {
             Bucket: required(config.bucket, 'R2_BUCKET'),
             Key: key,
         }));
+    } finally {
+        s3.destroy();
+    }
+}
+
+export async function readMediaFile(key: string) {
+    if (key.startsWith('uploads/')) return readFile(safeLocalPath(key));
+
+    if (!key.startsWith('media/')) throw new Error('External media cannot be read from managed storage.');
+    const config = await getRuntimeR2Config();
+    if (!configured(config)) throw new Error('R2 storage is not configured for this managed object.');
+    const s3 = client(config);
+    try {
+        const result = await s3.send(new GetObjectCommand({
+            Bucket: required(config.bucket, 'R2_BUCKET'),
+            Key: key,
+        }));
+        if (!result.Body) throw new Error('Stored media has no body.');
+        return Buffer.from(await result.Body.transformToByteArray());
     } finally {
         s3.destroy();
     }

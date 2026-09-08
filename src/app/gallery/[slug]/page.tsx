@@ -16,6 +16,7 @@ import {
   type GalleryItemSetting,
 } from '@/lib/gallery-settings';
 import { getPublicSiteUrl } from '@/lib/social-metadata';
+import { protectGalleryMedia } from '@/lib/blog-media-protection';
 
 export const dynamic = 'force-dynamic';
 const siteUrl = getPublicSiteUrl();
@@ -39,7 +40,7 @@ async function loadItem(slug: string) {
     where: { id: 'default' },
     select: { siteName: true, galleryContent: true, updatedAt: true },
   }).catch(() => null);
-  const content = normalizeGallerySettings(settings?.galleryContent);
+  const content = await protectGalleryMedia(normalizeGallerySettings(settings?.galleryContent));
   const item = content.items.find((candidate) => candidate.slug === slug && candidate.isVisible && candidate.mediaUrl);
   if (!item) return null;
   return { item, siteName: settings?.siteName || 'NecrotixLab', updatedAt: settings?.updatedAt || new Date() };
