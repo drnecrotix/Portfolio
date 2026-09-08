@@ -186,11 +186,34 @@ function IntegrationCard({ card, testResult, onTestResult, onToast }: {
     );
 }
 
+const TAB_ORDER = [
+    'Digital Footprint',
+    'Email & verification',
+    'Development data',
+    'Coding metrics',
+    'Commerce & payments',
+    'AI provider',
+    'Media & private file storage',
+] as const;
+
 export function ApiIntegrationsManager({ cards }: { cards: ApiIntegrationCard[] }) {
     const [results, setResults] = useState<Partial<Record<ApiIntegrationId, ApiActionResult>>>({});
     const [toast, setToast] = useState<Toast>(null);
     const [testingAll, startTestingAll] = useTransition();
+    const [activeTab, setActiveTab] = useState<string>(() => cards[0]?.category || 'Digital Footprint');
     const configuredCount = useMemo(() => cards.filter(requiredFieldsReady).length, [cards]);
+    const categories = useMemo(() => {
+        const present = new Set(cards.map((c) => c.category));
+        const ordered: string[] = TAB_ORDER.filter((c) => present.has(c));
+        for (const c of present) {
+            if (!ordered.includes(c)) ordered.push(c);
+        }
+        return ordered;
+    }, [cards]);
+    const visibleCards = useMemo(
+        () => cards.filter((card) => card.category === activeTab),
+        [cards, activeTab],
+    );
 
     const setTestResult = (id: ApiIntegrationId, result: ApiActionResult) => {
         setResults((current) => ({ ...current, [id]: result }));
@@ -221,10 +244,37 @@ export function ApiIntegrationsManager({ cards }: { cards: ApiIntegrationCard[] 
                 </button>
             </div>
 
+            <div className="flex flex-wrap gap-2 border-b border-border/60 pb-3">
+                {categories.map((category) => {
+                    const count = cards.filter((c) => c.category === category).length;
+                    const ready = cards.filter((c) => c.category === category && requiredFieldsReady(c)).length;
+                    return (
+                        <button
+                            key={category}
+                            type="button"
+                            onClick={() => setActiveTab(category)}
+                            className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
+                                activeTab === category
+                                    ? 'border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                                    : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            {category}
+                            <span className="font-mono text-[10px] opacity-70">{ready}/{count}</span>
+                        </button>
+                    );
+                })}
+            </div>
+
             <div className="grid gap-4 xl:grid-cols-2">
-                {cards.map((card) => (
+                {visibleCards.map((card) => (
                     <IntegrationCard key={card.id} card={card} testResult={results[card.id]} onTestResult={setTestResult} onToast={setToast} />
                 ))}
+                {visibleCards.length === 0 ? (
+                    <div className="col-span-full rounded-2xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
+                        No integrations in this category.
+                    </div>
+                ) : null}
             </div>
 
             {toast ? (
