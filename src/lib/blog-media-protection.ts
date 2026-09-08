@@ -1,11 +1,26 @@
 import 'server-only';
 
 import { prisma } from '@/lib/prisma';
+import type { GallerySettings } from '@/lib/gallery-settings';
 
 type ProtectedContent = { html?: string; text?: string; featuredImage?: string };
 
 function protectedUrl(id: string) {
-    return `/api/blog-media/${encodeURIComponent(id)}`;
+    return `/api/protected-media/${encodeURIComponent(id)}`;
+}
+
+export async function protectManagedMediaUrls(urls: Iterable<string>) {
+    const unique = [...new Set([...urls].filter(Boolean))];
+    if (!unique.length) return new Map<string, string>();
+    const assets = await prisma.mediaAsset.findMany({
+        where: {
+            url: { in: unique },
+            mimeType: { startsWith: 'image/' },
+            OR: [{ key: { startsWith: 'uploads/' } }, { key: { startsWith: 'media/' } }],
+        },
+        select: { id: true, url: true },
+    });
+    return new Map(assets.map((asset) => [asset.url, protectedUrl(asset.id)]));
 }
 
 export async function protectBlogMedia(content: ProtectedContent): Promise<ProtectedContent> {
@@ -17,15 +32,7 @@ export async function protectBlogMedia(content: ProtectedContent): Promise<Prote
     }
     if (!urls.size) return content;
 
-    const assets = await prisma.mediaAsset.findMany({
-        where: {
-            url: { in: [...urls] },
-            mimeType: { startsWith: 'image/' },
-            OR: [{ key: { startsWith: 'uploads/' } }, { key: { startsWith: 'media/' } }],
-        },
-        select: { id: true, url: true },
-    });
-    const replacements = new Map(assets.map((asset) => [asset.url, protectedUrl(asset.id)]));
+    const replacements = await protectManagedMediaUrls(urls);
     const replace = (url: string | undefined) => url ? replacements.get(url) ?? url : url;
 
     return {
@@ -38,10 +45,27 @@ export async function protectBlogMedia(content: ProtectedContent): Promise<Prote
     };
 }
 
+export async function protectGalleryMedia(content: GallerySettings): Promise<GallerySettings> {
+    const urls = content.items.flatMap((item) => item.type === 'image'
+        ? [item.mediaUrl, item.thumbnailUrl, item.socialImageUrl, ...item.additionalImages]
+        : [item.thumbnailUrl, item.socialImageUrl]);
+    const replacements = await protectManagedMediaUrls(urls);
+    const replace = (url: string) => replacements.get(url) ?? url;
+    return {
+        ...content,
+        items: content.items.map((item) => ({
+            ...item,
+            mediaUrl: item.type === 'image' ? replace(item.mediaUrl) : item.mediaUrl,
+            thumbnailUrl: replace(item.thumbnailUrl),
+            socialImageUrl: replace(item.socialImageUrl),
+            additionalImages: item.additionalImages.map(replace),
+        })),
+    };
+}
+
 export function contentReferencesMedia(content: unknown, url: string): boolean {
+    if (typeof content === 'string') return content === url || content.includes(`src="${url}"`) || content.includes(`src='${url}'`);
+    if (Array.isArray(content)) return content.some((value) => contentReferencesMedia(value, url));
     if (!content || typeof content !== 'object') return false;
-    const source = content as { featuredImage?: unknown; html?: unknown; translations?: unknown };
-    if (source.featuredImage === url || (typeof source.html === 'string' && source.html.includes(url))) return true;
-    if (!source.translations || typeof source.translations !== 'object') return false;
-    return Object.values(source.translations).some((translation) => contentReferencesMedia(translation, url));
+    return Object.values(content as Record<string, unknown>).some((value) => contentReferencesMedia(value, url));
 }
