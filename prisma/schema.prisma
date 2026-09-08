@@ -70,14 +70,14 @@ enum CommentSource {
 }
 
 model User {
-  id           String    @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
-  email        String    @unique
+  email        String     @unique
   passwordHash String
-  role         UserRole  @default(EDITOR)
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  role         UserRole   @default(EDITOR)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
   revisions    Revision[]
 }
 
@@ -94,13 +94,13 @@ model Project {
   highlights      String[]
   repoUrl         String?
   demoUrl         String?
-  role             String?
+  role            String?
   timeline        String?
   team            String?
   sortOrder       Int           @default(0)
   content         Json?
   seoTitle        String?
-  seoDescription String?
+  seoDescription  String?
   publishedAt     DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -108,30 +108,30 @@ model Project {
 }
 
 model Post {
-  id             String            @id @default(cuid())
-  slug           String            @unique
+  id             String         @id @default(cuid())
+  slug           String         @unique
   title          String
   excerpt        String?
   content        Json
-  type           PostType          @default(ARTICLE)
+  type           PostType       @default(ARTICLE)
   postTypeId     String?
-  postType       BlogPostType?     @relation(fields: [postTypeId], references: [id], onDelete: SetNull)
-  status         ContentStatus     @default(DRAFT)
+  postType       BlogPostType?  @relation(fields: [postTypeId], references: [id], onDelete: SetNull)
+  status         ContentStatus  @default(DRAFT)
   category       String?
   categoryId     String?
-  categoryRef    BlogCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryRef    BlogCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags           String[]
   authorName     String
-  seoTitle        String?
+  seoTitle       String?
   seoDescription String?
-  publishedAt     DateTime?
-  scheduledAt     DateTime?
-  viewCount       Int               @default(0)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  revisions       Revision[]
-  comments        BlogComment[]
-  likes           BlogPostLike[]
+  publishedAt    DateTime?
+  scheduledAt    DateTime?
+  viewCount      Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  revisions      Revision[]
+  comments       BlogComment[]
+  likes          BlogPostLike[]
 
   @@index([postTypeId])
   @@index([categoryId])
@@ -203,12 +203,12 @@ model Page {
   slug           String        @unique
   title          String
   status         ContentStatus @default(DRAFT)
-  content         Json
-  seoTitle        String?
+  content        Json
+  seoTitle       String?
   seoDescription String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  revisions       Revision[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  revisions      Revision[]
 }
 
 model NavigationItem {
@@ -243,7 +243,7 @@ model GalleryWorkLike {
   slug      String
   stats     GalleryWorkStats @relation(fields: [slug], references: [slug], onDelete: Cascade)
   visitorId String
-  createdAt DateTime @default(now())
+  createdAt DateTime         @default(now())
 
   @@unique([slug, visitorId])
   @@index([slug, createdAt])
@@ -321,42 +321,42 @@ model TrafficPageEvent {
 }
 
 model SiteSettings {
-  id                    String   @id @default("default")
-  siteName              String   @default("Dr Necrotix")
-  siteDescription       String?
-  faviconUrl            String?
-  defaultTheme          String   @default("dark")
-  allowDayMode          Boolean  @default(true)
-  accentColor           String?
-  locale                String   @default("en")
-  timezone              String   @default("Europe/Sofia")
-  socialLinks           Json?
-  contactDetails        Json?
-  homepageContent       Json?
-  profileCardContent    Json?
-  footerContent         Json?
-  galleryContent        Json?
-  seoDefaults           Json?
-  assistantSettings     Json?
-  integrationSettings   Json?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                  String   @id @default("default")
+  siteName            String   @default("Dr Necrotix")
+  siteDescription     String?
+  faviconUrl          String?
+  defaultTheme        String   @default("dark")
+  allowDayMode        Boolean  @default(true)
+  accentColor         String?
+  locale              String   @default("en")
+  timezone            String   @default("Europe/Sofia")
+  socialLinks         Json?
+  contactDetails      Json?
+  homepageContent     Json?
+  profileCardContent  Json?
+  footerContent       Json?
+  galleryContent      Json?
+  seoDefaults         Json?
+  assistantSettings   Json?
+  integrationSettings Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model SiteModeSettings {
-  id              String   @id @default("default")
-  mode            SiteMode @default(NORMAL)
-  template        String   @default("hero")
+  id              String    @id @default("default")
+  mode            SiteMode  @default(NORMAL)
+  template        String    @default("hero")
   startsAt        DateTime?
   endsAt          DateTime?
-  bypassAdmins    Boolean  @default(true)
+  bypassAdmins    Boolean   @default(true)
   passwordHash    String?
   title           String?
-  message         String?  @db.Text
+  message         String?   @db.Text
   countdownTarget DateTime?
-  showSocials     Boolean  @default(true)
-  showContact     Boolean  @default(false)
-  updatedAt       DateTime @updatedAt
+  showSocials     Boolean   @default(true)
+  showContact     Boolean   @default(false)
+  updatedAt       DateTime  @updatedAt
 }
 
 model MediaAsset {
@@ -372,6 +372,21 @@ model MediaAsset {
   url       String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model FootprintVerification {
+  id          String    @id @default(cuid())
+  emailHash   String    @unique
+  emailCipher String    @db.Text
+  codeHash    String
+  sessionHash String?   @unique
+  attempts    Int       @default(0)
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([expiresAt])
 }
 
 model Redirect {
@@ -451,18 +466,18 @@ model StoreProductFile {
 }
 
 model StoreOrder {
-  id              String           @id @default(cuid())
-  provider        String           @default("lemonsqueezy")
-  providerOrderId String           @unique
+  id              String               @id @default(cuid())
+  provider        String               @default("lemonsqueezy")
+  providerOrderId String               @unique
   email           String
   customerName    String?
-  currency        String           @default("EUR")
-  subtotalCents   Int              @default(0)
-  totalCents      Int              @default(0)
-  status          StoreOrderStatus @default(PENDING)
+  currency        String               @default("EUR")
+  subtotalCents   Int                  @default(0)
+  totalCents      Int                  @default(0)
+  status          StoreOrderStatus     @default(PENDING)
   paidAt          DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   items           StoreOrderItem[]
   downloadGrants  StoreDownloadGrant[]
 
