@@ -7,21 +7,31 @@ const isStagedUpdaterBuild = buildDistDir === '.next-update';
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const publicAssetCacheHeader = { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' };
 const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'woff', 'woff2'];
-const contentSecurityPolicy = [
-    "default-src 'self'",
-    "base-uri 'self'",
-    "object-src 'none'",
-    "frame-ancestors 'none'",
-    "form-action 'self'",
-    `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ''}`,
-    "style-src 'self' 'unsafe-inline' https:",
-    "img-src 'self' data: blob: https:",
-    "font-src 'self' data: https:",
-    "media-src 'self' data: blob: https:",
-    "connect-src 'self' https: wss:",
-    "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://assets.pinterest.com https://www.dailymotion.com",
-    'upgrade-insecure-requests',
-].join('; ');
+
+function buildContentSecurityPolicy({ allowWasm = false } = {}) {
+    const scriptSources = ["'self'", "'unsafe-inline'"];
+    if (isDevelopment) scriptSources.push("'unsafe-eval'");
+    else if (allowWasm) scriptSources.push("'wasm-unsafe-eval'");
+
+    return [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        `script-src ${scriptSources.join(' ')}`,
+        "style-src 'self' 'unsafe-inline' https:",
+        "img-src 'self' data: blob: https:",
+        "font-src 'self' data: https:",
+        "media-src 'self' data: blob: https:",
+        "connect-src 'self' https: wss:",
+        "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://assets.pinterest.com https://www.dailymotion.com",
+        'upgrade-insecure-requests',
+    ].join('; ');
+}
+
+const contentSecurityPolicy = buildContentSecurityPolicy();
+const labContentSecurityPolicy = buildContentSecurityPolicy({ allowWasm: true });
 const securityHeaders = [
     { key: 'Content-Security-Policy', value: contentSecurityPolicy },
     { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
@@ -74,6 +84,21 @@ const nextConfig = {
             {
                 source: '/:path*',
                 headers: securityHeaders,
+            },
+            // Spline on The Lab compiles a WebAssembly module in the browser.
+            // Allow only the CSP3 WebAssembly capability here instead of restoring
+            // the broader unsafe-eval permission across the whole application.
+            {
+                source: '/lab',
+                headers: [
+                    { key: 'Content-Security-Policy', value: labContentSecurityPolicy },
+                ],
+            },
+            {
+                source: '/lab/:path*',
+                headers: [
+                    { key: 'Content-Security-Policy', value: labContentSecurityPolicy },
+                ],
             },
             {
                 source: '/admin/:path*',
