@@ -54,24 +54,36 @@ const holehe: FootprintProvider = {
     configured: () => Boolean(process.env.HOLEHE_API_URL && process.env.HOLEHE_API_TOKEN),
     async check({ email, signal }) {
         if (!process.env.HOLEHE_API_URL || !process.env.HOLEHE_API_TOKEN || !email) return [];
-        const response = await fetch(new URL('/scan', process.env.HOLEHE_API_URL), {
+        const base = process.env.HOLEHE_API_URL.replace(/\/+$/, '');
+        const response = await fetch(`${base}/scan`, {
             method: 'POST', signal, cache: 'no-store',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.HOLEHE_API_TOKEN}` },
             body: JSON.stringify({ email }),
         });
         if (!response.ok) throw new Error(`Holehe ${response.status}`);
-        const payload = await response.json() as { results?: Array<Record<string, unknown>> };
-        return (payload.results || []).filter((row) => row.exists === true).map((row) => {
+        const payload = await response.json() as {
+            results?: Array<Record<string, unknown>> | { used?: string[] };
+            found?: number;
+        };
+        let rows: Array<Record<string, unknown>> = [];
+        if (Array.isArray(payload.results)) {
+            rows = payload.results.filter((row) => row.exists === true || row.exists === 'true');
+        } else if (payload.results && typeof payload.results === 'object' && Array.isArray((payload.results as { used?: string[] }).used)) {
+            rows = ((payload.results as { used: string[] }).used).map((name) => ({ name, exists: true }));
+        }
+        return rows.map((row) => {
             const name = String(row.name || 'Registered service');
             const domain = typeof row.domain === 'string' ? row.domain : undefined;
             const username = typeof row.username === 'string' ? row.username : undefined;
             const exposedData: FootprintExposedData = {
                 Service: name,
-                Domain: domain,
+                Domain: domain || null,
                 'Matched email': email,
                 'Registration signal': true,
             };
             if (username) exposedData.Username = username;
+            if (row.emailrecovery) exposedData['Recovery email (masked)'] = String(row.emailrecovery);
+            if (row.phoneNumber) exposedData['Recovery phone (masked)'] = String(row.phoneNumber);
             return finding({
                 provider: 'holehe', category: 'account', title: name, status: 'found', confidence: 85, risk: 'low',
                 summary: 'This email appears to be registered on the service (registration / recovery signal). Confirm in the app — not proof the account is active.',
@@ -266,13 +278,13 @@ export const footprintProviders: FootprintProvider[] = [hibp, leakCheckPublic, x
 
 export async function runFootprintProviders(context: { queryType: 'email' | 'phone' | 'username'; email?: string; phone?: string; usernames: string[] }) {
     const results = await Promise.all(footprintProviders.map(async (provider) => {
-        // Email searches must not run username-only social/public probes on the email local-part.
         if (!provider.supports.includes(context.queryType)) {
             return { provider, findings: [] as FootprintFinding[], status: 'unsupported' as const };
         }
         if (!provider.configured()) return { provider, findings: [] as FootprintFinding[], status: 'not-configured' as const };
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 12_000);
+        const ms = provider.id === 'holehe' ? 95_000 : 12_000;
+        const timeout = setTimeout(() => controller.abort(), ms);
         try {
             return { provider, findings: await provider.check({ ...context, signal: controller.signal }), status: 'available' as const };
         } catch {
@@ -284,7 +296,6 @@ export async function runFootprintProviders(context: { queryType: 'email' | 'pho
 
     let findings = results.flatMap((result) => result.findings);
 
-    // Email: only probe usernames discovered from email-linked account providers (not email local-part).
     if (context.queryType === 'email') {
         const discovered = new Set<string>();
         for (const item of findings) {
@@ -328,7 +339,7 @@ export async function runFootprintProviders(context: { queryType: 'email' | 'pho
                     }
                 }
             } catch {
-                // best-effort enrichment
+                // best-effort
             } finally {
                 clearTimeout(timeout);
             }
@@ -357,6 +368,7 @@ function collectRelatedAccounts(findings: FootprintFinding[], context: { queryTy
             (typeof item.exposedData?.Username === 'string' && item.exposedData.Username) ||
             titleMatch?.[1] ||
             context.usernames[0] ||
+            (item.provider === 'holehe' ? String(item.exposedData?.Service || item.title) : undefined) ||
             context.email?.split('@')[0] ||
             'unknown';
         const displayName =
