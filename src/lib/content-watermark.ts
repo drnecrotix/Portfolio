@@ -2,6 +2,7 @@ export const CONTENT_WATERMARK_CONFIG_SLUG = '__content-watermark-config';
 
 export type ContentWatermarkPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 export type ContentWatermarkSize = 'small' | 'medium';
+export type ContentWatermarkRenderMode = 'css' | 'pixel';
 
 export type ContentWatermarkSettings = {
     enabled: boolean;
@@ -9,6 +10,7 @@ export type ContentWatermarkSettings = {
     opacity: number;
     position: ContentWatermarkPosition;
     size: ContentWatermarkSize;
+    renderMode: ContentWatermarkRenderMode;
 };
 
 export const defaultContentWatermarkSettings: ContentWatermarkSettings = {
@@ -17,6 +19,7 @@ export const defaultContentWatermarkSettings: ContentWatermarkSettings = {
     opacity: 0.35,
     position: 'bottom-right',
     size: 'small',
+    renderMode: 'pixel',
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -46,6 +49,7 @@ export function normalizeContentWatermarkSettings(value: unknown): ContentWaterm
         ? source.position
         : defaultContentWatermarkSettings.position;
     const size = source.size === 'medium' ? 'medium' : 'small';
+    const renderMode = source.renderMode === 'css' ? 'css' : 'pixel';
 
     return {
         enabled: bool(source.enabled, defaultContentWatermarkSettings.enabled),
@@ -53,5 +57,6 @@ export function normalizeContentWatermarkSettings(value: unknown): ContentWaterm
         opacity: opacity(source.opacity, defaultContentWatermarkSettings.opacity),
         position,
         size,
+        renderMode,
     };
 }
