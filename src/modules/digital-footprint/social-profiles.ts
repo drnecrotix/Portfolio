@@ -48,23 +48,18 @@ const services: HtmlService[] = [
 
 const headers = {
     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'User-Agent': 'Mozilla/5.0 (compatible; NecrotixLab-Digital-Footprint/1.2.51; +https://github.com/drnecrotix/Portfolio)',
+    'User-Agent': 'Mozilla/5.0 (compatible; NecrotixLab-Digital-Footprint/1.2.52; +https://github.com/drnecrotix/Portfolio)',
 };
 
-/** Soft public URL probes. Social CDNs often block bots — matches are soft signals. */
+/** Soft public URL probes for username searches only — never guess from email local-part. */
 export const socialProfiles: FootprintProvider = {
     id: 'social-profiles',
     label: 'Social profiles',
     category: 'account',
-    supports: ['username', 'email'],
+    supports: ['username'],
     configured: () => true,
-    async check({ usernames, email, signal }) {
-        const candidates = [...usernames];
-        if (email) {
-            const local = email.split('@')[0]?.replace(/[^a-zA-Z0-9._-]/g, '') || '';
-            if (local.length >= 2 && local.length <= 40) candidates.push(local.toLowerCase());
-        }
-        const unique = [...new Set(candidates.map((v) => v.toLowerCase()).filter((v) => v.length >= 2 && v.length <= 40))];
+    async check({ usernames, signal }) {
+        const unique = [...new Set(usernames.map((v) => v.toLowerCase()).filter((v) => v.length >= 2 && v.length <= 40))];
         if (!unique.length) return [];
 
         const checks = unique.flatMap((username) =>

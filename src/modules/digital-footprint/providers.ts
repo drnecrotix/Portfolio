@@ -61,13 +61,26 @@ const holehe: FootprintProvider = {
         });
         if (!response.ok) throw new Error(`Holehe ${response.status}`);
         const payload = await response.json() as { results?: Array<Record<string, unknown>> };
-        return (payload.results || []).filter((row) => row.exists === true).map((row) => finding({
-            provider: 'holehe', category: 'account', title: String(row.name || 'Registered service'), status: 'found', confidence: 85, risk: 'low',
-            summary: 'The verified email appears to be recognized by this service. This is a lead, not proof that the account is active.',
-            sourceUrl: typeof row.domain === 'string' ? `https://${row.domain}` : undefined,
-            exposedFields: ['Account registration signal'],
-            remediation: ['Open the service directly and review or remove the account if it belongs to you.'],
-        }));
+        return (payload.results || []).filter((row) => row.exists === true).map((row) => {
+            const name = String(row.name || 'Registered service');
+            const domain = typeof row.domain === 'string' ? row.domain : undefined;
+            const username = typeof row.username === 'string' ? row.username : undefined;
+            const exposedData: FootprintExposedData = {
+                Service: name,
+                Domain: domain,
+                'Matched email': email,
+                'Registration signal': true,
+            };
+            if (username) exposedData.Username = username;
+            return finding({
+                provider: 'holehe', category: 'account', title: name, status: 'found', confidence: 85, risk: 'low',
+                summary: 'This email appears to be registered on the service (registration / recovery signal). Confirm in the app — not proof the account is active.',
+                sourceUrl: domain ? `https://${domain}` : undefined,
+                exposedFields: ['Account registration signal', 'Service', 'Matched email'],
+                exposedData,
+                remediation: ['Open the service directly and review or remove the account if it belongs to you.'],
+            });
+        });
     },
 };
 
@@ -102,6 +115,8 @@ const gravatar: FootprintProvider = {
         const profileUrl = typeof row.profile_url === 'string' ? row.profile_url : undefined;
         const exposedData = pickExposed(row, [['display_name', 'Display name'], ['description', 'Bio'], ['location', 'Location'], ['job_title', 'Job title'], ['company', 'Company'], ['profile_url', 'Profile URL']]);
         if (typeof row.avatar_url === 'string') exposedData['Avatar'] = row.avatar_url;
+        if (typeof row.preferred_username === 'string') exposedData.Username = row.preferred_username;
+        exposedData['Matched email'] = email;
         return [finding({ provider: 'gravatar', category: 'account', title: 'Public Gravatar profile', status: 'found', confidence: 100, risk: 'low', summary: 'A public Gravatar profile is associated with the verified email hash.', sourceUrl: profileUrl, exposedFields: Object.keys(exposedData).length ? Object.keys(exposedData) : ['Profile image', 'Display name', 'Profile metadata'], exposedData: Object.keys(exposedData).length ? exposedData : undefined, remediation: ['Review the public fields in your Gravatar profile.'] })];
     },
 };
@@ -115,7 +130,7 @@ const github: FootprintProvider = {
         const response = await fetch(`https://api.github.com/search/users?q=${encodeURIComponent(`${email} in:email`)}`, { signal, cache: 'no-store', headers });
         if (!response.ok) throw new Error(`GitHub ${response.status}`);
         const payload = await response.json() as { items?: Array<{ login?: string; html_url?: string }> };
-        return (payload.items || []).slice(0, 5).map((row) => finding({ provider: 'github', category: 'account', title: `GitHub @${row.login || 'profile'}`, status: 'found', confidence: 95, risk: 'low', summary: 'This GitHub account publicly exposes the verified email in searchable profile data.', sourceUrl: row.html_url, exposedFields: ['Email', 'Username', 'Public repositories'], exposedData: { Username: row.login || null, 'Profile URL': row.html_url || null, Email: email }, remediation: ['Remove the public email from GitHub profile settings if you do not want it searchable.'] }));
+        return (payload.items || []).slice(0, 5).map((row) => finding({ provider: 'github', category: 'account', title: `GitHub @${row.login || 'profile'}`, status: 'found', confidence: 95, risk: 'low', summary: 'This GitHub account publicly exposes the verified email in searchable profile data.', sourceUrl: row.html_url, exposedFields: ['Email', 'Username', 'Public repositories'], exposedData: { Username: row.login || null, 'Profile URL': row.html_url || null, 'Matched email': email }, remediation: ['Remove the public email from GitHub profile settings if you do not want it searchable.'] }));
     },
 };
 
@@ -132,7 +147,7 @@ const gitlab: FootprintProvider = {
             provider: 'gitlab', category: 'account', title: `GitLab @${String(row.username || 'profile')}`, status: 'found', confidence: 100, risk: 'low',
             summary: 'A GitLab profile publicly exposes the searched email address.', sourceUrl: safeSourceUrl(row.web_url),
             exposedFields: ['Email', 'Username', 'Public projects'],
-            exposedData: pickExposed(row, [['username', 'Username'], ['name', 'Display name'], ['public_email', 'Public email'], ['web_url', 'Profile URL'], ['bio', 'Bio']]),
+            exposedData: { ...pickExposed(row, [['username', 'Username'], ['name', 'Display name'], ['public_email', 'Public email'], ['web_url', 'Profile URL'], ['bio', 'Bio']]), 'Matched email': email },
             remediation: ['Review the public email and profile visibility in GitLab settings.'],
         }));
     },
@@ -214,14 +229,9 @@ const xposedOrNot: FootprintProvider = {
 };
 
 const publicProfiles: FootprintProvider = {
-    id: 'public-profiles', label: 'Public profiles', category: 'account', supports: ['username', 'email'], configured: () => true,
-    async check({ usernames, email, signal }) {
-        const candidates = [...usernames];
-        if (email) {
-            const local = email.split('@')[0]?.replace(/[^a-zA-Z0-9._-]/g, '') || '';
-            if (local.length >= 2 && local.length <= 40) candidates.push(local.toLowerCase());
-        }
-        const resolved = [...new Set(candidates.map((v) => v.toLowerCase()).filter((v) => v.length >= 2))];
+    id: 'public-profiles', label: 'Public profiles', category: 'account', supports: ['username'], configured: () => true,
+    async check({ usernames, signal }) {
+        const resolved = [...new Set(usernames.map((v) => v.toLowerCase()).filter((v) => v.length >= 2 && v.length <= 40))];
         if (!resolved.length) return [];
         const services = [
             { name: 'GitHub', check: (u: string) => `https://api.github.com/users/${encodeURIComponent(u)}`, profile: (u: string) => `https://github.com/${encodeURIComponent(u)}`, exists: (data: unknown) => Boolean((data as { login?: unknown })?.login), extract: (data: unknown) => pickExposed(data as Record<string, unknown>, [['login', 'Username'], ['name', 'Display name'], ['bio', 'Bio'], ['company', 'Company'], ['location', 'Location'], ['blog', 'Website'], ['email', 'Public email'], ['twitter_username', 'Twitter/X'], ['public_repos', 'Public repos'], ['followers', 'Followers'], ['following', 'Following'], ['created_at', 'Created at']]) },
@@ -256,7 +266,8 @@ export const footprintProviders: FootprintProvider[] = [hibp, leakCheckPublic, x
 
 export async function runFootprintProviders(context: { queryType: 'email' | 'phone' | 'username'; email?: string; phone?: string; usernames: string[] }) {
     const results = await Promise.all(footprintProviders.map(async (provider) => {
-        if (!provider.supports.includes(context.queryType) && !((provider.id === 'public-profiles' || provider.id === 'social-profiles') && context.queryType === 'email')) {
+        // Email searches must not run username-only social/public probes on the email local-part.
+        if (!provider.supports.includes(context.queryType)) {
             return { provider, findings: [] as FootprintFinding[], status: 'unsupported' as const };
         }
         if (!provider.configured()) return { provider, findings: [] as FootprintFinding[], status: 'not-configured' as const };
@@ -271,9 +282,62 @@ export async function runFootprintProviders(context: { queryType: 'email' | 'pho
         }
     }));
 
-    const findings = results.flatMap((result) => result.findings);
+    let findings = results.flatMap((result) => result.findings);
+
+    // Email: only probe usernames discovered from email-linked account providers (not email local-part).
+    if (context.queryType === 'email') {
+        const discovered = new Set<string>();
+        for (const item of findings) {
+            if (item.status !== 'found' || item.category !== 'account') continue;
+            if (!['github', 'gitlab', 'gravatar', 'holehe'].includes(item.provider)) continue;
+            const fromData = item.exposedData?.Username;
+            if (typeof fromData === 'string' && fromData.length >= 2 && fromData.length <= 40 && !fromData.includes('@')) {
+                discovered.add(fromData.toLowerCase());
+            }
+            const match = item.title.match(/@([\w.-]+)/);
+            if (match?.[1]) discovered.add(match[1].toLowerCase());
+        }
+        const extraUsernames = [...discovered];
+        if (extraUsernames.length) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12_000);
+            try {
+                const pub = footprintProviders.find((p) => p.id === 'public-profiles');
+                const soc = footprintProviders.find((p) => p.id === 'social-profiles');
+                const known = new Set(findings.filter((f) => f.status === 'found').map((f) => f.title.toLowerCase()));
+                if (pub?.configured()) {
+                    const extra = await pub.check({ usernames: extraUsernames, signal: controller.signal });
+                    for (const item of extra) {
+                        if (item.status !== 'found' || known.has(item.title.toLowerCase())) continue;
+                        findings.push({
+                            ...item,
+                            summary: `${item.summary} Linked via a username discovered from an email-associated profile (not from guessing the email local-part).`,
+                            confidence: Math.min(item.confidence, 80),
+                        });
+                    }
+                }
+                if (soc?.configured()) {
+                    const extra = await soc.check({ usernames: extraUsernames, signal: controller.signal });
+                    for (const item of extra) {
+                        if (item.status !== 'found' || known.has(item.title.toLowerCase())) continue;
+                        findings.push({
+                            ...item,
+                            summary: `${item.summary} Linked via a username discovered from an email-associated profile (not from guessing the email local-part).`,
+                            confidence: Math.min(item.confidence, 65),
+                        });
+                    }
+                }
+            } catch {
+                // best-effort enrichment
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+    }
+
+    findings = deduplicateFindings(findings);
     return {
-        findings: deduplicateFindings(findings),
+        findings,
         relatedAccounts: collectRelatedAccounts(findings, context),
         providersChecked: results.length,
         providersAvailable: results.filter((result) => result.status === 'available').length,
