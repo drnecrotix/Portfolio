@@ -1,9 +1,29 @@
+import 'server-only';
+
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { dirname, normalize, resolve } from 'node:path';
 import { getRuntimeR2Config } from '@/lib/integration-runtime';
 
 type R2Config = Awaited<ReturnType<typeof getRuntimeR2Config>>;
+
+const LOCAL_UPLOADS_HTACCESS = `<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [R=404,L]
+</IfModule>
+
+<IfModule mod_autoindex.c>
+IndexIgnore *
+</IfModule>
+
+<IfModule mod_headers.c>
+Header always set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex"
+Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+`;
+
+const LOCAL_UPLOADS_INDEX = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive,noimageindex"><title>Not found</title></head><body></body></html>\n';
 
 function required(value: string | undefined, name: string) {
     if (!value) throw new Error(`${name} is not configured.`);
@@ -46,6 +66,20 @@ function safeLocalPath(key: string) {
     return target;
 }
 
+async function ensureLocalUploadsProtection(targetFile: string) {
+    const uploadsRoot = safeLocalPath('uploads');
+    const targetDirectory = dirname(targetFile);
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(safeLocalPath('uploads/.htaccess'), LOCAL_UPLOADS_HTACCESS, 'utf8');
+
+    let current = targetDirectory;
+    while (current === uploadsRoot || current.startsWith(`${uploadsRoot}/`)) {
+        await writeFile(resolve(current, 'index.html'), LOCAL_UPLOADS_INDEX, 'utf8');
+        if (current === uploadsRoot) break;
+        current = dirname(current);
+    }
+}
+
 export async function uploadMediaFile(file: File, key: string) {
     const body = Buffer.from(await file.arrayBuffer());
     const config = await getRuntimeR2Config();
@@ -73,7 +107,7 @@ export async function uploadMediaFile(file: File, key: string) {
 
     const localKey = key.replace(/^media\//, 'uploads/');
     const target = safeLocalPath(localKey);
-    await mkdir(dirname(target), { recursive: true });
+    await ensureLocalUploadsProtection(target);
     await writeFile(target, body);
 
     return {
