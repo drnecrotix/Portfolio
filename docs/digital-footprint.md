@@ -32,3 +32,5 @@ Response:
 ```
 
 The modular provider interface is influenced by SpiderFoot, Holehe, Sherlock, WhatsMyName, Maigret and MOSINT. Their code and datasets are not bundled here; any future import must preserve the upstream license and attribution.
+
+SMTP delivery can be configured from **Admin > API Integrations > SMTP email delivery**. Encrypted CMS values override `EMAIL_USER`, `EMAIL_APP_PASSWORD`, `SMTP_HOST`, `SMTP_PORT` and `SMTP_SECURE` environment variables.

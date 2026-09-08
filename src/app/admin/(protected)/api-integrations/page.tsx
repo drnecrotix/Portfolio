@@ -63,6 +63,22 @@ export default async function ApiIntegrationsPage() {
 
     const cards: ApiIntegrationCard[] = [
         {
+            id: 'smtp',
+            name: 'SMTP email delivery',
+            category: 'Email & verification',
+            description: 'Sends Digital Footprint ownership codes and can share the same mailbox used by the contact form.',
+            usedBy: ['Digital Footprint email verification'],
+            docsHint: 'For Gmail, enable two-step verification and create an App Password. The password is encrypted before storage and is never returned to the browser. Typical settings are smtp.gmail.com, port 465, secure true.',
+            fields: [
+                field('smtp.user', 'Email / SMTP user', 'EMAIL_USER', false),
+                field('smtp.password', 'SMTP app password', 'EMAIL_APP_PASSWORD', true),
+                field('smtp.host', 'SMTP host', 'SMTP_HOST', false),
+                field('smtp.port', 'SMTP port', 'SMTP_PORT', false),
+                field('smtp.secure', 'Secure connection (true/false)', 'SMTP_SECURE', false),
+            ],
+            lastTest: tests.smtp ?? null,
+        },
+        {
             id: 'github',
             name: 'GitHub',
             category: 'Development data',
