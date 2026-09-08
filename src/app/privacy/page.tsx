@@ -40,7 +40,7 @@ export default async function PrivacyPage() {
                     <li><strong>AI assistant:</strong> the messages you choose to send, the conversation context required to answer them and short-lived technical data used for rate limiting.</li>
                     <li><strong>Preferences and browser storage:</strong> language, theme, first-visit/loading state, session view markers, chat history and short-lived first-party session identifiers.</li>
                     <li><strong>Administrative accounts:</strong> account identity and authentication information for authorised site administrators and editors.</li>
-                    <li><strong>Digital Footprint self-audit:</strong> the email you explicitly submit, a short-lived verification code/session and optional self-declared usernames. The email is encrypted at rest while verification is active; lookup results are returned to the current browser and are not stored by NecrotixLab.</li>
+                    <li><strong>Digital Footprint lookup:</strong> the email address, phone number or username you explicitly submit, your authorization statement and short-lived bot-check data. Lookup results are returned to the current browser and are not stored by NecrotixLab.</li>
                 </ul>
             </section>
 
@@ -76,8 +76,8 @@ export default async function PrivacyPage() {
                         <p className="mt-2">Short-lived IP-based rate limits and technical checks protect forms and APIs from automated abuse. The legal basis is the legitimate interest in securing the website and its users (Article 6(1)(f)).</p>
                     </div>
                     <div>
-                        <h3>Digital Footprint self-audit</h3>
-                        <p className="mt-2">After you confirm control of the submitted email, the tool sends that email and any optional usernames to the public-intelligence providers configured by the operator solely to produce the requested report. Browser signals and password hashing stay in the browser; password exposure uses a five-character hash prefix and never sends the password itself. Processing is based on your explicit request and consent (Article 6(1)(a) GDPR).</p>
+                        <h3>Digital Footprint lookup</h3>
+                        <p className="mt-2">The tool sends the identifier you enter to compatible public-intelligence providers solely to produce the requested report. You must confirm that you are checking your own identifier or have permission. A signed bot challenge, honeypot and short-lived IP rate limits reduce automated misuse. Password hashing stays in the browser; password exposure uses a five-character hash prefix and never sends the password itself. Processing is based on your explicit request and consent (Article 6(1)(a) GDPR).</p>
                     </div>
                 </div>
             </section>
@@ -87,7 +87,7 @@ export default async function PrivacyPage() {
                 <p className="mt-4">Personal data is not sold. It may be processed by service providers only where necessary to operate the site, including hosting/infrastructure providers, the configured email provider for contact messages and the configured AI provider when you use the assistant.</p>
                 <p className="mt-3">Hosting or proxy infrastructure may provide country-level and coarse city request headers used by the first-party traffic analytics layer. When no supported city header is available, the server may send the public client IP address to <strong>ipwho.is</strong> to resolve a country code and coarse city label. NecrotixLab does not store latitude, longitude or other precise coordinates returned by a geolocation provider. Raw IP context remains only for the short IP-retention window and is not retained for the full page-activity or country/device aggregate retention period.</p>
                 <p className="mt-3">Gallery pages may contain media hosted by services such as YouTube, Vimeo, TikTok, Instagram, Facebook, X/Twitter, Pinterest or Dailymotion. External media is treated separately because loading it can disclose technical information such as your IP address and browser details to that provider. See the <Link href="/cookies">Cookie Policy</Link>.</p>
-                <p className="mt-3">A requested Digital Footprint scan may query configured services such as Have I Been Pwned, EmailRep, GitHub, Gravatar and an operator-hosted Holehe sidecar. Those services receive only the verified lookup value needed for the scan and process it under their own notices.</p>
+                <p className="mt-3">A requested Digital Footprint scan may query configured services such as Have I Been Pwned, LeakCheck, XposedOrNot, EmailRep, GitHub, Gravatar and an operator-hosted Holehe sidecar. Compatible services receive only the lookup value needed for the scan and process it under their own notices.</p>
             </section>
 
             <section>
@@ -107,7 +107,7 @@ export default async function PrivacyPage() {
                     <li>Comments remain until removed by moderation, deletion of the related publication or a valid erasure request, subject to applicable legal exceptions.</li>
                     <li>Like identifiers remain until the Like is removed or the related content is deleted. The corresponding first-party Like cookie currently has a maximum lifetime of two years.</li>
                     <li>Preference and session storage periods are described in the <Link href="/cookies">Cookie Policy</Link>.</li>
-                    <li>Digital Footprint verification records expire after 10 minutes before verification or 30 minutes after successful verification. Scan findings are not written to the NecrotixLab database.</li>
+                    <li>Digital Footprint bot challenges expire after 10 minutes. Scan identifiers and findings are not written to the NecrotixLab database.</li>
                 </ul>
             </section>
 

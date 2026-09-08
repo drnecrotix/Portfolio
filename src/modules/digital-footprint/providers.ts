@@ -12,7 +12,7 @@ const hibp: FootprintProvider = {
     id: 'hibp', label: 'Have I Been Pwned', category: 'breach',
     configured: () => Boolean(process.env.HIBP_API_KEY),
     async check({ email, signal }) {
-        if (!process.env.HIBP_API_KEY) return [];
+        if (!process.env.HIBP_API_KEY || !email) return [];
         const response = await fetch(`https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}?truncateResponse=false`, {
             signal,
             headers: { 'hibp-api-key': process.env.HIBP_API_KEY, 'user-agent': 'NecrotixLab-Digital-Footprint' },
@@ -42,7 +42,7 @@ const holehe: FootprintProvider = {
     id: 'holehe', label: 'Holehe', category: 'account',
     configured: () => Boolean(process.env.HOLEHE_API_URL && process.env.HOLEHE_API_TOKEN),
     async check({ email, signal }) {
-        if (!process.env.HOLEHE_API_URL || !process.env.HOLEHE_API_TOKEN) return [];
+        if (!process.env.HOLEHE_API_URL || !process.env.HOLEHE_API_TOKEN || !email) return [];
         const response = await fetch(new URL('/scan', process.env.HOLEHE_API_URL), {
             method: 'POST', signal, cache: 'no-store',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.HOLEHE_API_TOKEN}` },
@@ -64,7 +64,7 @@ const emailRep: FootprintProvider = {
     id: 'emailrep', label: 'EmailRep', category: 'reputation',
     configured: () => Boolean(process.env.EMAILREP_API_KEY),
     async check({ email, signal }) {
-        if (!process.env.EMAILREP_API_KEY) return [];
+        if (!process.env.EMAILREP_API_KEY || !email) return [];
         const response = await fetch(`https://emailrep.io/${encodeURIComponent(email)}`, { signal, cache: 'no-store', headers: { Key: process.env.EMAILREP_API_KEY, 'User-Agent': 'NecrotixLab' } });
         if (!response.ok) throw new Error(`EmailRep ${response.status}`);
         const row = await response.json() as Record<string, unknown>;
@@ -82,6 +82,7 @@ const emailRep: FootprintProvider = {
 const gravatar: FootprintProvider = {
     id: 'gravatar', label: 'Gravatar', category: 'account', configured: () => true,
     async check({ email, signal }) {
+        if (!email) return [];
         const digest = createHash('sha256').update(email).digest('hex');
         const response = await fetch(`https://api.gravatar.com/v3/profiles/${digest}`, { signal, cache: 'no-store', headers: { Accept: 'application/json' } });
         if (response.status === 404) return [];
@@ -95,6 +96,7 @@ const gravatar: FootprintProvider = {
 const github: FootprintProvider = {
     id: 'github', label: 'GitHub', category: 'account', configured: () => true,
     async check({ email, signal }) {
+        if (!email) return [];
         const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': 'NecrotixLab-Digital-Footprint' };
         if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
         const response = await fetch(`https://api.github.com/search/users?q=${encodeURIComponent(`${email} in:email`)}`, { signal, cache: 'no-store', headers });
@@ -107,6 +109,7 @@ const github: FootprintProvider = {
 const domain: FootprintProvider = {
     id: 'domain', label: 'Mail domain posture', category: 'domain', configured: () => true,
     async check({ email }) {
+        if (!email) return [];
         const domainName = email.split('@')[1];
         if (!domainName) return [];
         const [mx, txt] = await Promise.all([resolveMx(domainName).catch(() => []), resolveTxt(domainName).catch(() => [])]);
@@ -114,6 +117,67 @@ const domain: FootprintProvider = {
         const spf = records.some((value) => value.startsWith('v=spf1'));
         const dmarc = await resolveTxt(`_dmarc.${domainName}`).then((rows) => rows.flat().join('').startsWith('v=DMARC1')).catch(() => false);
         return [finding({ provider: 'dns', category: 'domain', title: domainName, status: 'found', confidence: 100, risk: mx.length === 0 || !spf || !dmarc ? 'medium' : 'low', summary: `MX: ${mx.length ? 'present' : 'missing'} · SPF: ${spf ? 'present' : 'missing'} · DMARC: ${dmarc ? 'present' : 'missing'}`, exposedFields: ['Mail provider configuration', 'SPF policy', 'DMARC policy'], remediation: !spf || !dmarc ? ['Ask the domain administrator to configure SPF and DMARC.'] : ['Mail authentication records are present.'] })];
+    },
+};
+
+function safeSourceUrl(value: unknown) {
+    const raw = String(value || '').trim();
+    if (!raw) return undefined;
+    try {
+        const url = new URL(raw.includes('://') ? raw : `https://${raw}`);
+        return url.protocol === 'https:' ? url.toString() : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+const leakCheckPublic: FootprintProvider = {
+    id: 'leakcheck-public', label: 'LeakCheck Public', category: 'breach', configured: () => true,
+    async check({ email, phone, usernames, signal }) {
+        const lookup = email || phone || usernames[0];
+        if (!lookup) return [];
+        const response = await fetch(`https://leakcheck.io/api/public?check=${encodeURIComponent(lookup)}`, {
+            signal, cache: 'no-store', headers: { Accept: 'application/json', 'User-Agent': 'NecrotixLab-Digital-Footprint' },
+        });
+        if (response.status === 404) return [];
+        if (response.status === 429) return [finding({ provider: 'leakcheck-public', category: 'breach', title: 'LeakCheck rate limit', status: 'rate-limited', confidence: 100, risk: 'info', summary: 'The public provider asked the scanner to retry later.', remediation: ['Run the check again later.'] })];
+        if (!response.ok) throw new Error(`LeakCheck ${response.status}`);
+        const payload = await response.json() as { found?: unknown; fields?: unknown[]; sources?: Array<{ name?: unknown; date?: unknown }> };
+        const fields = Array.isArray(payload.fields) ? payload.fields.map(String) : [];
+        const passwordExposed = fields.some((value) => /password/i.test(value));
+        return (payload.sources || []).map((source) => finding({
+            provider: 'leakcheck-public', category: 'breach', title: String(source.name || 'Leak source'), status: 'found', confidence: 90,
+            risk: passwordExposed ? 'critical' : 'high',
+            summary: `LeakCheck reports ${Number(payload.found || 0).toLocaleString()} matching records across its public result. Sensitive field values are not returned by this integration.`,
+            sourceUrl: 'https://leakcheck.io/', exposedFields: fields, occurredAt: String(source.date || ''),
+            remediation: passwordExposed ? ['Change reused passwords and enable multi-factor authentication.'] : ['Review the affected accounts and remove unnecessary public data.'],
+        }));
+    },
+};
+
+const xposedOrNot: FootprintProvider = {
+    id: 'xposedornot', label: 'XposedOrNot', category: 'breach', configured: () => true,
+    async check({ email, signal }) {
+        if (!email) return [];
+        const response = await fetch(`https://api.xposedornot.com/v1/breach-analytics?email=${encodeURIComponent(email)}`, {
+            signal, cache: 'no-store', headers: { Accept: 'application/json', 'User-Agent': 'NecrotixLab-Digital-Footprint' },
+        });
+        if (response.status === 404) return [];
+        if (response.status === 429) return [finding({ provider: 'xposedornot', category: 'breach', title: 'XposedOrNot rate limit', status: 'rate-limited', confidence: 100, risk: 'info', summary: 'The public provider asked the scanner to retry later.', remediation: ['Run the check again later.'] })];
+        if (!response.ok) throw new Error(`XposedOrNot ${response.status}`);
+        const payload = await response.json() as { ExposedBreaches?: { breaches_details?: Array<Record<string, unknown>> } };
+        return (payload.ExposedBreaches?.breaches_details || []).map((row) => {
+            const fields = String(row.xposed_data || '').split(';').map((value) => value.trim()).filter(Boolean);
+            const passwordExposed = fields.some((value) => /password/i.test(value));
+            const details = String(row.details || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            return finding({
+                provider: 'xposedornot', category: 'breach', title: String(row.breach || 'Data exposure'), status: 'found', confidence: row.verified === true ? 95 : 80,
+                risk: passwordExposed ? 'critical' : 'high',
+                summary: [details, row.industry ? `Industry: ${String(row.industry)}.` : '', row.xposed_records ? `Reported records: ${Number(row.xposed_records).toLocaleString()}.` : ''].filter(Boolean).join(' '),
+                sourceUrl: safeSourceUrl(row.domain), exposedFields: fields, occurredAt: String(row.xposed_date || ''),
+                remediation: passwordExposed ? ['Change reused passwords and enable multi-factor authentication.'] : ['Review the affected account and its privacy settings.'],
+            });
+        });
     },
 };
 
@@ -136,15 +200,15 @@ const publicProfiles: FootprintProvider = {
     },
 };
 
-export const footprintProviders: FootprintProvider[] = [hibp, holehe, emailRep, gravatar, github, domain, publicProfiles];
+export const footprintProviders: FootprintProvider[] = [hibp, leakCheckPublic, xposedOrNot, holehe, emailRep, gravatar, github, domain, publicProfiles];
 
-export async function runFootprintProviders(email: string, usernames: string[]) {
+export async function runFootprintProviders(context: { email?: string; phone?: string; usernames: string[] }) {
     const results = await Promise.all(footprintProviders.map(async (provider) => {
         if (!provider.configured()) return { provider, findings: [] as FootprintFinding[], available: false };
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 12_000);
         try {
-            return { provider, findings: await provider.check({ email, usernames, signal: controller.signal }), available: true };
+            return { provider, findings: await provider.check({ ...context, signal: controller.signal }), available: true };
         } catch {
             return { provider, findings: [finding({ provider: provider.id, category: provider.category, title: `${provider.label} unavailable`, status: 'unavailable', confidence: 0, risk: 'info', summary: 'This provider did not return a usable result during the scan.', remediation: ['Try this provider again later.'] })], available: true };
         } finally {
