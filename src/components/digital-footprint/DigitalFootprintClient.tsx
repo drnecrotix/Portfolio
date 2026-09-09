@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ChevronRight, Clock3, Download, ExternalLink, Loader2, Mail, Phone, Radar, Search, ShieldCheck, Trash2, User, X } from 'lucide-react';
 import type { FootprintFinding, FootprintScan } from '@/modules/digital-footprint/types';
+import { buildDorkRecipes } from '@/modules/digital-footprint/dorking';
 
 function riskColor(risk: string) {
     if (risk === 'critical') return 'text-rose-400 border-rose-400/25 bg-rose-400/5';
@@ -58,6 +59,10 @@ export function DigitalFootprintClient() {
     const [selectedFinding, setSelectedFinding] = useState<FootprintFinding | null>(null);
 
     const liveType = useMemo(() => detectLocalQueryType(query), [query]);
+    const dorkRecipes = useMemo(
+        () => scan ? buildDorkRecipes({ queryType: scan.queryType, query: scan.query }) : [],
+        [scan],
+    );
 
     const findings = useMemo(() => {
         const needle = resultSearch.trim().toLowerCase();
@@ -260,6 +265,33 @@ export function DigitalFootprintClient() {
                         </div>
 
                         <p className="mt-4 text-xs leading-5 text-muted-foreground">{scan.notice}</p>
+
+                        {dorkRecipes.length > 0 ? (
+                            <section className="mt-6 rounded-2xl border border-border/70 bg-card/25 p-4 sm:p-5">
+                                <div className="flex flex-wrap items-end justify-between gap-2">
+                                    <div>
+                                        <h3 className="text-sm font-semibold">Public web search recipes</h3>
+                                        <p className="mt-1 text-xs leading-5 text-muted-foreground">Optional reviewed searches for the scanned identifier. Nothing is queried automatically - a search engine opens only after you select a link.</p>
+                                    </div>
+                                    <span className="font-mono text-[10px] text-muted-foreground">{dorkRecipes.length} recipes</span>
+                                </div>
+                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                    {dorkRecipes.map((recipe) => (
+                                        <div key={recipe.id} className="rounded-xl border border-border/70 bg-background/50 p-3">
+                                            <p className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{recipe.category}</p>
+                                            <p className="mt-1 text-sm font-semibold">{recipe.label}</p>
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                {recipe.engines.map((engine) => (
+                                                    <a key={engine.name} href={engine.url} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground">
+                                                        {engine.name}<ExternalLink className="size-3" />
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        ) : null}
 
                         <section className="mt-6 rounded-2xl border border-border/70 bg-card/25 p-4 sm:p-5">
                             <div className="flex flex-wrap items-end justify-between gap-2">
