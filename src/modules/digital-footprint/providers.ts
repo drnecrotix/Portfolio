@@ -19,6 +19,24 @@ function pickExposed(data: Record<string, unknown>, keys: Array<[string, string]
     return out;
 }
 
+function cleanUsername(value: unknown) {
+    const candidate = String(value ?? '').trim().replace(/^@/, '');
+    return /^[a-zA-Z0-9_.-]{2,40}$/.test(candidate) && !candidate.includes('@') ? candidate : '';
+}
+
+function usernameCandidates(item: FootprintFinding) {
+    const candidates = new Set<string>();
+    for (const [key, value] of Object.entries(item.exposedData || {})) {
+        if (!/(username|user name|handle|login|nickname|github|twitter\/x)/i.test(key)) continue;
+        const candidate = cleanUsername(value);
+        if (candidate) candidates.add(candidate.toLowerCase());
+    }
+    const titleMatch = item.title.match(/@([\w.-]+)/);
+    const titleUsername = cleanUsername(titleMatch?.[1]);
+    if (titleUsername) candidates.add(titleUsername.toLowerCase());
+    return [...candidates];
+}
+
 const hibp: FootprintProvider = {
     id: 'hibp', label: 'Have I Been Pwned', category: 'breach', supports: ['email'],
     configured: () => Boolean(process.env.HIBP_API_KEY),
@@ -36,12 +54,20 @@ const hibp: FootprintProvider = {
         return rows.map((row) => {
             const fields = Array.isArray(row.DataClasses) ? row.DataClasses.map(String) : [];
             const passwordExposed = fields.some((value) => /password/i.test(value));
+            const exposedData = pickExposed(row, [
+                ['Name', 'Breach'], ['Domain', 'Domain'], ['BreachDate', 'Breach date'], ['AddedDate', 'Added date'],
+                ['ModifiedDate', 'Modified date'], ['PwnCount', 'Records'], ['Verified', 'Verified'],
+                ['Fabricated', 'Fabricated'], ['Sensitive', 'Sensitive'], ['Retired', 'Retired'], ['SpamList', 'Spam list'], ['IsMalware', 'Malware'],
+            ]);
+            exposedData['Matched email'] = email;
+            if (fields.length) exposedData['Field types'] = fields.slice(0, 20).join(', ');
             return finding({
                 provider: 'hibp', category: 'breach', title: String(row.Title || row.Name || 'Data breach'), status: 'found', confidence: 100,
                 risk: passwordExposed ? 'critical' : 'high',
                 summary: String(row.Description || 'Your verified email appears in this breach.').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
                 sourceUrl: String(row.Domain || '') ? `https://${String(row.Domain)}` : undefined,
                 exposedFields: fields,
+                exposedData,
                 occurredAt: String(row.BreachDate || ''),
                 remediation: passwordExposed ? ['Change the affected password everywhere it was reused.', 'Enable multi-factor authentication.'] : ['Review the exposed data and the affected account security settings.'],
             });
@@ -106,10 +132,18 @@ const emailRep: FootprintProvider = {
         const row = await response.json() as Record<string, unknown>;
         const details = row.details && typeof row.details === 'object' ? row.details as Record<string, unknown> : {};
         const suspicious = row.suspicious === true;
+        const exposedData = pickExposed(row, [['reputation', 'Reputation'], ['suspicious', 'Suspicious'], ['references', 'References']]);
+        exposedData['Matched email'] = email;
+        for (const [key, value] of Object.entries(details).slice(0, 20)) {
+            if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                exposedData[key.replaceAll('_', ' ')] = value;
+            }
+        }
         return [finding({
             provider: 'emailrep', category: 'reputation', title: 'Email reputation', status: 'found', confidence: 90, risk: suspicious ? 'high' : 'low',
             summary: `Reputation: ${String(row.reputation || 'unknown')}. Suspicious: ${suspicious ? 'yes' : 'no'}.`,
             exposedFields: Object.entries(details).filter(([, value]) => value === true).map(([key]) => key.replaceAll('_', ' ')).slice(0, 12),
+            exposedData,
             remediation: suspicious ? ['Review account activity and rotate reused passwords.'] : ['Continue using unique passwords and multi-factor authentication.'],
         })];
     },
@@ -204,13 +238,24 @@ const leakCheckPublic: FootprintProvider = {
         const payload = await response.json() as { found?: unknown; fields?: unknown[]; sources?: Array<{ name?: unknown; date?: unknown }> };
         const fields = Array.isArray(payload.fields) ? payload.fields.map(String) : [];
         const passwordExposed = fields.some((value) => /password/i.test(value));
-        return (payload.sources || []).map((source) => finding({
-            provider: 'leakcheck-public', category: 'breach', title: String(source.name || 'Leak source'), status: 'found', confidence: 90,
-            risk: passwordExposed ? 'critical' : 'high',
-            summary: `LeakCheck reports ${Number(payload.found || 0).toLocaleString()} matching records across its public result. Sensitive field values are not returned by this integration.`,
-            sourceUrl: 'https://leakcheck.io/', exposedFields: fields, occurredAt: String(source.date || ''),
-            remediation: passwordExposed ? ['Change reused passwords and enable multi-factor authentication.'] : ['Review the affected accounts and remove unnecessary public data.'],
-        }));
+        return (payload.sources || []).map((source) => {
+            const sourceName = String(source.name || 'Leak source');
+            const breachDate = String(source.date || '');
+            const exposedData: FootprintExposedData = {
+                Source: sourceName,
+                'Matched query': lookup,
+                'Found records': Number(payload.found || 0),
+                'Breach date': breachDate || null,
+                'Field types': fields.slice(0, 20).join(', '),
+            };
+            return finding({
+                provider: 'leakcheck-public', category: 'breach', title: sourceName, status: 'found', confidence: 90,
+                risk: passwordExposed ? 'critical' : 'high',
+                summary: `LeakCheck reports ${Number(payload.found || 0).toLocaleString()} matching records across its public result. Sensitive field values are not returned by this integration.`,
+                sourceUrl: 'https://leakcheck.io/', exposedFields: fields, exposedData, occurredAt: breachDate,
+                remediation: passwordExposed ? ['Change reused passwords and enable multi-factor authentication.'] : ['Review the affected accounts and remove unnecessary public data.'],
+            });
+        });
     },
 };
 
@@ -229,11 +274,16 @@ const xposedOrNot: FootprintProvider = {
             const fields = String(row.xposed_data || '').split(';').map((value) => value.trim()).filter(Boolean);
             const passwordExposed = fields.some((value) => /password/i.test(value));
             const details = String(row.details || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            const exposedData = pickExposed(row, [
+                ['breach', 'Breach'], ['domain', 'Domain'], ['xposed_date', 'Breach date'], ['xposed_records', 'Reported records'], ['verified', 'Verified'], ['industry', 'Industry'],
+            ]);
+            exposedData['Matched email'] = email;
+            if (fields.length) exposedData['Field types'] = fields.slice(0, 20).join(', ');
             return finding({
                 provider: 'xposedornot', category: 'breach', title: String(row.breach || 'Data exposure'), status: 'found', confidence: row.verified === true ? 95 : 80,
                 risk: passwordExposed ? 'critical' : 'high',
                 summary: [details, row.industry ? `Industry: ${String(row.industry)}.` : '', row.xposed_records ? `Reported records: ${Number(row.xposed_records).toLocaleString()}.` : ''].filter(Boolean).join(' '),
-                sourceUrl: safeSourceUrl(row.domain), exposedFields: fields, occurredAt: String(row.xposed_date || ''),
+                sourceUrl: safeSourceUrl(row.domain), exposedFields: fields, exposedData, occurredAt: String(row.xposed_date || ''),
                 remediation: passwordExposed ? ['Change reused passwords and enable multi-factor authentication.'] : ['Review the affected account and its privacy settings.'],
             });
         });
@@ -300,13 +350,7 @@ export async function runFootprintProviders(context: { queryType: 'email' | 'pho
         const discovered = new Set<string>();
         for (const item of findings) {
             if (item.status !== 'found' || item.category !== 'account') continue;
-            if (!['github', 'gitlab', 'gravatar', 'holehe'].includes(item.provider)) continue;
-            const fromData = item.exposedData?.Username;
-            if (typeof fromData === 'string' && fromData.length >= 2 && fromData.length <= 40 && !fromData.includes('@')) {
-                discovered.add(fromData.toLowerCase());
-            }
-            const match = item.title.match(/@([\w.-]+)/);
-            if (match?.[1]) discovered.add(match[1].toLowerCase());
+            for (const username of usernameCandidates(item)) discovered.add(username);
         }
         const extraUsernames = [...discovered];
         if (extraUsernames.length) {
@@ -363,14 +407,8 @@ function collectRelatedAccounts(findings: FootprintFinding[], context: { queryTy
     for (const item of findings) {
         if (item.status !== 'found') continue;
         if (item.category !== 'account' && item.provider !== 'public-profiles' && item.provider !== 'social-profiles') continue;
-        const titleMatch = item.title.match(/@([\w.-]+)/);
-        const username =
-            (typeof item.exposedData?.Username === 'string' && item.exposedData.Username) ||
-            titleMatch?.[1] ||
-            context.usernames[0] ||
-            (item.provider === 'holehe' ? String(item.exposedData?.Service || item.title) : undefined) ||
-            context.email?.split('@')[0] ||
-            'unknown';
+        const username = usernameCandidates(item)[0] || (context.queryType === 'username' ? cleanUsername(context.usernames[0]) : '');
+        if (!username) continue;
         const displayName =
             (typeof item.exposedData?.['Display name'] === 'string' && item.exposedData['Display name']) ||
             (typeof item.exposedData?.Name === 'string' && item.exposedData.Name) ||
@@ -385,12 +423,16 @@ function collectRelatedAccounts(findings: FootprintFinding[], context: { queryTy
         const key = `${platform.toLowerCase()}:${String(username).toLowerCase()}`;
         if (seen.has(key)) continue;
         seen.add(key);
+        const itemLinkedVia: FootprintRelatedAccount['linkedVia'] =
+            (item.provider === 'public-profiles' || item.provider === 'social-profiles') && context.queryType !== 'username'
+                ? 'profile'
+                : linkedVia;
         accounts.push({
             platform,
             username: String(username),
             displayName: displayName ? String(displayName) : undefined,
             url: item.sourceUrl,
-            linkedVia,
+            linkedVia: itemLinkedVia,
             confidence: item.confidence,
             summary: item.summary,
             exposedData: item.exposedData,
@@ -412,11 +454,13 @@ function deduplicateFindings(findings: FootprintFinding[]) {
     return [...groups.values()].map((items) => {
         const primary = items.sort((a, b) => b.confidence - a.confidence)[0];
         if (items.length === 1) return primary;
+        const exposedData = items.reduce<FootprintExposedData>((merged, item) => ({ ...merged, ...(item.exposedData || {}) }), {});
         return {
             ...primary,
             relatedProviders: [...new Set(items.map((item) => item.provider))],
             duplicateCount: items.length,
             exposedFields: [...new Set(items.flatMap((item) => item.exposedFields || []))],
+            exposedData: Object.keys(exposedData).length ? exposedData : primary.exposedData,
             remediation: [...new Set(items.flatMap((item) => item.remediation))],
         };
     });

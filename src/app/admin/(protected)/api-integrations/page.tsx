@@ -27,7 +27,7 @@ function githubUsernameFromUrl(value: unknown) {
 
 export default async function ApiIntegrationsPage() {
     const session = await auth();
-    if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) redirect('/admin');
+    if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) redirect('/admin/login');
 
     const settings = await prisma.siteSettings.findUnique({
         where: { id: 'default' },
@@ -35,17 +35,17 @@ export default async function ApiIntegrationsPage() {
     });
 
     const stored = getStoredIntegrationValues(settings?.integrationSettings);
-    const assistantKeys = getStoredAssistantApiKeys(settings?.assistantSettings);
     const tests = getIntegrationTests(settings?.integrationSettings);
-    const siteGithubUsername = githubUsernameFromUrl(record(settings?.socialLinks).github);
+    const assistant = getStoredAssistantApiKeys(settings?.assistantSettings);
+    const social = record(settings?.socialLinks);
+    const siteGithubUsername = githubUsernameFromUrl(social.github);
 
-    const field = (key: string, label: string, envName: string, secret = true, help?: string): ApiIntegrationField => {
-        const provider = key.split('.')[0];
+    const field = (key: string, label: string, envName: string, secret: boolean, help?: string, required?: boolean): ApiIntegrationField => {
         const cms = Boolean(stored[key]);
-        const legacyAssistant = key.endsWith('.apiKey') && Boolean(assistantKeys[provider]);
+        const fromAssistant = Boolean((assistant as Record<string, string>)[key]);
         const environment = envConfigured(envName);
-        const source: ApiIntegrationField['source'] = cms ? 'cms' : legacyAssistant ? 'assistant' : environment ? 'environment' : 'missing';
-        return { key, label, envName, secret, configured: source !== 'missing', source, help };
+        const source = cms ? 'cms' : fromAssistant ? 'assistant' : environment ? 'environment' : 'missing';
+        return { key, label, envName, secret, configured: source !== 'missing', source, help, required };
     };
 
     const githubUsernameField: ApiIntegrationField = stored['github.username']
@@ -68,7 +68,7 @@ export default async function ApiIntegrationsPage() {
             category: 'Email & verification',
             description: 'SMTP delivery settings available to site features that send transactional messages.',
             usedBy: ['Transactional site email'],
-            docsHint: 'For Gmail, enable two-step verification and create an App Password. The password is encrypted before storage and is never returned to the browser. Typical settings are smtp.gmail.com, port 465, secure true.',
+            docsHint: 'For Gmail, enable two-step verification and create an App Password. The password is encrypted before storage and is never returned to the browser.',
             fields: [
                 field('smtp.user', 'Email / SMTP user', 'EMAIL_USER', false),
                 field('smtp.password', 'SMTP app password', 'EMAIL_APP_PASSWORD', true),
@@ -79,12 +79,68 @@ export default async function ApiIntegrationsPage() {
             lastTest: tests.smtp ?? null,
         },
         {
+            id: 'hibp',
+            name: 'Have I Been Pwned',
+            category: 'Digital Footprint',
+            description: 'Email breach lookup used by the public Digital Footprint tool.',
+            usedBy: ['Digital Footprint scan'],
+            docsHint: 'Get a key at haveibeenpwned.com/API/Key. Store it here or as HIBP_API_KEY.',
+            fields: [field('hibp.apiKey', 'API key', 'HIBP_API_KEY', true)],
+            lastTest: (tests as Record<string, typeof tests.smtp>).hibp ?? null,
+        },
+        {
+            id: 'holehe',
+            name: 'Holehe',
+            category: 'Digital Footprint',
+            description: 'Email → registered service signals via the Holehe sidecar.',
+            usedBy: ['Digital Footprint related accounts'],
+            docsHint: 'Point apiUrl at your Holehe FastAPI sidecar and set a shared bearer token.',
+            fields: [
+                field('holehe.apiUrl', 'API base URL', 'HOLEHE_API_URL', false, 'Example: http://127.0.0.1:8000'),
+                field('holehe.apiToken', 'Bearer token', 'HOLEHE_API_TOKEN', true),
+            ],
+            lastTest: (tests as Record<string, typeof tests.smtp>).holehe ?? null,
+        },
+        {
+            id: 'emailrep',
+            name: 'EmailRep',
+            category: 'Digital Footprint',
+            description: 'Email reputation and risk signals for Digital Footprint.',
+            usedBy: ['Digital Footprint scan'],
+            docsHint: 'API key from emailrep.io.',
+            fields: [field('emailrep.apiKey', 'API key', 'EMAILREP_API_KEY', true)],
+            lastTest: (tests as Record<string, typeof tests.smtp>).emailrep ?? null,
+        },
+        {
+            id: 'leakcheck',
+            name: 'LeakCheck Pro',
+            category: 'Digital Footprint',
+            description: 'Optional paid LeakCheck API for structured breach records. Passwords are redacted in the UI.',
+            usedBy: ['Digital Footprint scan'],
+            docsHint: 'Requires a LeakCheck Pro key. Public mode works without a key.',
+            fields: [field('leakcheck.apiKey', 'API key', 'LEAKCHECK_API_KEY', true)],
+            lastTest: (tests as Record<string, typeof tests.smtp>).leakcheck ?? null,
+        },
+        {
+            id: 'dehashed',
+            name: 'DeHashed',
+            category: 'Digital Footprint',
+            description: 'Optional DeHashed search for structured identity records. Secrets are never displayed.',
+            usedBy: ['Digital Footprint scan'],
+            docsHint: 'Use the email associated with your DeHashed account plus the API key.',
+            fields: [
+                field('dehashed.email', 'Account email', 'DEHASHED_EMAIL', false),
+                field('dehashed.apiKey', 'API key', 'DEHASHED_API_KEY', true),
+            ],
+            lastTest: (tests as Record<string, typeof tests.smtp>).dehashed ?? null,
+        },
+        {
             id: 'github',
             name: 'GitHub',
             category: 'Development data',
-            description: 'Reads your public GitHub repositories, languages, activity and repository metadata.',
-            usedBy: ['The Lab - Used in real work', 'GitHub statistics', 'Language statistics', 'Recent GitHub activity'],
-            docsHint: 'The Lab first tries authenticated GraphQL for richer framework detection. If GraphQL is unavailable or the token has restrictive scopes, it automatically uses the public REST repository API. A token is optional for the Lab fallback but recommended for richer data and higher rate limits.',
+            description: 'Public repository fallback used by The Lab when the live GitHub API needs a configured identity.',
+            usedBy: ['The Lab'],
+            docsHint: 'Username can come from CMS, environment or Site Settings social links.',
             fields: [githubUsernameField, githubTokenField],
             lastTest: tests.github ?? null,
         },
@@ -92,9 +148,9 @@ export default async function ApiIntegrationsPage() {
             id: 'wakatime',
             name: 'WakaTime',
             category: 'Coding metrics',
-            description: 'Loads coding time, weekly summaries and activity statistics shown in the portfolio.',
-            usedBy: ['WakaTime statistics', 'Coding activity cards'],
-            docsHint: 'Create an API key in your WakaTime account settings.',
+            description: 'Coding activity stats for the public site.',
+            usedBy: ['Coding stats widgets'],
+            docsHint: 'API key from wakatime.com.',
             fields: [field('wakatime.apiKey', 'API key', 'WAKATIME_API_KEY', true)],
             lastTest: tests.wakatime ?? null,
         },
@@ -102,12 +158,12 @@ export default async function ApiIntegrationsPage() {
             id: 'creem',
             name: 'Creem',
             category: 'Commerce & payments',
-            description: 'Creates Creem checkout sessions for one-time digital products and grants secure downloads only after signed payment webhooks.',
-            usedBy: ['Digital Store checkout', 'Test payments', 'Order verification', 'Secure download grants'],
-            docsHint: 'Test keys beginning with creem_test_ automatically use https://test-api.creem.io. Configure the webhook URL as /api/store/webhook/creem and subscribe to checkout.completed, refund.created and dispute.created. The API key never reaches the browser.',
+            description: 'Payment provider for the Digital Store.',
+            usedBy: ['Digital Store checkout'],
+            docsHint: 'API key and webhook secret from Creem.',
             fields: [
-                field('creem.apiKey', 'API Key', 'CREEM_API_KEY', true, 'Use a creem_test_ key while testing. The environment is detected from the key prefix.'),
-                field('creem.webhookSecret', 'Webhook Secret', 'CREEM_WEBHOOK_SECRET', true, 'Found in Creem Developers > Webhooks. Required before paid downloads can be granted.'),
+                field('creem.apiKey', 'API key', 'CREEM_API_KEY', true),
+                field('creem.webhookSecret', 'Webhook secret', 'CREEM_WEBHOOK_SECRET', true),
             ],
             lastTest: tests.creem ?? null,
         },
@@ -115,13 +171,13 @@ export default async function ApiIntegrationsPage() {
             id: 'lemonsqueezy',
             name: 'Lemon Squeezy',
             category: 'Commerce & payments',
-            description: 'Creates checkout sessions for Necrotix Lab digital products and verifies paid orders through signed webhooks.',
-            usedBy: ['Digital Store checkout', 'Order verification', 'Secure download grants'],
-            docsHint: 'Create an API key and webhook in Lemon Squeezy. Point the webhook to /api/store/webhook and subscribe to order_created and order_refunded. The webhook signing secret must match the value entered here.',
+            description: 'Alternative payment provider for the Digital Store.',
+            usedBy: ['Digital Store checkout'],
+            docsHint: 'API key, store ID and webhook secret.',
             fields: [
-                field('lemonsqueezy.apiKey', 'API Key', 'LEMON_SQUEEZY_API_KEY', true),
+                field('lemonsqueezy.apiKey', 'API key', 'LEMON_SQUEEZY_API_KEY', true),
                 field('lemonsqueezy.storeId', 'Store ID', 'LEMON_SQUEEZY_STORE_ID', false),
-                field('lemonsqueezy.webhookSecret', 'Webhook Secret', 'LEMON_SQUEEZY_WEBHOOK_SECRET', true),
+                field('lemonsqueezy.webhookSecret', 'Webhook secret', 'LEMON_SQUEEZY_WEBHOOK_SECRET', true),
             ],
             lastTest: tests.lemonsqueezy ?? null,
         },
@@ -129,9 +185,9 @@ export default async function ApiIntegrationsPage() {
             id: 'openai',
             name: 'OpenAI',
             category: 'AI provider',
-            description: 'Optional AI provider for the public portfolio assistant.',
-            usedBy: ['AI Assistant - free-form questions'],
-            docsHint: 'The key stored here overrides both the Assistant CMS key and OPENAI_API_KEY.',
+            description: 'OpenAI models for the AI Assistant.',
+            usedBy: ['AI Assistant'],
+            docsHint: 'API key overrides Assistant CMS and environment.',
             fields: [field('openai.apiKey', 'API key', 'OPENAI_API_KEY', true)],
             lastTest: tests.openai ?? null,
         },
@@ -139,9 +195,9 @@ export default async function ApiIntegrationsPage() {
             id: 'groq',
             name: 'Groq',
             category: 'AI provider',
-            description: 'Low-latency OpenAI-compatible provider used by the public portfolio assistant.',
-            usedBy: ['AI Assistant - free-form questions'],
-            docsHint: 'The key stored here overrides both the Assistant CMS key and GROQ_API_KEY.',
+            description: 'Groq models for the AI Assistant.',
+            usedBy: ['AI Assistant'],
+            docsHint: 'API key from console.groq.com.',
             fields: [field('groq.apiKey', 'API key', 'GROQ_API_KEY', true)],
             lastTest: tests.groq ?? null,
         },
@@ -149,9 +205,9 @@ export default async function ApiIntegrationsPage() {
             id: 'gemini',
             name: 'Google Gemini',
             category: 'AI provider',
-            description: 'Google Gemini provider used as an optional AI backend for the portfolio assistant.',
-            usedBy: ['AI Assistant - free-form questions'],
-            docsHint: 'The key stored here overrides both the Assistant CMS key and GEMINI_API_KEY.',
+            description: 'Gemini models for the AI Assistant.',
+            usedBy: ['AI Assistant'],
+            docsHint: 'API key from Google AI Studio.',
             fields: [field('gemini.apiKey', 'API key', 'GEMINI_API_KEY', true)],
             lastTest: tests.gemini ?? null,
         },
@@ -159,9 +215,9 @@ export default async function ApiIntegrationsPage() {
             id: 'openrouter',
             name: 'OpenRouter',
             category: 'AI provider',
-            description: 'OpenAI-compatible gateway that can route the assistant to models available through OpenRouter.',
-            usedBy: ['AI Assistant - free-form questions'],
-            docsHint: 'The key stored here overrides both the Assistant CMS key and OPENROUTER_API_KEY.',
+            description: 'OpenRouter gateway for multiple models.',
+            usedBy: ['AI Assistant'],
+            docsHint: 'API key from openrouter.ai.',
             fields: [field('openrouter.apiKey', 'API key', 'OPENROUTER_API_KEY', true)],
             lastTest: tests.openrouter ?? null,
         },
@@ -169,16 +225,16 @@ export default async function ApiIntegrationsPage() {
             id: 'r2',
             name: 'Cloudflare R2',
             category: 'Media & private file storage',
-            description: 'Stores public managed media and paid digital product files in separate R2 buckets.',
-            usedBy: ['Media Library uploads', 'Blog media', 'Project media', 'Journey media', 'Digital Store private files'],
-            docsHint: 'Use one public media bucket for normal site assets and a separate bucket with no public domain/access for Store files. The same R2 API credentials can be used if their token has object read/write access to both buckets.',
+            description: 'Stores public managed media and paid digital product files.',
+            usedBy: ['Media Library', 'Digital Store private files'],
+            docsHint: 'Use separate public media and private store buckets.',
             fields: [
                 field('r2.accountId', 'Account ID', 'R2_ACCOUNT_ID', false),
                 field('r2.accessKeyId', 'Access Key ID', 'R2_ACCESS_KEY_ID', true),
                 field('r2.secretAccessKey', 'Secret Access Key', 'R2_SECRET_ACCESS_KEY', true),
                 field('r2.bucket', 'Public media bucket', 'R2_BUCKET', false),
-                field('r2.storeBucket', 'Private Store bucket', 'R2_STORE_BUCKET', false, 'Required for downloadable products. Do not attach a public R2.dev or custom domain to this bucket.'),
-                field('r2.publicBaseUrl', 'Public Media Base URL', 'R2_PUBLIC_BASE_URL', false, 'Example: https://media.necrotixlab.com - used only by the public media bucket.'),
+                field('r2.storeBucket', 'Private Store bucket', 'R2_STORE_BUCKET', false),
+                field('r2.publicBaseUrl', 'Public Media Base URL', 'R2_PUBLIC_BASE_URL', false),
             ],
             lastTest: tests.r2 ?? null,
         },

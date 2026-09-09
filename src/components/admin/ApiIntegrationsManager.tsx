@@ -66,7 +66,11 @@ function StatusBadge({ status }: { status: ReturnType<typeof testStatus> }) {
                 ? { label: 'Configured', icon: PlugZap, className: 'border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400' }
                 : { label: 'Not configured', icon: CircleDashed, className: 'border-border bg-muted/40 text-muted-foreground' };
     const Icon = content.icon;
-    return <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${content.className}`}><Icon className="size-3.5" />{content.label}</span>;
+    return (
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${content.className}`}>
+            <Icon className="size-3.5" /> {content.label}
+        </span>
+    );
 }
 
 function IntegrationCard({ card, testResult, onTestResult, onToast }: {
@@ -120,45 +124,60 @@ function IntegrationCard({ card, testResult, onTestResult, onToast }: {
             <div className="mt-4 rounded-xl border border-border/60 bg-background/45 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Used by</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                    {card.usedBy.map((item) => <span key={item} className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium">{item}</span>)}
+                    {card.usedBy.map((item) => (
+                        <span key={item} className="rounded-full border border-border/70 bg-muted/30 px-2 py-0.5 text-[10px] text-muted-foreground">{item}</span>
+                    ))}
                 </div>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-4 space-y-3">
                 {card.fields.map((field) => {
-                    const removeSelected = clearFields.includes(field.key);
+                    const pending = values[field.key] !== undefined;
+                    const clearing = clearFields.includes(field.key);
                     return (
-                        <div key={field.key}>
-                            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                                <label htmlFor={`${card.id}-${field.key}`} className="text-xs font-semibold">
-                                    {field.label}{field.required === false ? <span className="ml-1 text-[10px] font-normal text-muted-foreground">optional</span> : null}
-                                </label>
-                                <span className="text-[10px] text-muted-foreground">Source: {sourceLabel(field.source)}</span>
+                        <label key={field.key} className="block">
+                            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                                <span className="text-xs font-semibold">{field.label}</span>
+                                <span className="text-[10px] text-muted-foreground">{sourceLabel(field.source)} · {field.envName}</span>
                             </div>
                             <input
-                                id={`${card.id}-${field.key}`}
                                 type={field.secret ? 'password' : 'text'}
                                 autoComplete="off"
+                                placeholder={field.configured && field.secret ? '•••••••• (leave blank to keep)' : field.help || field.envName}
                                 value={values[field.key] ?? ''}
-                                disabled={removeSelected}
-                                onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
-                                placeholder={field.configured ? 'Configured - leave blank to keep current value' : field.envName}
-                                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition focus:border-foreground/40 disabled:opacity-45"
+                                onChange={(event) => {
+                                    const next = event.target.value;
+                                    setValues((current) => {
+                                        const copy = { ...current };
+                                        if (!next) delete copy[field.key];
+                                        else copy[field.key] = next;
+                                        return copy;
+                                    });
+                                    setClearFields((current) => current.filter((key) => key !== field.key));
+                                }}
+                                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none ring-0 focus:border-foreground/40"
                             />
-                            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
-                                <span>{field.help || `Environment fallback: ${field.envName}`}</span>
-                                {field.source === 'cms' ? (
-                                    <label className="inline-flex cursor-pointer items-center gap-1.5">
-                                        <input
-                                            type="checkbox"
-                                            checked={removeSelected}
-                                            onChange={(event) => setClearFields((current) => event.target.checked ? [...current, field.key] : current.filter((item) => item !== field.key))}
-                                        />
-                                        Remove CMS override
-                                    </label>
+                            <div className="mt-1 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+                                {field.help ? <span>{field.help}</span> : null}
+                                {field.configured && field.secret ? (
+                                    <button
+                                        type="button"
+                                        className="font-semibold text-rose-500"
+                                        onClick={() => {
+                                            setClearFields((current) => current.includes(field.key) ? current : [...current, field.key]);
+                                            setValues((current) => {
+                                                const copy = { ...current };
+                                                delete copy[field.key];
+                                                return copy;
+                                            });
+                                        }}
+                                    >
+                                        {clearing ? 'Will clear on save' : 'Clear stored secret'}
+                                    </button>
                                 ) : null}
+                                {pending ? <span className="text-amber-500">Unsaved change</span> : null}
                             </div>
-                        </div>
+                        </label>
                     );
                 })}
             </div>
@@ -186,10 +205,29 @@ function IntegrationCard({ card, testResult, onTestResult, onToast }: {
     );
 }
 
+const TAB_ORDER = [
+    'Digital Footprint',
+    'Email & verification',
+    'Development data',
+    'Coding metrics',
+    'Commerce & payments',
+    'AI provider',
+    'Media & private file storage',
+] as const;
+
 export function ApiIntegrationsManager({ cards }: { cards: ApiIntegrationCard[] }) {
     const [results, setResults] = useState<Partial<Record<ApiIntegrationId, ApiActionResult>>>({});
     const [toast, setToast] = useState<Toast>(null);
     const [testingAll, startTestingAll] = useTransition();
+    const categories = useMemo(() => {
+        const present = new Set(cards.map((c) => c.category));
+        const ordered = TAB_ORDER.filter((c) => present.has(c));
+        const rest = [...present].filter((c) => !TAB_ORDER.includes(c as typeof TAB_ORDER[number])).sort();
+        return [...ordered, ...rest];
+    }, [cards]);
+    const [activeTab, setActiveTab] = useState<string>('');
+    const currentTab = activeTab && categories.includes(activeTab) ? activeTab : (categories[0] || '');
+    const visibleCards = useMemo(() => cards.filter((c) => c.category === currentTab), [cards, currentTab]);
     const configuredCount = useMemo(() => cards.filter(requiredFieldsReady).length, [cards]);
 
     const setTestResult = (id: ApiIntegrationId, result: ApiActionResult) => {
@@ -221,8 +259,27 @@ export function ApiIntegrationsManager({ cards }: { cards: ApiIntegrationCard[] 
                 </button>
             </div>
 
+            {categories.length > 1 ? (
+                <div className="flex flex-wrap gap-2 border-b border-border/60 pb-3">
+                    {categories.map((cat) => {
+                        const count = cards.filter((c) => c.category === cat).length;
+                        const active = cat === currentTab;
+                        return (
+                            <button
+                                key={cat}
+                                type="button"
+                                onClick={() => setActiveTab(cat)}
+                                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${active ? 'bg-foreground text-background' : 'border border-border bg-background text-muted-foreground hover:text-foreground'}`}
+                            >
+                                {cat} <span className="opacity-60">({count})</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            ) : null}
+
             <div className="grid gap-4 xl:grid-cols-2">
-                {cards.map((card) => (
+                {visibleCards.map((card) => (
                     <IntegrationCard key={card.id} card={card} testResult={results[card.id]} onTestResult={setTestResult} onToast={setToast} />
                 ))}
             </div>
