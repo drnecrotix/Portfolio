@@ -14,6 +14,7 @@ const routes = [
   '/contact',
   '/store',
   '/services/pricing',
+  '/seo-intelligence',
   '/legal',
   '/privacy',
   '/cookies',
@@ -76,6 +77,7 @@ for (const theme of themes) {
       if (route === '/contact') await expect(page.getByRole('heading', { name: /contact|start a conversation|get in touch/i }).first()).toBeVisible();
       if (route === '/store') await expect(page.getByRole('searchbox', { name: 'Search the Store' })).toBeVisible();
       if (route === '/services/pricing') await expect(page.getByRole('heading', { name: 'Service pricing' })).toBeVisible();
+      if (route === '/seo-intelligence') await expect(page.getByRole('heading', { name: 'SEO Intelligence' })).toBeVisible();
 
       await page.screenshot({
         path: testInfo.outputPath(`${theme}-${route === '/' ? 'home' : route.slice(1).replaceAll('/', '-')}.png`),
