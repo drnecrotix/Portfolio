@@ -9,6 +9,7 @@ const tools = [
     ['Email Domain Security', '/email-domain-security', 'email'],
     ['Site Crawl', '/site-crawl', 'crawl'],
     ['Accessibility Check', '/accessibility-check', 'accessibility'],
+    ['SEO Intelligence', '/seo-intelligence', 'seo'],
 ] as const;
 
 function statusText(status: HealthStatus) {
@@ -25,7 +26,7 @@ function statusMark(status: HealthStatus) {
     return 'INFO';
 }
 
-export function WebHealthNav({ active }: { active: 'website' | 'email' | 'crawl' | 'accessibility' }) {
+export function WebHealthNav({ active }: { active: 'website' | 'email' | 'crawl' | 'accessibility' | 'seo' }) {
     return (
         <nav aria-label="Web Health Suite" className="mt-8 flex flex-wrap border-y border-border/80 font-mono text-[9px] font-bold uppercase tracking-[0.13em]">
             {tools.map(([label, href, id]) => (
