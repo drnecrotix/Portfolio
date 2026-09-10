@@ -1,6 +1,6 @@
 {
     "name": "personal-portfolio",
-    "version": "1.2.61",
+    "version": "1.2.62",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -9,6 +9,7 @@
         "start": "next start",
         "lint": "eslint . --max-warnings=0",
         "typecheck": "tsc --noEmit",
+        "test:unit": "node --experimental-strip-types --test tests/unit/*.test.mjs",
         "test:visual": "playwright test",
         "postinstall": "prisma generate",
         "production:preflight": "node scripts/check-production-env.mjs",
