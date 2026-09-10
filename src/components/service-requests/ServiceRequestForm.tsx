@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Loader2, Wrench } from 'lucide-react';
 import { estimateServiceRange, type ServiceRequestIssue, type ServiceRequestSource } from '@/modules/service-requests/estimate';
 
@@ -24,9 +24,16 @@ export function ServiceRequestForm({
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [reference, setReference] = useState('');
-    const startedAt = useMemo(() => Date.now(), [open]);
+    const [startedAt, setStartedAt] = useState(() => Date.now());
     const selectedIssues = issues.filter((issue) => selected.has(issue.id));
     const estimate = estimateServiceRange(source, selectedIssues);
+
+    useEffect(() => {
+        setSelected(new Set(issues.map((issue) => issue.id)));
+        setOpen(false);
+        setMessage('');
+        setReference('');
+    }, [issues, target]);
 
     function toggle(id: string) {
         setSelected((current) => {
@@ -34,6 +41,11 @@ export function ServiceRequestForm({
             if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
+    }
+
+    function openForm() {
+        setStartedAt(Date.now());
+        setOpen(true);
     }
 
     async function submit(event: FormEvent<HTMLFormElement>) {
@@ -79,7 +91,7 @@ export function ServiceRequestForm({
     if (!open) {
         return (
             <div className="mt-10 border-t border-border/80 pt-5">
-                <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">
+                <button type="button" onClick={openForm} className="inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">
                     <Wrench className="size-4" /> Request a professional fix
                 </button>
                 <p className="mt-2 text-xs text-muted-foreground">Current automated estimate: €{estimate.min}-€{estimate.max}. Final pricing is confirmed after manual review.</p>
