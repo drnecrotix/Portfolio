@@ -39,7 +39,7 @@ export function EmailDomainSecurityClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
-                <header className="max-w-4xl"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / Web Health Suite / v1.2.59</div><h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Email Domain Security</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">Inspect public DNS signals used for mail delivery and spoofing protection: MX, SPF, DMARC, selector-specific DKIM, MTA-STS, TLS-RPT, CAA and BIMI.</p></header>
+                <header className="max-w-4xl"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / Web Health Suite / v1.2.60</div><h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Email Domain Security</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">Inspect public DNS signals used for mail delivery and spoofing protection: MX, SPF, DMARC, selector-specific DKIM, MTA-STS, TLS-RPT, CAA and BIMI.</p></header>
                 <WebHealthNav active="email" />
 
                 <section className="mt-8 border-b border-border/80 pb-6">
@@ -55,7 +55,7 @@ export function EmailDomainSecurityClient() {
                 {report ? <>
                     <ScoreLine score={report.score} right={<span>{report.domain} · {report.records.mx.length} MX record{report.records.mx.length === 1 ? '' : 's'}</span>} />
                     <HealthCheckRows checks={report.checks} />
-                    <ServiceRequestForm key={report.checkedAt} source="EMAIL_DOMAIN_SECURITY" target={report.domain} score={report.score} issues={actionable} snapshot={{ checkedAt: report.checkedAt, records: report.records }} />
+                    <ServiceRequestForm key={report.checkedAt} source="EMAIL_DOMAIN_SECURITY" target={report.domain} score={report.score} issues={actionable} snapshot={{ score: report.score, checkedAt: report.checkedAt, records: report.records, checks: report.checks }} />
                 </> : <section className="mt-10 border-t border-border/80 pt-5"><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Report area</p><p className="mt-3 text-sm text-muted-foreground">Enter a domain to inspect its public mail-security posture.</p></section>}
 
                 <footer className="mt-12 border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">This tool reads public DNS records only. Results are configuration signals, not a guarantee that mail is deliverable or immune to spoofing. Scan results are not stored unless you explicitly create a service request.</footer>
