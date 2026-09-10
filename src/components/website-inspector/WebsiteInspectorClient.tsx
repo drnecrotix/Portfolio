@@ -7,9 +7,10 @@ import type { WebsiteInspection, WebsiteInspectorCategory, WebsiteInspectorCheck
 const categories: Array<{ id: WebsiteInspectorCategory; label: string; code: string }> = [
     { id: 'delivery', label: 'Delivery', code: '01' },
     { id: 'security', label: 'Security headers', code: '02' },
-    { id: 'seo', label: 'SEO basics', code: '03' },
+    { id: 'seo', label: 'SEO & discovery', code: '03' },
     { id: 'privacy', label: 'Privacy signals', code: '04' },
-    { id: 'performance', label: 'Response sample', code: '05' },
+    { id: 'performance', label: 'Response & caching', code: '05' },
+    { id: 'wordpress', label: 'WordPress check', code: '06' },
 ];
 
 function statusText(status: WebsiteInspectorCheck['status']) {
@@ -53,7 +54,7 @@ export function WebsiteInspectorClient() {
         event.preventDefault();
         if (loading || url.trim().length < 3) return;
         setLoading(true);
-        setMessage('Inspecting one public page request...');
+        setMessage('Inspecting the public page and bounded companion probes...');
         try {
             const response = await fetch('/api/website-inspector', {
                 method: 'POST',
@@ -63,7 +64,7 @@ export function WebsiteInspectorClient() {
             const payload = await response.json().catch(() => ({})) as { inspection?: WebsiteInspection; error?: string };
             if (!response.ok || !payload.inspection) throw new Error(payload.error || 'The website could not be inspected.');
             setInspection(payload.inspection);
-            setMessage(`Inspection completed in ${payload.inspection.responseTimeMs} ms.`);
+            setMessage(`Inspection completed in ${payload.inspection.responseTimeMs} ms for the primary page request.`);
         } catch (error) {
             setInspection(null);
             setMessage(error instanceof Error ? error.message : 'The website could not be inspected.');
@@ -81,11 +82,11 @@ export function WebsiteInspectorClient() {
                         <span aria-hidden="true">/</span>
                         <span>Website Inspector</span>
                         <span aria-hidden="true">/</span>
-                        <span>v1.2.56</span>
+                        <span>v1.2.58</span>
                     </div>
                     <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Website Inspector</h1>
                     <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                        A lightweight technical inspection of one public page. The report focuses on delivery, security headers, SEO basics, privacy signals and a single response-time sample.
+                        A lightweight technical inspection of one public page with bounded companion probes for TLS, redirects, security headers, SEO discovery, privacy, caching, technology hints and WordPress signals.
                     </p>
                 </header>
 
@@ -115,9 +116,10 @@ export function WebsiteInspectorClient() {
                         </button>
                     </form>
                     <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
-                        <span>1 page request</span>
+                        <span>1 primary page</span>
+                        <span>bounded public probes</span>
                         <span>512 KB HTML cap</span>
-                        <span>8 s timeout</span>
+                        <span>3.5 s probe timeout</span>
                         <span>private networks blocked</span>
                     </div>
                     {message ? <p className="mt-4 text-xs leading-5 text-muted-foreground" role="status">{message}</p> : null}
@@ -181,7 +183,15 @@ export function WebsiteInspectorClient() {
                                                 >
                                                     <span className={`font-mono text-[9px] font-black tracking-[0.12em] ${statusText(check.status)}`}>{statusMark(check.status)}</span>
                                                     <p className="text-sm font-semibold">{check.label}</p>
-                                                    <p className="text-xs leading-5 text-muted-foreground">{check.summary}</p>
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs leading-5 text-muted-foreground">{check.summary}</p>
+                                                        {check.recommendation ? (
+                                                            <p className="mt-1.5 text-xs leading-5 text-foreground/80">
+                                                                <span className="mr-2 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-sky-500">Fix</span>
+                                                                {check.recommendation}
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -193,13 +203,13 @@ export function WebsiteInspectorClient() {
                 ) : (
                     <section className="mt-12 border-t border-border/80 pt-5">
                         <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Report area</p>
-                        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Enter a public website above. Results will appear here as a compact technical report instead of a dashboard.</p>
+                        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Enter a public website above. Results will appear here as the same compact technical report, with additional checks added as rows instead of dashboard cards.</p>
                     </section>
                 )}
 
                 <footer className="mt-12 border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">
                     <p className="max-w-4xl">
-                        Website Inspector analyzes only the public response it receives. It does not log in, bypass access controls, crawl the whole domain, run exploit payloads or certify security, privacy, accessibility or regulatory compliance. Submitted URLs and reports are not stored by this tool.
+                        Website Inspector analyzes public responses only. It does not log in, bypass access controls, enumerate WordPress users, brute-force paths, run exploit payloads, perform port scans or certify security, privacy, accessibility or regulatory compliance. Submitted URLs and reports are not stored by this tool.
                     </p>
                 </footer>
             </div>
