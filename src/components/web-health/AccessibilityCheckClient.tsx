@@ -36,7 +36,7 @@ export function AccessibilityCheckClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
-                <header className="max-w-4xl"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / Web Health Suite / v1.2.59</div><h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Accessibility Check</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">A fast static HTML review for common accessibility signals. It is intentionally lightweight and does not pretend to replace keyboard, contrast or screen-reader testing.</p></header>
+                <header className="max-w-4xl"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / Web Health Suite / v1.2.60</div><h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Accessibility Check</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">A fast static HTML review for common accessibility signals. It is intentionally lightweight and does not pretend to replace keyboard, contrast or screen-reader testing.</p></header>
                 <WebHealthNav active="accessibility" />
 
                 <section className="mt-8 border-b border-border/80 pb-6">
@@ -48,7 +48,7 @@ export function AccessibilityCheckClient() {
                 {report ? <>
                     <ScoreLine score={report.score} right={<span>{report.stats.images} images · {report.stats.controls} controls · {report.stats.headings} headings</span>} />
                     <HealthCheckRows checks={report.checks} />
-                    <ServiceRequestForm source="ACCESSIBILITY_CHECK" target={report.finalUrl} score={report.score} issues={actionable} snapshot={{ checkedAt: report.checkedAt, stats: report.stats, statusCode: report.statusCode }} />
+                    <ServiceRequestForm source="ACCESSIBILITY_CHECK" target={report.finalUrl} score={report.score} issues={actionable} snapshot={{ score: report.score, checkedAt: report.checkedAt, statusCode: report.statusCode, stats: report.stats, checks: report.checks }} />
                 </> : <section className="mt-10 border-t border-border/80 pt-5"><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Report area</p><p className="mt-3 text-sm text-muted-foreground">Enter a public HTML page to run the static accessibility review.</p></section>}
 
                 <footer className="mt-12 border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">Automated static checks cover only a subset of accessibility requirements. Manual keyboard, screen-reader, focus-order and visual contrast testing remains necessary. Results are not stored unless you explicitly create a service request.</footer>
