@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { DataForSeoError, runSeoIntelligence } from '@/lib/dataforseo';
+import { SeoIntelligenceError, runNativeSeoIntelligence } from '@/modules/seo-intelligence/native';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const requestSchema = z.object({
-    mode: z.enum(['keywords', 'serp', 'competitors', 'backlinks']),
-    query: z.string().trim().min(2).max(700),
-    target: z.string().trim().max(255).optional().default(''),
+    mode: z.enum(['overview', 'keywords', 'competitors', 'links']),
+    query: z.string().trim().min(3).max(2048),
+    competitors: z.array(z.string().trim().min(3).max(255)).max(3).optional().default([]),
 });
 
 type RateEntry = { count: number; resetAt: number };
@@ -37,7 +37,7 @@ function isRateLimited(ip: string) {
     }
     current.count += 1;
     rateLimit.set(ip, current);
-    return current.count > 5;
+    return current.count > 6;
 }
 
 function hasValidOrigin(request: Request) {
@@ -54,7 +54,7 @@ function hasValidOrigin(request: Request) {
 
 function acquireSlot() {
     const active = globalForSeo.seoIntelligenceActive ?? 0;
-    if (active >= 2) return false;
+    if (active >= 1) return false;
     globalForSeo.seoIntelligenceActive = active + 1;
     return true;
 }
@@ -78,16 +78,16 @@ export async function POST(request: Request) {
     }
 
     const parsed = requestSchema.safeParse(await request.json().catch(() => ({})));
-    if (!parsed.success) return NextResponse.json({ error: 'Enter a valid keyword or domain.' }, { status: 400, headers: responseHeaders });
+    if (!parsed.success) return NextResponse.json({ error: 'Enter a valid website and comparison inputs.' }, { status: 400, headers: responseHeaders });
     if (!acquireSlot()) {
         return NextResponse.json({ error: 'SEO Intelligence is busy. Try again in a few seconds.' }, { status: 503, headers: { ...responseHeaders, 'Retry-After': '10' } });
     }
 
     try {
-        const result = await runSeoIntelligence(parsed.data);
-        return NextResponse.json({ result, market: { locationCode: 2100, languageCode: 'bg', label: 'Bulgaria / Bulgarian' } }, { headers: responseHeaders });
+        const result = await runNativeSeoIntelligence(parsed.data);
+        return NextResponse.json({ result }, { headers: responseHeaders });
     } catch (error) {
-        if (error instanceof DataForSeoError) return NextResponse.json({ error: error.message }, { status: error.status, headers: responseHeaders });
+        if (error instanceof SeoIntelligenceError) return NextResponse.json({ error: error.message }, { status: error.status, headers: responseHeaders });
         console.error('[SEO Intelligence] unexpected failure', error);
         return NextResponse.json({ error: 'SEO Intelligence is temporarily unavailable.' }, { status: 500, headers: responseHeaders });
     } finally {
