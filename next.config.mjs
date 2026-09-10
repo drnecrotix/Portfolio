@@ -4,34 +4,9 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const useN0cBuildTuning = process.env.NEXT_N0C_WASM_SWC === '1';
 const buildDistDir = process.env.NEXT_DIST_DIR?.trim() || '.next';
 const isStagedUpdaterBuild = buildDistDir === '.next-update';
-const isDevelopment = process.env.NODE_ENV !== 'production';
 const publicAssetCacheHeader = { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' };
 const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'woff', 'woff2'];
 
-function buildContentSecurityPolicy({ allowWasm = false } = {}) {
-    const scriptSources = ["'self'", "'unsafe-inline'"];
-    if (isDevelopment) scriptSources.push("'unsafe-eval'");
-    if (allowWasm) scriptSources.push("'wasm-unsafe-eval'");
-
-    return [
-        "default-src 'self'",
-        "base-uri 'self'",
-        "object-src 'none'",
-        "frame-ancestors 'none'",
-        "form-action 'self'",
-        `script-src ${scriptSources.join(' ')}`,
-        "style-src 'self' 'unsafe-inline' https:",
-        "img-src 'self' data: blob: https:",
-        "font-src 'self' data: https:",
-        "media-src 'self' data: blob: https:",
-        "connect-src 'self' https: wss:",
-        "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://assets.pinterest.com https://www.dailymotion.com",
-        'upgrade-insecure-requests',
-    ].join('; ');
-}
-
-const contentSecurityPolicy = buildContentSecurityPolicy();
-const labContentSecurityPolicy = buildContentSecurityPolicy({ allowWasm: true });
 const sharedSecurityHeaders = [
     { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -83,33 +58,6 @@ const nextConfig = {
             {
                 source: '/:path*',
                 headers: sharedSecurityHeaders,
-            },
-            {
-                source: '/',
-                headers: [
-                    { key: 'Content-Security-Policy', value: contentSecurityPolicy },
-                ],
-            },
-            // Keep the default CSP off /lab. Browsers intersect multiple CSP
-            // policies, so a stricter global script-src would still block Spline
-            // WebAssembly even when /lab sends its own wasm-enabled policy.
-            {
-                source: '/:path((?!lab(?:/|$)).*)',
-                headers: [
-                    { key: 'Content-Security-Policy', value: contentSecurityPolicy },
-                ],
-            },
-            {
-                source: '/lab',
-                headers: [
-                    { key: 'Content-Security-Policy', value: labContentSecurityPolicy },
-                ],
-            },
-            {
-                source: '/lab/:path*',
-                headers: [
-                    { key: 'Content-Security-Policy', value: labContentSecurityPolicy },
-                ],
             },
             {
                 source: '/admin/:path*',
