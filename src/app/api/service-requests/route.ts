@@ -8,6 +8,7 @@ import { getRuntimeSmtpConfig } from '@/lib/integration-runtime';
 import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
 import { isPublicWriteBlocked } from '@/lib/public-write-guard';
 import { estimateServiceRange } from '@/modules/service-requests/estimate';
+import { serviceStatusUrl } from '@/modules/service-requests/status-access';
 import { hasValidOrigin, isRateLimited, noStoreHeaders } from '@/modules/web-health/route-guard';
 
 export const runtime = 'nodejs';
@@ -59,28 +60,42 @@ function safeSnapshot(value: unknown): Prisma.InputJsonValue | undefined {
     }
 }
 
-async function notifyAdmin(request: { reference: string; name: string; email: string; source: string; target: string; estimateMin: number; estimateMax: number; issueCount: number }) {
+async function mailContext() {
+    const smtp = await getRuntimeSmtpConfig();
+    if (!smtp.user || !smtp.password) return null;
+    let recipient = smtp.user;
     try {
-        const smtp = await getRuntimeSmtpConfig();
-        if (!smtp.user || !smtp.password) return;
-        let recipient = smtp.user;
-        try {
-            const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
-            const contact = normalizeGeneralSiteSettings(settings).contactDetails;
-            recipient = contact.formRecipientEmail || contact.email || recipient;
-        } catch {
-            // Keep SMTP account as recipient when CMS settings are unavailable.
-        }
-        if (!recipient) return;
+        const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+        const contact = normalizeGeneralSiteSettings(settings).contactDetails;
+        recipient = contact.formRecipientEmail || contact.email || recipient;
+    } catch {
+        // Keep SMTP account as recipient when CMS settings are unavailable.
+    }
+    const transporter = nodemailer.createTransport({ host: smtp.host, port: smtp.port, secure: smtp.secure, auth: { user: smtp.user, pass: smtp.password } });
+    return { smtp, recipient, transporter };
+}
 
-        const transporter = nodemailer.createTransport({ host: smtp.host, port: smtp.port, secure: smtp.secure, auth: { user: smtp.user, pass: smtp.password } });
+async function notifyParties(request: { reference: string; name: string; email: string; source: string; target: string; estimateMin: number; estimateMax: number; issueCount: number; statusUrl: string }) {
+    try {
+        const context = await mailContext();
+        if (!context) return;
+        const { smtp, recipient, transporter } = context;
+        if (recipient) {
+            await transporter.sendMail({
+                from: `Kreatrics Service Requests <${smtp.user}>`,
+                to: recipient,
+                replyTo: request.email,
+                subject: `[${request.reference}] ${request.source} - ${request.target}`,
+                text: `Service request ${request.reference}\nCustomer: ${request.name} <${request.email}>\nSource: ${request.source}\nTarget: ${request.target}\nIssues: ${request.issueCount}\nEstimate: EUR ${request.estimateMin}-${request.estimateMax}\nStatus: ${request.statusUrl}`,
+                html: `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px"><p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#64748b">Kreatrics service request</p><h2>${escapeHtml(request.reference)}</h2><p><strong>Customer:</strong> ${escapeHtml(request.name)} &lt;${escapeHtml(request.email)}&gt;</p><p><strong>Source:</strong> ${escapeHtml(request.source)}</p><p><strong>Target:</strong> ${escapeHtml(request.target)}</p><p><strong>Selected issues:</strong> ${request.issueCount}</p><p><strong>Automated estimate:</strong> EUR ${request.estimateMin}-${request.estimateMax}</p><p><a href="${escapeHtml(request.statusUrl)}">Open customer status page</a></p></div>`,
+            });
+        }
         await transporter.sendMail({
             from: `Kreatrics Service Requests <${smtp.user}>`,
-            to: recipient,
-            replyTo: request.email,
-            subject: `[${request.reference}] ${request.source} - ${request.target}`,
-            text: `Service request ${request.reference}\nCustomer: ${request.name} <${request.email}>\nSource: ${request.source}\nTarget: ${request.target}\nIssues: ${request.issueCount}\nEstimate: EUR ${request.estimateMin}-${request.estimateMax}`,
-            html: `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px"><p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#64748b">Kreatrics service request</p><h2>${escapeHtml(request.reference)}</h2><p><strong>Customer:</strong> ${escapeHtml(request.name)} &lt;${escapeHtml(request.email)}&gt;</p><p><strong>Source:</strong> ${escapeHtml(request.source)}</p><p><strong>Target:</strong> ${escapeHtml(request.target)}</p><p><strong>Selected issues:</strong> ${request.issueCount}</p><p><strong>Automated estimate:</strong> EUR ${request.estimateMin}-${request.estimateMax}</p></div>`,
+            to: request.email,
+            subject: `${request.reference} - service request received`,
+            text: `Hello ${request.name},\n\nYour Kreatrics service request ${request.reference} was received. The automated estimate is EUR ${request.estimateMin}-${request.estimateMax}; the final quote is confirmed only after manual review.\n\nTrack your request: ${request.statusUrl}\n\nKeep this private link because it provides access to your request status.`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px"><p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#64748b">Kreatrics customer service</p><h2>Request received</h2><p>Hello ${escapeHtml(request.name)},</p><p>Your request <strong>${escapeHtml(request.reference)}</strong> was received.</p><p>The automated estimate is <strong>EUR ${request.estimateMin}-${request.estimateMax}</strong>. The final quote is confirmed after manual review.</p><p><a href="${escapeHtml(request.statusUrl)}">Track your service request</a></p><p style="color:#64748b;font-size:12px">Keep this private link because it provides access to your request status.</p></div>`,
         });
     } catch (error) {
         console.error('[Service Requests] email notification failed', error);
@@ -117,16 +132,17 @@ export async function POST(request: Request) {
             accessStatus: data.accessStatus || undefined,
             budgetCents,
             selectedIssues: data.issues as Prisma.InputJsonValue,
-            ...(snapshot ? { auditSnapshot: snapshot } : {}),
+            ...(snapshot ? { auditSnapshot: { before: snapshot } as Prisma.InputJsonValue } : {}),
             scanScore: data.score,
             estimateMinCents: estimate.min * 100,
             estimateMaxCents: estimate.max * 100,
             currency: estimate.currency,
             customerMessage: data.message || undefined,
         },
-        select: { reference: true },
+        select: { reference: true, customerEmail: true },
     });
 
-    await notifyAdmin({ reference: created.reference, name: data.name, email: data.email, source: data.source, target: data.target, estimateMin: estimate.min, estimateMax: estimate.max, issueCount: data.issues.length });
-    return NextResponse.json({ reference: created.reference, estimate: { min: estimate.min, max: estimate.max, currency: estimate.currency } }, { status: 201, headers: noStoreHeaders });
+    const statusUrl = serviceStatusUrl(created.reference, created.customerEmail);
+    await notifyParties({ reference: created.reference, name: data.name, email: data.email, source: data.source, target: data.target, estimateMin: estimate.min, estimateMax: estimate.max, issueCount: data.issues.length, statusUrl });
+    return NextResponse.json({ reference: created.reference, statusUrl, estimate: { min: estimate.min, max: estimate.max, currency: estimate.currency } }, { status: 201, headers: noStoreHeaders });
 }
