@@ -107,8 +107,8 @@ const safeLookup: LookupFunction = (hostname, options, callback) => {
             callback(error, '', family);
             return;
         }
-        if (isBlockedIp(address)) {
-            const blocked = Object.assign(new Error('Target resolved to a private or reserved IP address.'), { code: 'EACCES' });
+        if (!address || isBlockedIp(address)) {
+            const blocked = Object.assign(new Error('Target resolved to an invalid, private or reserved IP address.'), { code: 'EACCES' });
             callback(blocked, '', family);
             return;
         }
@@ -148,6 +148,7 @@ async function requestPage(initialUrl: URL): Promise<RawPage> {
             const req = requester(url, {
                 method: 'GET',
                 lookup: safeLookup,
+                autoSelectFamily: false,
                 headers: {
                     Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.2',
                     'Accept-Encoding': 'identity',
