@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { parseMonitoringState } from '@/modules/service-requests/monitoring';
 import { verifyServiceStatusToken } from '@/modules/service-requests/status-access';
 import { customerServiceAction } from './actions';
 
@@ -17,7 +18,7 @@ type Props = {
 };
 
 function money(cents: number | null | undefined, currency = 'EUR') {
-    if (!cents) return '-';
+    if (cents === null || cents === undefined) return '-';
     return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(cents / 100);
 }
 
@@ -35,6 +36,12 @@ function sourceLabel(value: string) {
     return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function when(value: string | undefined) {
+    if (!value) return '-';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('en-GB');
+}
+
 const steps = ['NEW', 'REVIEWING', 'QUOTE_SENT', 'ACCEPTED', 'IN_PROGRESS', 'WAITING_CUSTOMER', 'COMPLETED'] as const;
 
 export default async function ServiceRequestStatusPage({ params, searchParams }: Props) {
@@ -48,8 +55,7 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
     const after = snapshot.after;
     const beforeScore = request.scanScore ?? scoreFrom(before);
     const afterScore = scoreFrom(after);
-    const monitoring = object((snapshot.monitoring ?? null) as Prisma.JsonValue | null);
-    const monitoringRequested = monitoring.requested === true;
+    const monitoring = parseMonitoringState(request.auditSnapshot);
     const selectedIssues = Array.isArray(request.selectedIssues) ? request.selectedIssues.filter((item): item is Prisma.JsonObject => Boolean(item && typeof item === 'object' && !Array.isArray(item))) : [];
     const stepIndex = request.status === 'REJECTED' ? -1 : Math.max(0, steps.indexOf(request.status as typeof steps[number]));
 
@@ -112,8 +118,24 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
                     <section className="border-b border-border/80 py-6">
                         <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-sky-500">Website care</p>
                         <h2 className="mt-2 text-xl font-black">Keep the result healthy</h2>
-                        {monitoringRequested ? <p className="mt-3 text-sm text-emerald-500">Monitoring request received: {String(monitoring.cadence ?? 'monthly')} checks.</p> : (
+                        {!monitoring ? (
                             <form action={customerServiceAction} className="mt-4 flex flex-wrap items-end gap-3"><input type="hidden" name="reference" value={request.reference} /><input type="hidden" name="token" value={token} /><input type="hidden" name="action" value="request_monitoring" /><label className="text-xs text-muted-foreground">Frequency<select name="cadence" defaultValue="monthly" className="ml-2 border border-border bg-background px-3 py-2 text-foreground"><option value="monthly">Monthly</option><option value="weekly">Weekly</option></select></label><button className="border border-foreground px-4 py-2 text-xs font-bold">Request monitoring</button></form>
+                        ) : (
+                            <div className="mt-4 border-y border-border/60">
+                                <div className="grid gap-3 py-4 sm:grid-cols-[120px_1fr_1fr_1fr]">
+                                    <div><p className="font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground">Status</p><p className="mt-1 text-xs font-bold">{monitoring.status}</p></div>
+                                    <div><p className="font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground">Cadence</p><p className="mt-1 text-xs font-semibold">{monitoring.cadence.toLowerCase()}</p></div>
+                                    <div><p className="font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground">Last check</p><p className="mt-1 text-xs font-semibold">{when(monitoring.lastRunAt)}</p></div>
+                                    <div><p className="font-mono text-[8px] uppercase tracking-[0.12em] text-muted-foreground">Next check</p><p className="mt-1 text-xs font-semibold">{monitoring.status === 'ACTIVE' ? when(monitoring.nextRunAt) : '-'}</p></div>
+                                </div>
+                                <div className="border-t border-border/50 py-4 text-xs leading-5 text-muted-foreground">
+                                    {monitoring.status === 'REQUESTED' ? 'Your monitoring request is awaiting review. Recurring checks do not start until the plan is activated.' : null}
+                                    {monitoring.status === 'ACTIVE' ? `Monitoring is active${monitoring.priceCents !== undefined ? ` at ${money(monitoring.priceCents, request.currency)} per billing period` : ''}. Latest score: ${monitoring.lastScore ?? monitoring.baselineScore ?? '-'}/100.` : null}
+                                    {monitoring.status === 'PAUSED' ? 'Recurring checks are paused. No scheduled run will occur until the plan is activated again.' : null}
+                                    {monitoring.status === 'CANCELLED' ? 'Monitoring has been cancelled. No further scheduled checks will run.' : null}
+                                    {monitoring.lastError ? <span className="mt-2 block text-rose-500">Last monitoring error: {monitoring.lastError}</span> : null}
+                                </div>
+                            </div>
                         )}
                     </section>
                 ) : null}
