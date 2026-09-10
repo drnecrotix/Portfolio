@@ -50,7 +50,7 @@ export default async function ServiceRequestsAdminPage() {
             </header>
 
             {requests.length === 0 ? <p className="border-y border-dashed border-white/10 py-16 text-center text-sm text-white/35">No service requests yet.</p> : (
-                <div className="border-y border-white/10">
+                <div id="service-request-list" className="scroll-mt-24 border-y border-white/10">
                     {requests.map((request, index) => {
                         const selectedIssues = issues(request.selectedIssues);
                         const snapshot = object(request.auditSnapshot);
@@ -68,6 +68,10 @@ export default async function ServiceRequestsAdminPage() {
                                 </summary>
 
                                 <div className="border-t border-white/5 pb-7 pt-5 md:pl-[150px]">
+                                    <div className="mb-5 flex flex-wrap items-center gap-3">
+                                        <a href="/admin/service-requests#service-request-list" className="inline-flex items-center border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition hover:border-white/30 hover:text-white">← Back to service requests</a>
+                                        <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-white/25">{request.reference}</span>
+                                    </div>
                                     <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_390px]">
                                         <div>
                                             <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[9px] uppercase tracking-[0.12em] text-white/35">
