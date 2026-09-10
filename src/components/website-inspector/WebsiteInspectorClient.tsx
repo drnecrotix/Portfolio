@@ -86,7 +86,7 @@ export function WebsiteInspectorClient() {
             <div className="mx-auto max-w-6xl">
                 <header className="max-w-4xl">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
-                        <span className="text-sky-500">NecrotixLab</span><span aria-hidden="true">/</span><span>Website Inspector</span><span aria-hidden="true">/</span><span>v1.2.60</span>
+                        <span className="text-sky-500">NecrotixLab</span><span aria-hidden="true">/</span><span>Website Inspector</span><span aria-hidden="true">/</span><span>v1.2.61</span>
                     </div>
                     <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Website Inspector</h1>
                     <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">A lightweight technical inspection of one public page with bounded companion probes for TLS, redirects, security headers, SEO discovery, privacy, caching, technology hints and WordPress signals.</p>
