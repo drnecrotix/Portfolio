@@ -1,29 +1,29 @@
 'use client';
 
 import { useMemo, useState, type FormEvent } from 'react';
-import { AlertTriangle, CheckCircle2, ExternalLink, Gauge, Globe2, Loader2, Search, ShieldCheck, XCircle } from 'lucide-react';
+import { ExternalLink, Loader2, Search, ShieldCheck } from 'lucide-react';
 import type { WebsiteInspection, WebsiteInspectorCategory, WebsiteInspectorCheck } from '@/modules/website-inspector/types';
 
-const categories: Array<{ id: WebsiteInspectorCategory; label: string }> = [
-    { id: 'delivery', label: 'Delivery' },
-    { id: 'security', label: 'Security headers' },
-    { id: 'seo', label: 'SEO basics' },
-    { id: 'privacy', label: 'Privacy signals' },
-    { id: 'performance', label: 'Response sample' },
+const categories: Array<{ id: WebsiteInspectorCategory; label: string; code: string }> = [
+    { id: 'delivery', label: 'Delivery', code: '01' },
+    { id: 'security', label: 'Security headers', code: '02' },
+    { id: 'seo', label: 'SEO basics', code: '03' },
+    { id: 'privacy', label: 'Privacy signals', code: '04' },
+    { id: 'performance', label: 'Response sample', code: '05' },
 ];
 
-function statusClasses(status: WebsiteInspectorCheck['status']) {
-    if (status === 'pass') return 'border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-600 dark:text-emerald-400';
-    if (status === 'fail') return 'border-rose-500/20 bg-rose-500/[0.06] text-rose-600 dark:text-rose-400';
-    if (status === 'warning') return 'border-amber-500/20 bg-amber-500/[0.06] text-amber-600 dark:text-amber-400';
-    return 'border-border/70 bg-foreground/[0.025] text-muted-foreground';
+function statusText(status: WebsiteInspectorCheck['status']) {
+    if (status === 'pass') return 'text-emerald-600 dark:text-emerald-400';
+    if (status === 'fail') return 'text-rose-600 dark:text-rose-400';
+    if (status === 'warning') return 'text-amber-600 dark:text-amber-400';
+    return 'text-muted-foreground';
 }
 
-function StatusIcon({ status }: { status: WebsiteInspectorCheck['status'] }) {
-    if (status === 'pass') return <CheckCircle2 className="size-4" />;
-    if (status === 'fail') return <XCircle className="size-4" />;
-    if (status === 'warning') return <AlertTriangle className="size-4" />;
-    return <Gauge className="size-4" />;
+function statusMark(status: WebsiteInspectorCheck['status']) {
+    if (status === 'pass') return 'PASS';
+    if (status === 'fail') return 'FAIL';
+    if (status === 'warning') return 'WARN';
+    return 'INFO';
 }
 
 export function WebsiteInspectorClient() {
@@ -39,11 +39,21 @@ export function WebsiteInspectorClient() {
         return map;
     }, [inspection]);
 
+    const totals = useMemo(() => {
+        const checks = inspection?.checks ?? [];
+        return {
+            pass: checks.filter((check) => check.status === 'pass').length,
+            warning: checks.filter((check) => check.status === 'warning').length,
+            fail: checks.filter((check) => check.status === 'fail').length,
+            info: checks.filter((check) => check.status === 'info').length,
+        };
+    }, [inspection]);
+
     async function inspect(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (loading || url.trim().length < 3) return;
         setLoading(true);
-        setMessage('Inspecting one public page request…');
+        setMessage('Inspecting one public page request...');
         try {
             const response = await fetch('/api/website-inspector', {
                 method: 'POST',
@@ -65,116 +75,133 @@ export function WebsiteInspectorClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
-                <header className="max-w-3xl">
-                    <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-sky-500">NecrotixLab · Website tool</p>
-                    <h1 className="mt-5 text-4xl font-black tracking-[-0.05em] sm:text-6xl">Website Inspector</h1>
-                    <p className="mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                        A lightweight first-pass audit of one public page: delivery, security headers, SEO basics, privacy signals and response timing. No browser automation and no third-party scanning API.
+                <header className="max-w-4xl">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
+                        <span className="text-sky-500">NecrotixLab</span>
+                        <span aria-hidden="true">/</span>
+                        <span>Website Inspector</span>
+                        <span aria-hidden="true">/</span>
+                        <span>v1.2.56</span>
+                    </div>
+                    <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Website Inspector</h1>
+                    <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
+                        A lightweight technical inspection of one public page. The report focuses on delivery, security headers, SEO basics, privacy signals and a single response-time sample.
                     </p>
                 </header>
 
-                <section className="mt-10 rounded-[2rem] border border-sky-500/20 bg-sky-500/[0.04] p-5 sm:p-7">
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sky-500/15 pb-5">
-                        <div className="flex items-center gap-3">
-                            <span className="flex size-11 items-center justify-center rounded-2xl border border-sky-500/25 bg-background"><Globe2 className="size-5 text-sky-500" /></span>
-                            <div>
-                                <h2 className="font-semibold">Inspect a public website</h2>
-                                <p className="text-xs leading-5 text-muted-foreground">Single request · 512 KB cap · private networks blocked</p>
-                            </div>
-                        </div>
-                        <span className="rounded-full border border-border/70 px-3 py-1 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">v1 lightweight</span>
-                    </div>
-
-                    <form onSubmit={inspect} className="mt-6 flex flex-col gap-3 sm:flex-row">
-                        <label className="relative min-w-0 flex-1">
-                            <span className="sr-only">Website URL</span>
-                            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                            <input
-                                value={url}
-                                onChange={(event) => setUrl(event.target.value)}
-                                autoComplete="url"
-                                inputMode="url"
-                                placeholder="https://example.com"
-                                className="w-full rounded-xl border border-border bg-background/80 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-sky-500/60"
-                            />
+                <section className="mt-10 border-y border-border/80 py-5 sm:py-6">
+                    <form onSubmit={inspect} className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                        <label className="block min-w-0">
+                            <span className="mb-2 block font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Target URL</span>
+                            <span className="relative block">
+                                <Search className="absolute left-0 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <input
+                                    value={url}
+                                    onChange={(event) => setUrl(event.target.value)}
+                                    autoComplete="url"
+                                    inputMode="url"
+                                    placeholder="https://example.com"
+                                    className="w-full border-0 border-b border-border bg-transparent py-3 pl-7 pr-3 text-sm outline-none transition placeholder:text-muted-foreground/55 focus:border-sky-500"
+                                />
+                            </span>
                         </label>
-                        <button type="submit" disabled={loading || url.trim().length < 3} className="inline-flex items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40">
+                        <button
+                            type="submit"
+                            disabled={loading || url.trim().length < 3}
+                            className="inline-flex h-11 items-center justify-center gap-2 border border-foreground bg-foreground px-5 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-foreground disabled:hover:text-background"
+                        >
                             {loading ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-                            {loading ? 'Inspecting…' : 'Inspect site'}
+                            {loading ? 'Inspecting...' : 'Inspect site'}
                         </button>
                     </form>
+                    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+                        <span>1 page request</span>
+                        <span>512 KB HTML cap</span>
+                        <span>8 s timeout</span>
+                        <span>private networks blocked</span>
+                    </div>
                     {message ? <p className="mt-4 text-xs leading-5 text-muted-foreground" role="status">{message}</p> : null}
                 </section>
 
                 {inspection ? (
-                    <section className="mt-8 space-y-6">
-                        <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-                            <div className="rounded-[2rem] border border-border/70 bg-card/35 p-6">
+                    <section className="mt-10">
+                        <div className="grid border-t border-border/80 md:grid-cols-[150px_minmax(0,1fr)_260px]">
+                            <div className="border-b border-border/80 py-6 md:border-b-0 md:border-r md:pr-6">
                                 <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Hygiene score</p>
-                                <div className="mt-5 flex items-end gap-3">
-                                    <span className="text-6xl font-black tracking-[-0.07em]">{inspection.score}</span>
-                                    <span className="mb-1 rounded-full border border-border px-3 py-1 font-mono text-xs font-bold">Grade {inspection.grade}</span>
+                                <div className="mt-2 flex items-baseline gap-2">
+                                    <span className="text-5xl font-black tracking-[-0.07em]">{inspection.score}</span>
+                                    <span className="font-mono text-xs font-bold text-muted-foreground">/100</span>
                                 </div>
-                                <p className="mt-3 text-xs leading-5 text-muted-foreground">A compact heuristic for the checks below - not a vulnerability rating or compliance certification.</p>
+                                <p className="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.16em]">Grade {inspection.grade}</p>
                             </div>
 
-                            <div className="rounded-[2rem] border border-border/70 bg-card/35 p-6">
-                                <div className="flex flex-wrap items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Final page</p>
-                                        <h2 className="mt-2 break-words text-xl font-bold">{inspection.page.title || new URL(inspection.finalUrl).hostname}</h2>
-                                        <a href={inspection.finalUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex max-w-full items-center gap-1.5 break-all text-xs font-semibold text-sky-500 hover:underline">
-                                            {inspection.finalUrl}<ExternalLink className="size-3 shrink-0" />
-                                        </a>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <span className="rounded-full border border-border px-3 py-1 font-mono text-[10px]">HTTP {inspection.statusCode}</span>
-                                        <span className="rounded-full border border-border px-3 py-1 font-mono text-[10px]">{inspection.responseTimeMs} ms</span>
-                                    </div>
-                                </div>
-                                <div className="mt-5 grid gap-3 border-t border-border/60 pt-5 sm:grid-cols-3">
-                                    <Metric label="Content" value={inspection.page.contentType?.split(';')[0] || 'Unknown'} />
-                                    <Metric label="Language" value={inspection.page.language || 'Not declared'} />
-                                    <Metric label="HTML sample" value={`${Math.max(1, Math.round(inspection.page.capturedBytes / 1024))} KB${inspection.page.truncated ? '+' : ''}`} />
-                                </div>
+                            <div className="min-w-0 border-b border-border/80 py-6 md:border-b-0 md:border-r md:px-6">
+                                <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Final page</p>
+                                <h2 className="mt-2 break-words text-xl font-bold tracking-[-0.02em]">{inspection.page.title || new URL(inspection.finalUrl).hostname}</h2>
+                                <a href={inspection.finalUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex max-w-full items-center gap-1.5 break-all font-mono text-[10px] font-semibold text-sky-500 hover:underline">
+                                    {inspection.finalUrl}<ExternalLink className="size-3 shrink-0" />
+                                </a>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-4 py-6 md:pl-6">
+                                <Metric label="HTTP" value={String(inspection.statusCode)} />
+                                <Metric label="Response" value={`${inspection.responseTimeMs} ms`} />
+                                <Metric label="Language" value={inspection.page.language || 'Not declared'} />
+                                <Metric label="HTML" value={`${Math.max(1, Math.round(inspection.page.capturedBytes / 1024))} KB${inspection.page.truncated ? '+' : ''}`} />
                             </div>
                         </div>
 
-                        <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="flex flex-wrap gap-x-5 gap-y-2 border-y border-border/80 py-3 font-mono text-[9px] font-bold uppercase tracking-[0.14em]">
+                            <span className="text-emerald-600 dark:text-emerald-400">{totals.pass} pass</span>
+                            <span className="text-amber-600 dark:text-amber-400">{totals.warning} warn</span>
+                            <span className="text-rose-600 dark:text-rose-400">{totals.fail} fail</span>
+                            <span className="text-muted-foreground">{totals.info} info</span>
+                            <span className="ml-auto normal-case tracking-normal text-muted-foreground">Heuristic summary, not a vulnerability rating.</span>
+                        </div>
+
+                        <div>
                             {categories.map((category) => {
                                 const checks = grouped.get(category.id) ?? [];
                                 if (!checks.length) return null;
                                 return (
-                                    <article key={category.id} className="overflow-hidden rounded-2xl border border-border/70 bg-card/25">
-                                        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
-                                            <h3 className="text-sm font-bold">{category.label}</h3>
-                                            <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">{checks.length} checks</span>
-                                        </div>
-                                        <div className="divide-y divide-border/60">
-                                            {checks.map((check) => (
-                                                <div key={check.id} className="flex gap-3 px-5 py-4">
-                                                    <span className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl border ${statusClasses(check.status)}`}><StatusIcon status={check.status} /></span>
-                                                    <div className="min-w-0">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <p className="text-sm font-semibold">{check.label}</p>
-                                                            <span className={`rounded-full border px-2 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wide ${statusClasses(check.status)}`}>{check.status}</span>
-                                                        </div>
-                                                        <p className="mt-1 text-xs leading-5 text-muted-foreground">{check.summary}</p>
-                                                    </div>
+                                    <section key={category.id} className="grid border-b border-border/80 lg:grid-cols-[200px_minmax(0,1fr)]">
+                                        <header className="py-5 lg:border-r lg:border-border/80 lg:pr-6">
+                                            <div className="flex items-baseline gap-3">
+                                                <span className="font-mono text-[9px] font-bold text-sky-500">{category.code}</span>
+                                                <h3 className="text-sm font-bold">{category.label}</h3>
+                                            </div>
+                                            <p className="mt-1 pl-7 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">{checks.length} checks</p>
+                                        </header>
+
+                                        <div className="border-t border-border/60 lg:border-t-0 lg:pl-6">
+                                            {checks.map((check, index) => (
+                                                <div
+                                                    key={check.id}
+                                                    className={`grid gap-2 py-4 sm:grid-cols-[64px_minmax(150px,220px)_minmax(0,1fr)] sm:gap-4 ${index > 0 ? 'border-t border-border/60' : ''}`}
+                                                >
+                                                    <span className={`font-mono text-[9px] font-black tracking-[0.12em] ${statusText(check.status)}`}>{statusMark(check.status)}</span>
+                                                    <p className="text-sm font-semibold">{check.label}</p>
+                                                    <p className="text-xs leading-5 text-muted-foreground">{check.summary}</p>
                                                 </div>
                                             ))}
                                         </div>
-                                    </article>
+                                    </section>
                                 );
                             })}
                         </div>
                     </section>
-                ) : null}
+                ) : (
+                    <section className="mt-12 border-t border-border/80 pt-5">
+                        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Report area</p>
+                        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">Enter a public website above. Results will appear here as a compact technical report instead of a dashboard.</p>
+                    </section>
+                )}
 
-                <div className="mt-10 flex items-start gap-3 rounded-2xl border border-border/70 bg-card/25 p-5 text-xs leading-5 text-muted-foreground">
-                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
-                    <p>Website Inspector analyzes only the public response it receives. It does not log in, bypass access controls, crawl the whole domain, run exploit payloads or certify security, privacy, accessibility or regulatory compliance. Submitted URLs and reports are not stored by this tool.</p>
-                </div>
+                <footer className="mt-12 border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">
+                    <p className="max-w-4xl">
+                        Website Inspector analyzes only the public response it receives. It does not log in, bypass access controls, crawl the whole domain, run exploit payloads or certify security, privacy, accessibility or regulatory compliance. Submitted URLs and reports are not stored by this tool.
+                    </p>
+                </footer>
             </div>
         </main>
     );
@@ -182,7 +209,7 @@ export function WebsiteInspectorClient() {
 
 function Metric({ label, value }: { label: string; value: string }) {
     return (
-        <div>
+        <div className="min-w-0">
             <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
             <p className="mt-1 break-words text-sm font-semibold">{value}</p>
         </div>
