@@ -30,14 +30,23 @@ function bounded(value: unknown, max: number, label: string) {
     return result;
 }
 
+function isAbsoluteHttpUrl(value: string) {
+    return /^https?:\/\//i.test(value);
+}
+
 function normalizeHref(value: unknown, isExternal: boolean, isDropdown: boolean) {
     const href = bounded(value, 2048, 'Navigation URL');
     if (isDropdown && !href) return '#';
     if (!href || /[\u0000-\u001f\u007f]/.test(href)) throw new Error('A valid navigation URL is required.');
     if (isExternal) {
-        const parsed = new URL(href);
+        let parsed: URL;
+        try {
+            parsed = new URL(href);
+        } catch {
+            throw new Error('External navigation URLs must be valid absolute HTTP or HTTPS URLs.');
+        }
         if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
-            throw new Error('External navigation URLs must use HTTP or HTTPS.');
+            throw new Error('External navigation URLs must use HTTP or HTTPS and cannot contain credentials.');
         }
         return parsed.toString();
     }
@@ -49,11 +58,12 @@ function normalizeEditable(input: EditableNavigationItem | NewNavigationItem) {
     const label = bounded(input.label, 80, 'Label');
     if (!label) throw new Error('Navigation label is required.');
     const isDropdown = input.itemType === 'dropdown';
-    const isExternal = !isDropdown && Boolean(input.isExternal);
+    const rawHref = bounded(input.href, 2048, 'Navigation URL');
+    const isExternal = !isDropdown && (Boolean(input.isExternal) || isAbsoluteHttpUrl(rawHref));
     const requestedStyle = String(input.dropdownStyle || 'auto').trim().toLowerCase();
     return {
         label,
-        href: normalizeHref(input.href, isExternal, isDropdown),
+        href: normalizeHref(rawHref, isExternal, isDropdown),
         parentId: input.parentId || null,
         location: 'primary',
         isVisible: Boolean(input.isVisible),
