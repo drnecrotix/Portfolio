@@ -4,28 +4,42 @@ import { useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Loader2, Search } from 'lucide-react';
 import { WebHealthNav } from '@/components/web-health/WebHealthUi';
-import type { SeoIntelligenceMode } from '@/modules/seo-intelligence/core';
+import type { SeoIntelligenceMode, SeoScoreBreakdown } from '@/modules/seo-intelligence/core';
 
-type KeywordRow = { keyword: string; searchVolume: number; cpc: number; competition: number; competitionLevel: string };
-type SerpRow = { rank: number; title: string; domain: string; url: string; isTarget: boolean };
-type CompetitorRow = { domain: string; intersections: number; avgPosition: number; etv: number; keywords: number };
-type BacklinkSummary = { target: string; rank: number; backlinks: number; referringDomains: number; referringPages: number; brokenBacklinks: number };
-type SeoResult = { mode: SeoIntelligenceMode; rows?: KeywordRow[] | SerpRow[] | CompetitorRow[]; summary?: BacklinkSummary };
+type Finding = { id: string; severity: 'fail' | 'warning' | 'info'; label: string; summary: string; recommendation?: string };
+type OverviewPage = { url: string; statusCode: number; title: string; words: number; h1: number; internalLinks: number; externalLinks: number };
+type KeywordRow = { keyword: string; occurrences: number; pages: number; coverage: number; relevance: string; cannibalization: boolean };
+type CompetitorRow = { domain: string; isTarget: boolean; score: number; title: string; words: number; h1: number; schema: number; keywordOverlap: number };
+type LinkRow = { url: string; internalLinks: number; externalLinks: number; genericAnchors: number; nofollowLinks: number };
+type LinkSummary = { internalLinks: number; externalLinks: number; uniqueInternalTargets: number; externalDomains: number; brokenInternal: number; genericAnchors: number; nofollowLinks: number };
+type SeoResult = {
+    mode: SeoIntelligenceMode;
+    provider: 'native';
+    score?: number;
+    breakdown?: SeoScoreBreakdown;
+    findings?: Finding[];
+    pages?: OverviewPage[];
+    rows?: KeywordRow[] | CompetitorRow[] | LinkRow[];
+    summary?: LinkSummary;
+    brokenTargets?: string[];
+    pagesAnalyzed?: number;
+    cannibalizationCount?: number;
+    scope?: string;
+};
 
-const modes: Array<{ id: SeoIntelligenceMode; label: string; placeholder: string; help: string }> = [
-    { id: 'keywords', label: 'Keyword Research', placeholder: 'e.g. уеб дизайн', help: 'Long-tail keyword ideas with Bulgarian search-volume and CPC signals.' },
-    { id: 'serp', label: 'SERP / Rank', placeholder: 'e.g. изработка на сайт', help: 'Live Google organic results for Bulgaria. Add a target domain to highlight its ranking.' },
-    { id: 'competitors', label: 'Competitors', placeholder: 'e.g. example.bg', help: 'Organic-search competitors sharing ranking keywords with the target domain.' },
-    { id: 'backlinks', label: 'Backlinks', placeholder: 'e.g. example.bg', help: 'A compact backlink-profile overview for a domain or subdomain.' },
+const modes: Array<{ id: SeoIntelligenceMode; label: string; help: string }> = [
+    { id: 'overview', label: 'SEO Audit', help: 'Bounded technical, on-page, content, indexability and structured-data analysis.' },
+    { id: 'keywords', label: 'Keyword Intelligence', help: 'Extracts prominent topics and phrases from the site and flags cross-page intent overlap.' },
+    { id: 'competitors', label: 'Competitor Compare', help: 'Compares your homepage with up to three competitor domains you provide.' },
+    { id: 'links', label: 'Link Intelligence', help: 'Inspects internal/outbound links, anchor quality and a bounded sample of broken internal targets.' },
 ];
 
 const integer = new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 0 });
-const decimal = new Intl.NumberFormat('bg-BG', { maximumFractionDigits: 2 });
 
 export function SeoIntelligenceClient() {
-    const [mode, setMode] = useState<SeoIntelligenceMode>('keywords');
+    const [mode, setMode] = useState<SeoIntelligenceMode>('overview');
     const [query, setQuery] = useState('');
-    const [target, setTarget] = useState('');
+    const [competitors, setCompetitors] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [result, setResult] = useState<SeoResult | null>(null);
@@ -33,15 +47,16 @@ export function SeoIntelligenceClient() {
 
     async function submit(event: FormEvent) {
         event.preventDefault();
-        if (loading || query.trim().length < 2) return;
+        if (loading || query.trim().length < 3) return;
         setLoading(true);
         setError('');
         setResult(null);
         try {
+            const competitorDomains = competitors.split(/[,;\n]+/).map((value) => value.trim()).filter(Boolean).slice(0, 3);
             const response = await fetch('/api/seo-intelligence', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ mode, query, target: mode === 'serp' ? target : '' }),
+                body: JSON.stringify({ mode, query, competitors: mode === 'competitors' ? competitorDomains : [] }),
             });
             const payload = await response.json().catch(() => ({})) as { result?: SeoResult; error?: string };
             if (!response.ok || !payload.result) throw new Error(payload.error || 'SEO Intelligence request failed.');
@@ -59,7 +74,7 @@ export function SeoIntelligenceClient() {
                 <header className="max-w-4xl">
                     <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / SEO Intelligence</div>
                     <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">SEO Intelligence</h1>
-                    <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">Research Bulgarian search demand, live Google positions, organic competitors and backlink signals from one compact workspace. Default market: Bulgaria / Bulgarian.</p>
+                    <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">Run native SEO analysis directly from NecrotixLab. No external SEO provider, API key, credits or subscription is required.</p>
                     <WebHealthNav active="seo" />
                 </header>
 
@@ -75,18 +90,18 @@ export function SeoIntelligenceClient() {
 
                     <form onSubmit={submit} className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <label className="text-xs text-muted-foreground">{mode === 'keywords' || mode === 'serp' ? 'Keyword' : 'Domain'}
-                                <input value={query} onChange={(event) => setQuery(event.target.value)} required minLength={2} maxLength={700} placeholder={current.placeholder} className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" />
+                            <label className="text-xs text-muted-foreground">Website URL or domain
+                                <input value={query} onChange={(event) => setQuery(event.target.value)} required minLength={3} maxLength={2048} placeholder="example.bg" className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" />
                             </label>
-                            {mode === 'serp' ? <label className="text-xs text-muted-foreground">Target domain <span className="opacity-60">optional</span>
-                                <input value={target} onChange={(event) => setTarget(event.target.value)} maxLength={255} placeholder="necrotixlab.com" className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" />
+                            {mode === 'competitors' ? <label className="text-xs text-muted-foreground">Competitor domains <span className="opacity-60">up to 3, comma separated</span>
+                                <input value={competitors} onChange={(event) => setCompetitors(event.target.value)} required placeholder="competitor1.bg, competitor2.bg" className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" />
                             </label> : <div className="hidden sm:block" />}
                         </div>
                         <button disabled={loading} className="inline-flex h-11 items-center justify-center gap-2 border border-foreground bg-foreground px-5 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground disabled:opacity-50">
-                            {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}{loading ? 'Researching...' : 'Run research'}
+                            {loading ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}{loading ? 'Analyzing...' : 'Run analysis'}
                         </button>
                     </form>
-                    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground"><span>Market: Bulgaria (2100)</span><span>Language: Bulgarian (bg)</span><span>Paid API calls are rate-limited.</span><Link href="/services/pricing" className="font-semibold text-sky-500 hover:underline">Professional SEO services</Link></div>
+                    <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground"><span>Native mode</span><span>No API key</span><span>No credits</span><span>Bounded scans are rate-limited to protect server resources.</span><Link href="/services/pricing" className="font-semibold text-sky-500 hover:underline">Professional SEO services</Link></div>
                 </section>
 
                 {error ? <p role="alert" className="mt-6 border-l-2 border-rose-500 pl-4 text-sm text-rose-600 dark:text-rose-400">{error}</p> : null}
@@ -96,29 +111,29 @@ export function SeoIntelligenceClient() {
     );
 }
 
+function ScoreRow({ label, value }: { label: string; value: number }) {
+    return <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 border-t border-border/60 py-3 first:border-t-0"><span className="text-sm text-muted-foreground">{label}</span><strong className="font-mono text-sm">{integer.format(value)}/100</strong></div>;
+}
+
 function Results({ result }: { result: SeoResult }) {
-    if (result.mode === 'backlinks' && result.summary) {
-        const summary = result.summary;
-        const metrics = [
-            ['Domain rank', summary.rank],
-            ['Backlinks', summary.backlinks],
-            ['Referring domains', summary.referringDomains],
-            ['Referring pages', summary.referringPages],
-            ['Broken backlinks', summary.brokenBacklinks],
-        ];
-        return <section className="mt-8"><h2 className="text-xl font-black">Backlink overview</h2><div className="mt-4 border-y border-border/80">{metrics.map(([label, value], index) => <div key={String(label)} className={`grid grid-cols-[minmax(0,1fr)_auto] gap-4 py-3 ${index ? 'border-t border-border/60' : ''}`}><span className="text-sm text-muted-foreground">{label}</span><strong className="font-mono text-sm">{integer.format(Number(value))}</strong></div>)}</div></section>;
+    if (result.mode === 'overview' && result.breakdown) {
+        const breakdown = result.breakdown;
+        const categories: Array<[string, number]> = [['Technical', breakdown.technical], ['On-page', breakdown.onPage], ['Content', breakdown.content], ['Internal links', breakdown.internalLinks], ['Indexability', breakdown.indexability], ['Structured data', breakdown.structuredData]];
+        return <section className="mt-8 space-y-8"><div><div className="flex items-end gap-3"><strong className="font-mono text-5xl tracking-[-0.06em]">{result.score ?? 0}</strong><span className="pb-1 text-sm text-muted-foreground">/ 100 native SEO score</span></div><div className="mt-5 border-y border-border/80">{categories.map(([label, value]) => <ScoreRow key={label} label={label} value={value} />)}</div></div><div><h2 className="text-xl font-black">Findings</h2><div className="mt-4 border-y border-border/80">{(result.findings ?? []).map((finding, index) => <div key={finding.id} className={`grid gap-2 py-4 sm:grid-cols-[92px_minmax(0,1fr)] ${index ? 'border-t border-border/60' : ''}`}><span className={`font-mono text-[9px] font-bold uppercase tracking-[0.12em] ${finding.severity === 'fail' ? 'text-rose-500' : finding.severity === 'warning' ? 'text-amber-500' : 'text-sky-500'}`}>{finding.severity}</span><div><p className="text-sm font-bold">{finding.label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{finding.summary}</p>{finding.recommendation ? <p className="mt-1 text-xs leading-5">{finding.recommendation}</p> : null}</div></div>)}</div></div>{result.pages?.length ? <div><h2 className="text-xl font-black">Pages sampled</h2><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"><tr className="border-b border-border"><th className="py-3 pr-4">Page</th><th className="py-3 pr-4 text-right">HTTP</th><th className="py-3 pr-4 text-right">Words</th><th className="py-3 pr-4 text-right">H1</th><th className="py-3 text-right">Links</th></tr></thead><tbody>{result.pages.map((page) => <tr key={page.url} className="border-b border-border/60"><td className="max-w-[420px] truncate py-3 pr-4" title={page.url}>{page.title || page.url}</td><td className="py-3 pr-4 text-right font-mono">{page.statusCode || '-'}</td><td className="py-3 pr-4 text-right font-mono">{integer.format(page.words)}</td><td className="py-3 pr-4 text-right font-mono">{page.h1}</td><td className="py-3 text-right font-mono">{page.internalLinks + page.externalLinks}</td></tr>)}</tbody></table></div></div> : null}<p className="text-xs leading-5 text-muted-foreground">{result.scope}</p></section>;
     }
 
     const rows = result.rows ?? [];
-    if (!rows.length) return <p className="mt-8 text-sm text-muted-foreground">No matching results were returned for this query.</p>;
+    if (!rows.length) return <p className="mt-8 text-sm text-muted-foreground">No useful signals were extracted from the bounded sample.</p>;
 
     if (result.mode === 'keywords') {
-        return <section className="mt-8"><h2 className="text-xl font-black">Keyword opportunities</h2><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[680px] border-collapse text-left text-sm"><thead className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"><tr className="border-b border-border"><th className="py-3 pr-4">Keyword</th><th className="py-3 pr-4 text-right">Volume</th><th className="py-3 pr-4 text-right">CPC (USD)</th><th className="py-3 text-right">Competition</th></tr></thead><tbody>{(rows as KeywordRow[]).map((row) => <tr key={row.keyword} className="border-b border-border/60"><td className="py-3 pr-4 font-medium">{row.keyword}</td><td className="py-3 pr-4 text-right font-mono">{integer.format(row.searchVolume)}</td><td className="py-3 pr-4 text-right font-mono">${decimal.format(row.cpc)}</td><td className="py-3 text-right font-mono">{row.competitionLevel || decimal.format(row.competition)}</td></tr>)}</tbody></table></div></section>;
+        return <section className="mt-8"><div className="flex flex-wrap items-baseline justify-between gap-3"><h2 className="text-xl font-black">Keyword map</h2><span className="text-xs text-muted-foreground">{result.pagesAnalyzed ?? 0} pages analyzed · {result.cannibalizationCount ?? 0} overlap flags</span></div><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-left text-sm"><thead className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"><tr className="border-b border-border"><th className="py-3 pr-4">Keyword / phrase</th><th className="py-3 pr-4 text-right">Occurrences</th><th className="py-3 pr-4 text-right">Pages</th><th className="py-3 pr-4 text-right">Coverage</th><th className="py-3 text-right">Signal</th></tr></thead><tbody>{(rows as KeywordRow[]).map((row) => <tr key={row.keyword} className="border-b border-border/60"><td className="py-3 pr-4 font-medium">{row.keyword}{row.cannibalization ? <span className="ml-2 font-mono text-[9px] uppercase text-amber-500">overlap</span> : null}</td><td className="py-3 pr-4 text-right font-mono">{integer.format(row.occurrences)}</td><td className="py-3 pr-4 text-right font-mono">{row.pages}</td><td className="py-3 pr-4 text-right font-mono">{row.coverage}%</td><td className="py-3 text-right font-mono">{row.relevance}</td></tr>)}</tbody></table></div><p className="mt-4 text-xs leading-5 text-muted-foreground">These are content-derived relevance signals, not Google search-volume or competition estimates.</p></section>;
     }
 
-    if (result.mode === 'serp') {
-        return <section className="mt-8"><h2 className="text-xl font-black">Google organic results</h2><div className="mt-4 border-y border-border/80">{(rows as SerpRow[]).map((row, index) => <div key={`${row.rank}-${row.url}`} className={`grid gap-2 py-3 sm:grid-cols-[52px_minmax(150px,220px)_minmax(0,1fr)] ${index ? 'border-t border-border/60' : ''} ${row.isTarget ? 'bg-sky-500/[0.05]' : ''}`}><span className="font-mono text-xs font-bold">#{row.rank}</span><span className={`text-xs ${row.isTarget ? 'font-bold text-sky-500' : 'text-muted-foreground'}`}>{row.domain}</span><a href={row.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-sm font-medium hover:underline">{row.title || row.url}</a></div>)}</div></section>;
+    if (result.mode === 'competitors') {
+        return <section className="mt-8"><h2 className="text-xl font-black">User-supplied competitor comparison</h2><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"><tr className="border-b border-border"><th className="py-3 pr-4">Domain</th><th className="py-3 pr-4 text-right">Native score</th><th className="py-3 pr-4 text-right">Words</th><th className="py-3 pr-4 text-right">H1</th><th className="py-3 pr-4 text-right">Schema</th><th className="py-3 text-right">Keyword overlap</th></tr></thead><tbody>{(rows as CompetitorRow[]).map((row) => <tr key={row.domain} className={`border-b border-border/60 ${row.isTarget ? 'bg-sky-500/[0.05]' : ''}`}><td className={`py-3 pr-4 font-medium ${row.isTarget ? 'text-sky-500' : ''}`}>{row.domain}{row.isTarget ? ' (target)' : ''}</td><td className="py-3 pr-4 text-right font-mono">{row.score}</td><td className="py-3 pr-4 text-right font-mono">{integer.format(row.words)}</td><td className="py-3 pr-4 text-right font-mono">{row.h1}</td><td className="py-3 pr-4 text-right font-mono">{row.schema}</td><td className="py-3 text-right font-mono">{row.keywordOverlap}%</td></tr>)}</tbody></table></div><p className="mt-4 text-xs leading-5 text-muted-foreground">Comparison is based on directly inspected homepage content and technical signals, not third-party traffic or ranking databases.</p></section>;
     }
 
-    return <section className="mt-8"><h2 className="text-xl font-black">Organic competitors</h2><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[720px] border-collapse text-left text-sm"><thead className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"><tr className="border-b border-border"><th className="py-3 pr-4">Domain</th><th className="py-3 pr-4 text-right">Shared keywords</th><th className="py-3 pr-4 text-right">Avg. position</th><th className="py-3 pr-4 text-right">Organic keywords</th><th className="py-3 text-right">ETV</th></tr></thead><tbody>{(rows as CompetitorRow[]).map((row) => <tr key={row.domain} className="border-b border-border/60"><td className="py-3 pr-4 font-medium">{row.domain}</td><td className="py-3 pr-4 text-right font-mono">{integer.format(row.intersections)}</td><td className="py-3 pr-4 text-right font-mono">{decimal.format(row.avgPosition)}</td><td className="py-3 pr-4 text-right font-mono">{integer.format(row.keywords)}</td><td className="py-3 text-right font-mono">{integer.format(row.etv)}</td></tr>)}</tbody></table></div></section>;
+    const summary = result.summary;
+    const metrics: Array<[string, number]> = summary ? [['Internal links', summary.internalLinks], ['External links', summary.externalLinks], ['Unique internal targets', summary.uniqueInternalTargets], ['External domains', summary.externalDomains], ['Broken internal', summary.brokenInternal], ['Generic anchors', summary.genericAnchors], ['Nofollow links', summary.nofollowLinks]] : [];
+    return <section className="mt-8 space-y-7"><div><h2 className="text-xl font-black">Link intelligence</h2><div className="mt-4 border-y border-border/80">{metrics.map(([label, value]) => <div key={label} className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 border-t border-border/60 py-3 first:border-t-0"><span className="text-sm text-muted-foreground">{label}</span><strong className="font-mono text-sm">{integer.format(value)}</strong></div>)}</div></div><div className="overflow-x-auto"><table className="w-full min-w-[700px] border-collapse text-left text-sm"><thead className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"><tr className="border-b border-border"><th className="py-3 pr-4">Page</th><th className="py-3 pr-4 text-right">Internal</th><th className="py-3 pr-4 text-right">External</th><th className="py-3 pr-4 text-right">Generic</th><th className="py-3 text-right">Nofollow</th></tr></thead><tbody>{(rows as LinkRow[]).map((row) => <tr key={row.url} className="border-b border-border/60"><td className="max-w-[420px] truncate py-3 pr-4" title={row.url}>{row.url}</td><td className="py-3 pr-4 text-right font-mono">{row.internalLinks}</td><td className="py-3 pr-4 text-right font-mono">{row.externalLinks}</td><td className="py-3 pr-4 text-right font-mono">{row.genericAnchors}</td><td className="py-3 text-right font-mono">{row.nofollowLinks}</td></tr>)}</tbody></table></div>{result.brokenTargets?.length ? <div><h3 className="text-sm font-bold">Confirmed broken internal targets</h3><div className="mt-2 space-y-1 font-mono text-xs text-rose-500">{result.brokenTargets.map((url) => <p key={url} className="break-all">{url}</p>)}</div></div> : null}<p className="text-xs leading-5 text-muted-foreground">This analyzes links visible in the bounded crawl. It is not a global backlink database.</p></section>;
 }

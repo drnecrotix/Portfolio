@@ -3,7 +3,7 @@ import { SeoIntelligenceClient } from '@/components/seo-intelligence/SeoIntellig
 
 export const metadata: Metadata = {
     title: 'SEO Intelligence',
-    description: 'Bulgarian keyword research, live Google SERP checks, organic competitor analysis and backlink signals in NecrotixLab.',
+    description: 'Native technical SEO, content, keyword, competitor and link analysis without third-party SEO API credits.',
     alternates: { canonical: '/seo-intelligence' },
 };
 
