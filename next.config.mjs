@@ -32,8 +32,7 @@ function buildContentSecurityPolicy({ allowWasm = false } = {}) {
 
 const contentSecurityPolicy = buildContentSecurityPolicy();
 const labContentSecurityPolicy = buildContentSecurityPolicy({ allowWasm: true });
-const securityHeaders = [
-    { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+const sharedSecurityHeaders = [
     { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'X-Frame-Options', value: 'DENY' },
@@ -83,11 +82,23 @@ const nextConfig = {
         return [
             {
                 source: '/:path*',
-                headers: securityHeaders,
+                headers: sharedSecurityHeaders,
             },
-            // Spline on The Lab compiles a WebAssembly module in the browser.
-            // Allow only the CSP3 WebAssembly capability here instead of restoring
-            // the broader unsafe-eval permission across the whole production app.
+            {
+                source: '/',
+                headers: [
+                    { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+                ],
+            },
+            // Keep the default CSP off /lab. Browsers intersect multiple CSP
+            // policies, so a stricter global script-src would still block Spline
+            // WebAssembly even when /lab sends its own wasm-enabled policy.
+            {
+                source: '/:path((?!lab(?:/|$)).*)',
+                headers: [
+                    { key: 'Content-Security-Policy', value: contentSecurityPolicy },
+                ],
+            },
             {
                 source: '/lab',
                 headers: [
@@ -110,6 +121,13 @@ const nextConfig = {
                 source: '/api/:path*',
                 headers: [
                     { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' },
+                ],
+            },
+            {
+                source: '/service/:path*',
+                headers: [
+                    { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet, noimageindex' },
+                    { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
                 ],
             },
             ...publicAssetExtensions.map((extension) => ({
