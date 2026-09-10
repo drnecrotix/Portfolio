@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { AlertTriangle, CheckCircle2, ExternalLink, Gauge, Globe2, Loader2, Search, ShieldCheck, XCircle } from 'lucide-react';
 import type { WebsiteInspection, WebsiteInspectorCategory, WebsiteInspectorCheck } from '@/modules/website-inspector/types';
 
