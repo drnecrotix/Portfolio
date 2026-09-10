@@ -1,12 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { monitoringRequestState } from '@/modules/service-requests/monitoring';
 import { verifyServiceStatusToken } from '@/modules/service-requests/status-access';
 
-function object(value: Prisma.JsonValue | null): Record<string, unknown> {
-    return value && typeof value === 'object' && !Array.isArray(value) ? { ...(value as Prisma.JsonObject) } : {};
+function scoreFrom(value: unknown) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const score = Number((value as Record<string, unknown>).score);
+    return Number.isFinite(score) && score >= 0 && score <= 100 ? Math.round(score) : undefined;
 }
 
 export async function customerServiceAction(formData: FormData) {
@@ -23,16 +25,13 @@ export async function customerServiceAction(formData: FormData) {
         await prisma.serviceRequest.update({ where: { id: request.id }, data: { status: 'ACCEPTED' } });
     } else if (action === 'request_monitoring') {
         if (request.status !== 'COMPLETED') throw new Error('Monitoring can be requested after the service is completed.');
-        const cadence = String(formData.get('cadence') ?? 'monthly') === 'weekly' ? 'weekly' : 'monthly';
-        const current = object(request.auditSnapshot);
+        const cadence = String(formData.get('cadence') ?? '').toLowerCase() === 'weekly' ? 'WEEKLY' : 'MONTHLY';
+        const snapshot = request.auditSnapshot;
+        const root = snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot) ? snapshot as Record<string, unknown> : {};
+        const baselineScore = scoreFrom(root.after) ?? request.scanScore ?? undefined;
         await prisma.serviceRequest.update({
             where: { id: request.id },
-            data: {
-                auditSnapshot: {
-                    ...current,
-                    monitoring: { requested: true, cadence, requestedAt: new Date().toISOString() },
-                } as Prisma.InputJsonValue,
-            },
+            data: { auditSnapshot: monitoringRequestState(snapshot, cadence, baselineScore) },
         });
     } else {
         throw new Error('Unsupported service request action.');
@@ -40,4 +39,5 @@ export async function customerServiceAction(formData: FormData) {
 
     revalidatePath(`/service/${reference}`);
     revalidatePath('/admin/service-requests');
+    revalidatePath('/admin/service-monitoring');
 }
