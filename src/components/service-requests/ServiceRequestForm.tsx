@@ -74,11 +74,19 @@ export function ServiceRequestForm({
                     startedAt,
                 }),
             });
-            const payload = await response.json().catch(() => ({})) as { reference?: string; statusUrl?: string; error?: string; estimate?: { min: number; max: number } };
+            const payload = await response.json().catch(() => ({})) as {
+                reference?: string;
+                statusUrl?: string;
+                confirmationEmailSent?: boolean;
+                error?: string;
+                estimate?: { min: number; max: number };
+            };
             if (!response.ok || !payload.reference) throw new Error(payload.error || 'The service request could not be created.');
             setReference(payload.reference);
             setStatusUrl(payload.statusUrl || '');
-            setMessage(`Request ${payload.reference} was created. I will review the audit before confirming a final quote.`);
+            setMessage(payload.confirmationEmailSent
+                ? `Request ${payload.reference} was created and a confirmation email was sent. I will review the audit before confirming a final quote.`
+                : `Request ${payload.reference} was created, but the confirmation email could not be delivered. Save the private status link below while I review the audit.`);
         } catch (error) {
             setMessage(error instanceof Error ? error.message : 'The service request could not be created.');
         } finally {
