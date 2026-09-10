@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Loader2, Wrench } from 'lucide-react';
 import { estimateServiceRange, type ServiceRequestIssue, type ServiceRequestSource } from '@/modules/service-requests/estimate';
 
@@ -27,13 +27,6 @@ export function ServiceRequestForm({
     const [startedAt, setStartedAt] = useState(() => Date.now());
     const selectedIssues = issues.filter((issue) => selected.has(issue.id));
     const estimate = estimateServiceRange(source, selectedIssues);
-
-    useEffect(() => {
-        setSelected(new Set(issues.map((issue) => issue.id)));
-        setOpen(false);
-        setMessage('');
-        setReference('');
-    }, [issues, target]);
 
     function toggle(id: string) {
         setSelected((current) => {
