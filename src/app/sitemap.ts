@@ -62,6 +62,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...(galleryPublic ? [{ url: `${baseUrl}/gallery`, lastModified: galleryUpdatedAt, changeFrequency: 'weekly' as const, priority: 0.8, images: galleryImages.length ? galleryImages : undefined }] : []),
         { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/lab`, changeFrequency: 'monthly', priority: 0.7 },
+        { url: `${baseUrl}/website-inspector`, changeFrequency: 'monthly', priority: 0.75 },
+        { url: `${baseUrl}/email-domain-security`, changeFrequency: 'monthly', priority: 0.7 },
+        { url: `${baseUrl}/site-crawl`, changeFrequency: 'monthly', priority: 0.7 },
+        { url: `${baseUrl}/accessibility-check`, changeFrequency: 'monthly', priority: 0.7 },
         ...(wikiEnabled && wikiPublic ? [
             { url: `${baseUrl}/wiki`, changeFrequency: 'monthly' as const, priority: 0.8 },
             { url: `${baseUrl}/wiki/articles`, changeFrequency: 'weekly' as const, priority: 0.7 },
@@ -108,13 +112,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                 .filter((item) => item.isVisible && item.isIndexable && item.slug)
                 .map((item) => {
                     const images = item.isNsfw ? [] : galleryItemImages(item).map((image) => absoluteMediaUrl(baseUrl, image)).filter(Boolean);
-                    return {
-                        url: `${baseUrl}${galleryItemHref(item.slug)}`,
-                        lastModified: galleryUpdatedAt,
-                        changeFrequency: 'monthly' as const,
-                        priority: 0.75,
-                        images: images.length ? images : undefined,
-                    };
+                    return { url: `${baseUrl}${galleryItemHref(item.slug)}`, lastModified: galleryUpdatedAt, changeFrequency: 'monthly' as const, priority: 0.75, images: images.length ? images : undefined };
                 })
             : [];
 
