@@ -1,4 +1,4 @@
-export type WebsiteInspectorCategory = 'delivery' | 'security' | 'seo' | 'privacy' | 'performance';
+export type WebsiteInspectorCategory = 'delivery' | 'security' | 'seo' | 'privacy' | 'performance' | 'wordpress';
 export type WebsiteInspectorStatus = 'pass' | 'warning' | 'fail' | 'info';
 
 export type WebsiteInspectorCheck = {
@@ -7,6 +7,7 @@ export type WebsiteInspectorCheck = {
     label: string;
     status: WebsiteInspectorStatus;
     summary: string;
+    recommendation?: string;
 };
 
 export type WebsiteInspection = {
@@ -27,6 +28,21 @@ export type WebsiteInspection = {
         h1Count: number;
         capturedBytes: number;
         truncated: boolean;
+        redirectCount: number;
+        technologies: string[];
+        tls?: {
+            protocol?: string;
+            cipher?: string;
+            issuer?: string;
+            validFrom?: string;
+            validTo?: string;
+            daysRemaining?: number;
+        };
+        wordpress?: {
+            detected: boolean;
+            version?: string;
+            restApiUrl?: string;
+        };
     };
     checks: WebsiteInspectorCheck[];
 };
