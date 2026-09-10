@@ -206,7 +206,6 @@ function IntegrationCard({ card, testResult, onTestResult, onToast }: {
 }
 
 const TAB_ORDER = [
-    'Digital Footprint',
     'Email & verification',
     'Development data',
     'Coding metrics',
