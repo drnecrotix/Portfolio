@@ -11,6 +11,37 @@ type RedirectPayload = {
     redirect: null | { target: string; permanent: boolean };
 };
 
+function contentSecurityPolicy(pathname: string) {
+    const scripts = ["'self'", "'unsafe-inline'"];
+    if (process.env.NODE_ENV !== 'production') scripts.push("'unsafe-eval'");
+    if (pathname === '/lab' || pathname.startsWith('/lab/')) scripts.push("'wasm-unsafe-eval'");
+
+    return [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        `script-src ${scripts.join(' ')}`,
+        "style-src 'self' 'unsafe-inline' https:",
+        "img-src 'self' data: blob: https:",
+        "font-src 'self' data: https:",
+        "media-src 'self' data: blob: https:",
+        "connect-src 'self' https: wss:",
+        "frame-src 'self' https://www.youtube.com https://player.vimeo.com https://www.tiktok.com https://www.instagram.com https://www.facebook.com https://platform.twitter.com https://assets.pinterest.com https://www.dailymotion.com",
+        'upgrade-insecure-requests',
+    ].join('; ');
+}
+
+function withCsp(response: NextResponse, pathname: string) {
+    response.headers.set('Content-Security-Policy', contentSecurityPolicy(pathname));
+    return response;
+}
+
+function nextWithCsp(pathname: string) {
+    return withCsp(NextResponse.next(), pathname);
+}
+
 function bytesToBase64Url(bytes: Uint8Array) {
     let binary = '';
     for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -63,9 +94,8 @@ async function fetchSiteMode(request: NextRequest): Promise<SiteModePayload | nu
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    if (pathname.startsWith('/admin') || pathname.startsWith('/api') || pathname === '/site-status') {
-        return NextResponse.next();
-    }
+    if (pathname.startsWith('/api')) return NextResponse.next();
+    if (pathname.startsWith('/admin') || pathname === '/site-status') return nextWithCsp(pathname);
 
     try {
         const redirectEndpoint = new URL('/api/redirects/resolve', request.url);
@@ -75,7 +105,7 @@ export async function proxy(request: NextRequest) {
             const payload = (await redirectResponse.json()) as RedirectPayload;
             if (payload.redirect) {
                 const target = payload.redirect.target.startsWith('/') ? new URL(payload.redirect.target, request.url) : new URL(payload.redirect.target);
-                if (target.toString() !== request.nextUrl.toString()) return NextResponse.redirect(target, payload.redirect.permanent ? 308 : 307);
+                if (target.toString() !== request.nextUrl.toString()) return withCsp(NextResponse.redirect(target, payload.redirect.permanent ? 308 : 307), pathname);
             }
         }
     } catch {
@@ -83,24 +113,22 @@ export async function proxy(request: NextRequest) {
     }
 
     const settings = await fetchSiteMode(request);
-    if (!settings) {
-        return NextResponse.next();
-    }
+    if (!settings) return nextWithCsp(pathname);
 
     const adminBypassRevision = request.cookies.get('portfolio-admin-bypass')?.value;
     const hasAdminBypass = Boolean(adminBypassRevision && adminBypassRevision === settings.updatedAt);
-    if (settings.bypassAdmins && hasAdminBypass) return NextResponse.next();
+    if (settings.bypassAdmins && hasAdminBypass) return nextWithCsp(pathname);
 
-    if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return NextResponse.next();
+    if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return nextWithCsp(pathname);
 
     if (settings.mode === 'MAINTENANCE' || settings.mode === 'COMING_SOON' || settings.mode === 'PRIVATE' || settings.mode === 'ARCHIVE') {
         const target = request.nextUrl.clone();
         target.pathname = '/site-status';
         target.search = '';
-        return NextResponse.redirect(target);
+        return withCsp(NextResponse.redirect(target), pathname);
     }
 
-    return NextResponse.next();
+    return nextWithCsp(pathname);
 }
 
 export const config = {
