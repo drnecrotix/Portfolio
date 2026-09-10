@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { estimateServiceRange } from '../../src/modules/service-requests/estimate.ts';
+import { estimateServiceRange, REMEDIATION_RATE_CARD } from '../../src/modules/service-requests/estimate.ts';
+import { SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
 
 function issue(id, status = 'warning', summary = 'Finding detected.') {
   return {
@@ -50,9 +51,9 @@ test('CMS complexity and access availability refine web estimates', () => {
   assert.ok(difficultAccess.min > easyAccess.min);
   assert.ok(difficultAccess.max > easyAccess.max);
   assert.equal(easyAccess.breakdown.cmsModifier, 1);
-  assert.equal(easyAccess.breakdown.accessModifier, 0.92);
-  assert.equal(difficultAccess.breakdown.cmsModifier, 1.25);
-  assert.equal(difficultAccess.breakdown.accessModifier, 1.2);
+  assert.equal(easyAccess.breakdown.accessModifier, 0.9);
+  assert.equal(difficultAccess.breakdown.cmsModifier, 1.22);
+  assert.equal(difficultAccess.breakdown.accessModifier, 1.18);
 });
 
 test('email-domain estimates remain independent from CMS and access modifiers', () => {
@@ -78,6 +79,22 @@ test('bundle adjustment remains bounded and predictable', () => {
   ], availableWordPress);
 
   assert.equal(two.breakdown.bundleModifier, 1);
-  assert.equal(three.breakdown.bundleModifier, 0.92);
-  assert.equal(six.breakdown.bundleModifier, 0.85);
+  assert.equal(three.breakdown.bundleModifier, 0.9);
+  assert.equal(six.breakdown.bundleModifier, 0.82);
+});
+
+test('Bulgarian market pricing is published in EUR with ordered monthly tiers', () => {
+  assert.equal(SERVICE_PRICING.market, 'Bulgaria');
+  assert.equal(SERVICE_PRICING.currency, 'EUR');
+  assert.deepEqual(SERVICE_PRICING.monthly.map((plan) => plan.price), [89, 149, 249, 399]);
+  assert.equal(SERVICE_PRICING.oneOff.find((item) => item.id === 'technical-seo-audit')?.priceFrom, 119);
+});
+
+test('automated remediation estimates cannot exceed published safety caps', () => {
+  const findings = Array.from({ length: 20 }, (_, index) => issue(index % 2 ? 'https' : 'csp', 'fail'));
+  const estimate = estimateServiceRange('WEBSITE_INSPECTOR', findings, { cms: 'Custom', accessStatus: 'No access yet' });
+
+  assert.ok(estimate.min <= REMEDIATION_RATE_CARD.caps.min);
+  assert.ok(estimate.max <= REMEDIATION_RATE_CARD.caps.max);
+  assert.equal(estimate.currency, 'EUR');
 });

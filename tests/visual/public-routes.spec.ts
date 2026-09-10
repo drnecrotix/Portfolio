@@ -13,6 +13,7 @@ const routes = [
   '/resume',
   '/contact',
   '/store',
+  '/services/pricing',
   '/legal',
   '/privacy',
   '/cookies',
@@ -74,6 +75,7 @@ for (const theme of themes) {
       }
       if (route === '/contact') await expect(page.getByRole('heading', { name: /contact|start a conversation|get in touch/i }).first()).toBeVisible();
       if (route === '/store') await expect(page.getByRole('searchbox', { name: 'Search the Store' })).toBeVisible();
+      if (route === '/services/pricing') await expect(page.getByRole('heading', { name: 'Service pricing' })).toBeVisible();
 
       await page.screenshot({
         path: testInfo.outputPath(`${theme}-${route === '/' ? 'home' : route.slice(1).replaceAll('/', '-')}.png`),
