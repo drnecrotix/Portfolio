@@ -33,6 +33,10 @@ function object(value: unknown): JsonObject {
     return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {};
 }
 
+function jsonValue(value: unknown): Prisma.InputJsonValue {
+    return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
 function source(value: string): ServiceRequestSource {
     if (value === 'WEBSITE_INSPECTOR' || value === 'EMAIL_DOMAIN_SECURITY' || value === 'SITE_CRAWL' || value === 'ACCESSIBILITY_CHECK') return value;
     throw new Error('Unsupported monitoring source.');
@@ -80,18 +84,21 @@ export function parseMonitoringState(snapshot: unknown): ServiceMonitoringState 
     const priceCents = Number(monitoring.priceCents);
     const baselineScore = Number(monitoring.baselineScore);
     const lastScore = Number(monitoring.lastScore);
+    const activatedAt = isoOrUndefined(monitoring.activatedAt);
+    const lastRunAt = isoOrUndefined(monitoring.lastRunAt);
+    const nextRunAt = isoOrUndefined(monitoring.nextRunAt);
 
     return {
         requested: true,
         status: statusFrom(monitoring.status),
         cadence: cadenceFrom(monitoring.cadence),
         requestedAt: isoOrUndefined(monitoring.requestedAt) ?? new Date().toISOString(),
-        ...(isoOrUndefined(monitoring.activatedAt) ? { activatedAt: isoOrUndefined(monitoring.activatedAt) } : {}),
+        ...(activatedAt ? { activatedAt } : {}),
         ...(Number.isFinite(priceCents) && priceCents >= 0 ? { priceCents: Math.round(priceCents) } : {}),
         ...(Number.isFinite(baselineScore) && baselineScore >= 0 && baselineScore <= 100 ? { baselineScore: Math.round(baselineScore) } : {}),
         ...(Number.isFinite(lastScore) && lastScore >= 0 && lastScore <= 100 ? { lastScore: Math.round(lastScore) } : {}),
-        ...(isoOrUndefined(monitoring.lastRunAt) ? { lastRunAt: isoOrUndefined(monitoring.lastRunAt) } : {}),
-        ...(isoOrUndefined(monitoring.nextRunAt) ? { nextRunAt: isoOrUndefined(monitoring.nextRunAt) } : {}),
+        ...(lastRunAt ? { lastRunAt } : {}),
+        ...(nextRunAt ? { nextRunAt } : {}),
         ...(typeof monitoring.lastError === 'string' && monitoring.lastError.trim() ? { lastError: monitoring.lastError.trim().slice(0, 500) } : {}),
         ...(history.length ? { history } : {}),
         ...(Object.keys(object(monitoring.lastSnapshot)).length ? { lastSnapshot: object(monitoring.lastSnapshot) } : {}),
@@ -107,21 +114,21 @@ export function nextMonitoringRun(from: Date, cadence: ServiceMonitoringCadence)
 
 export function monitoringRequestState(snapshot: unknown, cadence: ServiceMonitoringCadence, baselineScore?: number) {
     const current = object(snapshot);
-    const now = new Date().toISOString();
-    return {
+    return jsonValue({
         ...current,
         monitoring: {
             requested: true,
             status: 'REQUESTED',
             cadence,
-            requestedAt: now,
+            requestedAt: new Date().toISOString(),
             ...(baselineScore !== undefined ? { baselineScore } : {}),
         },
-    } as Prisma.InputJsonValue;
+    });
 }
 
 function compactReport(report: unknown) {
     const value = object(report);
+    const score = scoreFrom(report);
     const checks = Array.isArray(value.checks)
         ? value.checks.slice(0, 40).map((check) => {
             const item = object(check);
@@ -134,7 +141,7 @@ function compactReport(report: unknown) {
         })
         : [];
     return {
-        score: scoreFrom(report),
+        ...(score !== undefined ? { score } : {}),
         checkedAt: typeof value.checkedAt === 'string' ? value.checkedAt : new Date().toISOString(),
         checks,
     };
@@ -160,22 +167,22 @@ export async function runServiceMonitoring(requestId: string, options: { force?:
     try {
         const report = await runAudit(request.source, request.target);
         const compact = compactReport(report);
-        const score = compact.score;
+        const score = scoreFrom(compact);
         const history = [...(monitoring.history ?? []), { checkedAt: startedAt.toISOString(), ...(score !== undefined ? { score } : {}), ok: true }].slice(-12);
         const nextRunAt = monitoring.status === 'ACTIVE' ? nextMonitoringRun(startedAt, monitoring.cadence).toISOString() : undefined;
+        const { lastError: _lastError, ...withoutLastError } = monitoring;
         const nextMonitoring: ServiceMonitoringState = {
-            ...monitoring,
+            ...withoutLastError,
             ...(monitoring.baselineScore === undefined && score !== undefined ? { baselineScore: score } : {}),
             ...(score !== undefined ? { lastScore: score } : {}),
             lastRunAt: startedAt.toISOString(),
             ...(nextRunAt ? { nextRunAt } : {}),
-            lastError: undefined,
             history,
             lastSnapshot: compact,
         };
         await prisma.serviceRequest.update({
             where: { id: request.id },
-            data: { auditSnapshot: { ...snapshot, monitoring: nextMonitoring } as Prisma.InputJsonValue },
+            data: { auditSnapshot: jsonValue({ ...snapshot, monitoring: nextMonitoring }) },
         });
         return { ok: true as const, reference: request.reference, score, nextRunAt };
     } catch (error) {
@@ -185,7 +192,7 @@ export async function runServiceMonitoring(requestId: string, options: { force?:
         await prisma.serviceRequest.update({
             where: { id: request.id },
             data: {
-                auditSnapshot: {
+                auditSnapshot: jsonValue({
                     ...snapshot,
                     monitoring: {
                         ...monitoring,
@@ -194,7 +201,7 @@ export async function runServiceMonitoring(requestId: string, options: { force?:
                         lastError: message.slice(0, 500),
                         history,
                     },
-                } as Prisma.InputJsonValue,
+                }),
             },
         });
         return { ok: false as const, reference: request.reference, error: message, nextRunAt };
@@ -225,7 +232,7 @@ export async function updateMonitoringState(requestId: string, input: { status: 
 
     await prisma.serviceRequest.update({
         where: { id: request.id },
-        data: { auditSnapshot: { ...snapshot, monitoring } as Prisma.InputJsonValue },
+        data: { auditSnapshot: jsonValue({ ...snapshot, monitoring }) },
     });
     return monitoring;
 }
