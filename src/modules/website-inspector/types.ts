@@ -33,7 +33,7 @@ export type WebsiteInspection = {
         tls?: {
             protocol?: string;
             cipher?: string;
-            issuer?: string;
+            issuer?: string | string[];
             validFrom?: string;
             validTo?: string;
             daysRemaining?: number;
