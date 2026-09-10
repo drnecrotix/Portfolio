@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { HealthCheck, HealthStatus } from '@/modules/web-health/types';
 
 const tools = [
@@ -53,7 +54,7 @@ export function HealthCheckRows({ checks }: { checks: HealthCheck[] }) {
     );
 }
 
-export function ScoreLine({ score, right }: { score: number; right?: React.ReactNode }) {
+export function ScoreLine({ score, right }: { score: number; right?: ReactNode }) {
     return (
         <div className="mt-8 flex flex-col gap-4 border-t border-border/80 py-5 sm:flex-row sm:items-end sm:justify-between">
             <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Health score</p><div className="mt-1 flex items-baseline gap-2"><span className="text-5xl font-black tracking-[-0.07em]">{score}</span><span className="font-mono text-xs font-bold text-muted-foreground">/100</span></div></div>
