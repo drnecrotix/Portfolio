@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { MonitoringSchedulerSetup } from '@/components/admin/MonitoringSchedulerSetup';
 import { parseMonitoringState } from '@/modules/service-requests/monitoring';
+import { maskedMonitoringSchedulerToken, monitoringSchedulerCredential } from '@/modules/service-requests/monitoring-auth';
 import { SERVICE_PRICING } from '@/modules/service-requests/pricing';
 import { serviceStatusUrl } from '@/modules/service-requests/status-access';
 import { runServiceMonitoringNow, updateServiceMonitoring } from './actions';
@@ -30,7 +32,11 @@ export default async function ServiceMonitoringAdminPage() {
     const monitored = requests.map((request) => ({ request, monitoring: parseMonitoringState(request.auditSnapshot) })).filter((item) => item.monitoring !== null);
     const active = monitored.filter((item) => item.monitoring?.status === 'ACTIVE').length;
     const requested = monitored.filter((item) => item.monitoring?.status === 'REQUESTED').length;
-    const schedulerConfigured = String(process.env.MONITORING_CRON_SECRET ?? '').trim().length >= 24;
+    const scheduler = monitoringSchedulerCredential();
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://necrotixlab.com').replace(/\/$/, '');
+    const schedulerCommand = scheduler
+        ? `curl -fsS -X POST -H "Authorization: Bearer ${scheduler.token}" "${siteUrl}/api/internal/service-monitoring"`
+        : '';
     const defaultMonthlyPrice = SERVICE_PRICING.monthly.find((plan) => plan.id === 'monitor')?.price ?? 89;
 
     return (
@@ -41,15 +47,21 @@ export default async function ServiceMonitoringAdminPage() {
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Manage recurring Web Health checks requested after completed service work. Due checks run sequentially to keep the shared N0C workload bounded.</p>
                 <div className="mt-5 flex flex-wrap gap-5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
                     <span>{monitored.length} plans</span><span>{requested} requested</span><span>{active} active</span>
-                    <span className={schedulerConfigured ? 'text-emerald-300' : 'text-amber-300'}>{schedulerConfigured ? 'scheduler secret configured' : 'scheduler secret missing'}</span>
+                    <span className={scheduler ? 'text-emerald-300' : 'text-amber-300'}>{scheduler ? 'scheduler ready' : 'scheduler unavailable'}</span>
                 </div>
             </header>
 
-            {!schedulerConfigured ? (
+            {scheduler ? (
+                <MonitoringSchedulerSetup
+                    command={schedulerCommand}
+                    maskedToken={maskedMonitoringSchedulerToken(scheduler.token)}
+                    source={scheduler.source}
+                />
+            ) : (
                 <div className="mb-7 border-y border-amber-300/20 py-4 text-xs leading-5 text-amber-100/70">
-                    Set <code className="font-mono text-amber-200">MONITORING_CRON_SECRET</code> and configure PlanetHoster cron to POST to <code className="font-mono text-amber-200">/api/internal/service-monitoring</code>. Manual runs below work independently from cron.
+                    The scheduler needs either a dedicated <code className="font-mono text-amber-200">MONITORING_CRON_SECRET</code> or an existing server credential such as <code className="font-mono text-amber-200">AUTH_SECRET</code> with at least 24 characters. Manual runs below work independently from cron.
                 </div>
-            ) : null}
+            )}
 
             {monitored.length === 0 ? <p className="border-y border-dashed border-white/10 py-16 text-center text-sm text-white/35">No monitoring requests yet.</p> : (
                 <div className="border-y border-white/10">
