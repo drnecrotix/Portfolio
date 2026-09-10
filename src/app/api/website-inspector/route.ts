@@ -10,9 +10,13 @@ const requestSchema = z.object({
 });
 
 type RateEntry = { count: number; resetAt: number };
-const globalForInspector = globalThis as unknown as { websiteInspectorRateLimit?: Map<string, RateEntry> };
+const globalForInspector = globalThis as unknown as {
+    websiteInspectorRateLimit?: Map<string, RateEntry>;
+    websiteInspectorActiveScans?: number;
+};
 const rateLimit = globalForInspector.websiteInspectorRateLimit ?? new Map<string, RateEntry>();
 globalForInspector.websiteInspectorRateLimit = rateLimit;
+globalForInspector.websiteInspectorActiveScans ??= 0;
 
 function clientIp(request: Request) {
     return request.headers.get('cf-connecting-ip')
@@ -46,6 +50,17 @@ function hasValidOrigin(request: Request) {
     }
 }
 
+function acquireScanSlot() {
+    const active = globalForInspector.websiteInspectorActiveScans ?? 0;
+    if (active >= 2) return false;
+    globalForInspector.websiteInspectorActiveScans = active + 1;
+    return true;
+}
+
+function releaseScanSlot() {
+    globalForInspector.websiteInspectorActiveScans = Math.max(0, (globalForInspector.websiteInspectorActiveScans ?? 1) - 1);
+}
+
 const responseHeaders = {
     'Cache-Control': 'no-store, private',
     'X-Robots-Tag': 'noindex, noarchive',
@@ -67,6 +82,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Enter a valid website URL.' }, { status: 400, headers: responseHeaders });
     }
 
+    if (!acquireScanSlot()) {
+        return NextResponse.json(
+            { error: 'Website Inspector is busy with other scans. Try again in a few seconds.' },
+            { status: 503, headers: { ...responseHeaders, 'Retry-After': '10' } },
+        );
+    }
+
     try {
         const inspection = await inspectWebsite(parsed.data.url);
         return NextResponse.json({ inspection }, { headers: responseHeaders });
@@ -76,5 +98,7 @@ export async function POST(request: Request) {
         }
         console.error('[Website Inspector] unexpected failure', error);
         return NextResponse.json({ error: 'Website inspection is temporarily unavailable.' }, { status: 500, headers: responseHeaders });
+    } finally {
+        releaseScanSlot();
     }
 }
