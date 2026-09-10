@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     const completionMs = Date.now() - data.startedAt;
     if (data.website || completionMs < 1500 || completionMs > 2 * 60 * 60 * 1000) return NextResponse.json({ reference: 'REQUEST-RECEIVED' }, { headers: noStoreHeaders });
 
-    const estimate = estimateServiceRange(data.source, data.issues);
+    const estimate = estimateServiceRange(data.source, data.issues, { cms: data.cms, accessStatus: data.accessStatus });
     const budgetNumber = Number(data.budget ?? 0);
     const budgetCents = Number.isFinite(budgetNumber) && budgetNumber > 0 ? Math.min(1_000_000, Math.round(budgetNumber * 100)) : undefined;
     const requestReference = reference();
