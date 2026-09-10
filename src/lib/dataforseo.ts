@@ -4,6 +4,15 @@ import { getRuntimeIntegrationValue } from '@/lib/integration-runtime';
 import { finiteNumber, normalizeSeoTarget, SEO_LANGUAGE_CODE_BG, SEO_LOCATION_CODE_BG, targetMatchesDomain, type SeoIntelligenceMode } from '@/modules/seo-intelligence/core';
 
 const BASE_URL = 'https://api.dataforseo.com';
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function asArray(value: unknown): unknown[] {
+    return Array.isArray(value) ? value : [];
+}
 
 export class DataForSeoError extends Error {
     status: number;
@@ -38,66 +47,76 @@ async function post(path: string, task: Record<string, unknown>) {
     });
 
     if (!response.ok) throw new DataForSeoError(`DataForSEO returned HTTP ${response.status}.`, response.status === 401 ? 502 : response.status);
-    const payload = await response.json().catch(() => null) as any;
-    if (!payload || Number(payload.status_code) !== 20000) {
-        throw new DataForSeoError(String(payload?.status_message || 'DataForSEO request failed.'));
+    const payload = asRecord(await response.json().catch(() => null));
+    if (Number(payload.status_code) !== 20000) {
+        throw new DataForSeoError(String(payload.status_message || 'DataForSEO request failed.'));
     }
-    const taskResult = payload.tasks?.[0];
-    if (!taskResult || Number(taskResult.status_code) !== 20000) {
-        throw new DataForSeoError(String(taskResult?.status_message || 'DataForSEO task failed.'));
+    const taskResult = asRecord(asArray(payload.tasks)[0]);
+    if (Number(taskResult.status_code) !== 20000) {
+        throw new DataForSeoError(String(taskResult.status_message || 'DataForSEO task failed.'));
     }
 
     return {
-        result: Array.isArray(taskResult.result) ? taskResult.result : [],
+        result: asArray(taskResult.result),
         costUsd: finiteNumber(taskResult.cost ?? payload.cost),
     };
 }
 
-function keywordRows(result: any[]) {
-    const items = Array.isArray(result?.[0]?.items) ? result[0].items : [];
-    return items.slice(0, 20).map((item: any) => ({
-        keyword: String(item?.keyword || ''),
-        searchVolume: finiteNumber(item?.keyword_info?.search_volume),
-        cpc: finiteNumber(item?.keyword_info?.cpc),
-        competition: finiteNumber(item?.keyword_info?.competition),
-        competitionLevel: String(item?.keyword_info?.competition_level || ''),
-    })).filter((item: any) => item.keyword);
+function keywordRows(result: unknown[]) {
+    const items = asArray(asRecord(result[0]).items);
+    return items.slice(0, 20).map((value) => {
+        const item = asRecord(value);
+        const keywordInfo = asRecord(item.keyword_info);
+        return {
+            keyword: String(item.keyword || ''),
+            searchVolume: finiteNumber(keywordInfo.search_volume),
+            cpc: finiteNumber(keywordInfo.cpc),
+            competition: finiteNumber(keywordInfo.competition),
+            competitionLevel: String(keywordInfo.competition_level || ''),
+        };
+    }).filter((item) => item.keyword);
 }
 
-function serpRows(result: any[], target = '') {
-    const items = Array.isArray(result?.[0]?.items) ? result[0].items : [];
+function serpRows(result: unknown[], target = '') {
+    const items = asArray(asRecord(result[0]).items);
     return items
-        .filter((item: any) => item?.type === 'organic')
+        .map(asRecord)
+        .filter((item) => item.type === 'organic')
         .slice(0, 20)
-        .map((item: any) => ({
-            rank: finiteNumber(item?.rank_absolute || item?.rank_group),
-            title: String(item?.title || ''),
-            domain: String(item?.domain || ''),
-            url: String(item?.url || ''),
-            isTarget: targetMatchesDomain(target, String(item?.domain || '')),
+        .map((item) => ({
+            rank: finiteNumber(item.rank_absolute || item.rank_group),
+            title: String(item.title || ''),
+            domain: String(item.domain || ''),
+            url: String(item.url || ''),
+            isTarget: targetMatchesDomain(target, String(item.domain || '')),
         }));
 }
 
-function competitorRows(result: any[]) {
-    const items = Array.isArray(result?.[0]?.items) ? result[0].items : [];
-    return items.slice(0, 12).map((item: any) => ({
-        domain: String(item?.domain || ''),
-        intersections: finiteNumber(item?.intersections),
-        avgPosition: finiteNumber(item?.avg_position),
-        etv: finiteNumber(item?.full_domain_metrics?.organic?.etv ?? item?.etv),
-        keywords: finiteNumber(item?.full_domain_metrics?.organic?.count ?? item?.keywords_count),
-    })).filter((item: any) => item.domain);
+function competitorRows(result: unknown[]) {
+    const items = asArray(asRecord(result[0]).items);
+    return items.slice(0, 12).map((value) => {
+        const item = asRecord(value);
+        const fullDomainMetrics = asRecord(item.full_domain_metrics);
+        const organic = asRecord(fullDomainMetrics.organic);
+        return {
+            domain: String(item.domain || ''),
+            intersections: finiteNumber(item.intersections),
+            avgPosition: finiteNumber(item.avg_position),
+            etv: finiteNumber(organic.etv ?? item.etv),
+            keywords: finiteNumber(organic.count ?? item.keywords_count),
+        };
+    }).filter((item) => item.domain);
 }
 
-function backlinkSummary(result: any[]) {
-    const item = result?.[0] || {};
+function backlinkSummary(result: unknown[]) {
+    const item = asRecord(result[0]);
     return {
-        target: String(item?.target || ''),
-        rank: finiteNumber(item?.rank),
-        backlinks: finiteNumber(item?.backlinks),
-        referringDomains: finiteNumber(item?.referring_domains),
-        referringPages: finiteNumber(item?.referring_pages),
-        brokenBacklinks: finiteNumber(item?.broken_backlinks),
+        target: String(item.target || ''),
+        rank: finiteNumber(item.rank),
+        backlinks: finiteNumber(item.backlinks),
+        referringDomains: finiteNumber(item.referring_domains),
+        referringPages: finiteNumber(item.referring_pages),
+        brokenBacklinks: finiteNumber(item.broken_backlinks),
     };
 }
 
