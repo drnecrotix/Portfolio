@@ -62,7 +62,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...(galleryPublic ? [{ url: `${baseUrl}/gallery`, lastModified: galleryUpdatedAt, changeFrequency: 'weekly' as const, priority: 0.8, images: galleryImages.length ? galleryImages : undefined }] : []),
         { url: `${baseUrl}/journey`, changeFrequency: 'monthly', priority: 0.7 },
         { url: `${baseUrl}/lab`, changeFrequency: 'monthly', priority: 0.7 },
-        { url: `${baseUrl}/digital-footprint`, changeFrequency: 'monthly', priority: 0.75 },
         ...(wikiEnabled && wikiPublic ? [
             { url: `${baseUrl}/wiki`, changeFrequency: 'monthly' as const, priority: 0.8 },
             { url: `${baseUrl}/wiki/articles`, changeFrequency: 'weekly' as const, priority: 0.7 },
