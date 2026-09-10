@@ -1,0 +1,153 @@
+export const REMEDIATION_RATE_CARD = {
+    currency: 'EUR',
+    market: 'Bulgaria',
+    reviewedAt: '2026-09-10',
+    baseBySource: {
+        WEBSITE_INSPECTOR: 35,
+        EMAIL_DOMAIN_SECURITY: 45,
+        SITE_CRAWL: 45,
+        ACCESSIBILITY_CHECK: 55,
+    },
+    costByComplexity: {
+        simple: { min: 10, max: 22 },
+        moderate: { min: 22, max: 48 },
+        complex: { min: 42, max: 90 },
+        specialist: { min: 70, max: 140 },
+    },
+    severity: {
+        warning: 1,
+        fail: 1.25,
+    },
+    affectedItems: {
+        cap: 12,
+        minEach: 4,
+        maxEach: 8,
+    },
+    bundleModifiers: {
+        threePlus: 0.9,
+        sixPlus: 0.82,
+    },
+    cmsModifiers: {
+        wordpress: 1,
+        woocommerce: 1.12,
+        'next.js': 1.08,
+        shopify: 1.12,
+        custom: 1.22,
+        other: 1.12,
+        unknown: 1.06,
+    },
+    accessModifiers: {
+        'both available': 0.9,
+        'hosting access available': 1,
+        'cms admin access available': 1,
+        'no access yet': 1.18,
+        'need guidance': 1.06,
+    },
+    caps: {
+        min: 590,
+        max: 790,
+    },
+} as const;
+
+export const SERVICE_PRICING = {
+    currency: 'EUR',
+    market: 'Bulgaria',
+    reviewedAt: '2026-09-10',
+    oneOff: [
+        {
+            id: 'automated-health-checks',
+            name: 'Automated Web Health checks',
+            priceFrom: 0,
+            priceTo: 0,
+            description: 'Self-service Website Inspector, Site Crawl, Accessibility and Email Domain Security checks.',
+        },
+        {
+            id: 'manual-audit-review',
+            name: 'Manual audit review',
+            priceFrom: 49,
+            priceTo: 49,
+            description: 'Human review of automated findings with priorities and a concise action plan.',
+        },
+        {
+            id: 'keyword-research',
+            name: 'Keyword research & intent map',
+            priceFrom: 69,
+            priceTo: 69,
+            description: 'Focused keyword set, intent grouping and recommended target pages for a small or local business.',
+        },
+        {
+            id: 'competitor-snapshot',
+            name: 'Competitor SEO snapshot',
+            priceFrom: 79,
+            priceTo: 79,
+            description: 'Search visibility, keyword and content-gap snapshot for selected competitors.',
+        },
+        {
+            id: 'backlink-review',
+            name: 'Backlink profile review',
+            priceFrom: 79,
+            priceTo: 79,
+            description: 'Backlink overview, risk signals and practical acquisition opportunities without paid placements.',
+        },
+        {
+            id: 'local-seo-setup',
+            name: 'Local SEO setup',
+            priceFrom: 99,
+            priceTo: 99,
+            description: 'Local search checklist, Google Business Profile guidance and on-site local signals.',
+        },
+        {
+            id: 'technical-seo-audit',
+            name: 'Technical SEO audit + action plan',
+            priceFrom: 119,
+            priceTo: 119,
+            description: 'Technical crawl review, indexability, metadata, internal linking and implementation priorities.',
+        },
+        {
+            id: 'on-page-cleanup',
+            name: 'On-page SEO setup / cleanup',
+            priceFrom: 129,
+            priceTo: null,
+            description: 'Implementation on priority pages. Final quote depends on page count, CMS and access availability.',
+        },
+        {
+            id: 'remediation-sprint',
+            name: 'Full remediation sprint',
+            priceFrom: 249,
+            priceTo: null,
+            description: 'Bundled technical remediation across multiple findings. Scope is confirmed after manual review.',
+        },
+    ],
+    monthly: [
+        {
+            id: 'monitor',
+            name: 'Monitor',
+            price: 89,
+            description: 'Rank and technical monitoring, monthly summary and priority alerts. No implementation included.',
+        },
+        {
+            id: 'starter',
+            name: 'Starter',
+            price: 149,
+            description: 'For small/local sites: monitoring, keyword tracking, technical follow-up and light on-page work.',
+        },
+        {
+            id: 'growth',
+            name: 'Growth',
+            price: 249,
+            description: 'Adds competitor, backlink and keyword-gap review plus a larger monthly optimization allowance.',
+        },
+        {
+            id: 'pro',
+            name: 'Pro',
+            price: 399,
+            description: 'For larger or e-commerce projects needing broader tracking, implementation and priority support.',
+        },
+    ],
+    exclusions: [
+        'Paid media, sponsored placements and paid backlinks are not included.',
+        'Long-form content production and translation are quoted separately.',
+        'Unusually high third-party data/API usage is confirmed before chargeable work starts.',
+        'Final pricing is confirmed after scope review; applicable taxes are shown on the final quote or invoice.',
+    ],
+} as const;

@@ -92,7 +92,7 @@ export function ServiceRequestForm({
                 <button type="button" onClick={openForm} className="inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">
                     <Wrench className="size-4" /> Request a professional fix
                 </button>
-                <p className="mt-2 text-xs text-muted-foreground">Current automated estimate: €{estimate.min}-€{estimate.max}. It is based on the selected findings and is refined by CMS/access details before submission.</p>
+                <p className="mt-2 text-xs text-muted-foreground">Current automated estimate: €{estimate.min}-€{estimate.max}. It is based on the selected findings and is refined by CMS/access details before submission. <a href="/services/pricing" className="font-semibold text-sky-500 hover:underline">View EUR pricing guide</a>.</p>
             </div>
         );
     }
@@ -101,7 +101,7 @@ export function ServiceRequestForm({
         <section className="mt-10 border-y border-border/80 py-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-sky-500">Kreatrics service request</p><h2 className="mt-2 text-2xl font-black tracking-tight">Request a professional fix</h2></div>
-                <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Estimate €{estimate.min}-€{estimate.max}</p>
+                <div className="text-right"><p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Estimate €{estimate.min}-€{estimate.max}</p><a href="/services/pricing" className="mt-1 inline-block text-[10px] font-semibold text-sky-500 hover:underline">EUR pricing guide</a></div>
             </div>
 
             {issues.length ? (
