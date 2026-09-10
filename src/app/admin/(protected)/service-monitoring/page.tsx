@@ -24,7 +24,6 @@ export default async function ServiceMonitoringAdminPage() {
     if (!session?.user || !['OWNER', 'ADMIN'].includes(session.user.role)) redirect('/admin');
 
     const requests = await prisma.serviceRequest.findMany({
-        where: { auditSnapshot: { not: null } },
         orderBy: { updatedAt: 'desc' },
         take: 200,
     });
