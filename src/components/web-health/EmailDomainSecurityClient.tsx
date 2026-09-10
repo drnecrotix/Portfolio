@@ -39,7 +39,7 @@ export function EmailDomainSecurityClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
-                <header className="max-w-4xl"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / Web Health Suite / v1.2.60</div><h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Email Domain Security</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">Inspect public DNS signals used for mail delivery and spoofing protection: MX, SPF, DMARC, selector-specific DKIM, MTA-STS, TLS-RPT, CAA and BIMI.</p></header>
+                <header className="max-w-4xl"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / Web Health Suite / v1.2.61</div><h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Email Domain Security</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">Inspect public DNS signals used for mail delivery and spoofing protection: MX, SPF, DMARC, selector-specific DKIM, MTA-STS, TLS-RPT, CAA and BIMI.</p></header>
                 <WebHealthNav active="email" />
 
                 <section className="mt-8 border-b border-border/80 pb-6">
