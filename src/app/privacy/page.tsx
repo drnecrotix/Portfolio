@@ -32,6 +32,7 @@ export default async function PrivacyPage() {
                 <h2>2. Data the site may process</h2>
                 <ul className="mt-4 list-disc">
                     <li><strong>Contact enquiries:</strong> name, email address, reason, subject and message content.</li>
+                    <li><strong>Requested technical services:</strong> when you explicitly create a Web Health service request, the site stores your name, email, optional company/project, target website or domain, selected audit findings, the limited audit snapshot attached to the request, automated estimate, optional budget/access/CMS context, notes and subsequent service status or quote information. Ordinary Web Health scans are not stored by this workflow.</li>
                     <li><strong>Blog comments:</strong> public display name, comment text and an optional private email address.</li>
                     <li><strong>Engagement:</strong> pseudonymous visitor identifiers used to remember Blog and Gallery likes, plus aggregate view counts.</li>
                     <li><strong>Interface experiments:</strong> random A/B variants are kept stable for the current browser session through a first-party variant cookie. A separate random HTTP-only experiment-session cookie is hashed server-side so exposure and outcome events can be counted at most once per experiment and browser session. Short-lived experiment rows contain the experiment ID, hashed session reference, assigned variant, event name and timestamp. They do not contain a visitor name, email address, raw IP address, city or precise location.</li>
@@ -49,6 +50,10 @@ export default async function PrivacyPage() {
                     <div>
                         <h3>Responding to enquiries</h3>
                         <p className="mt-2">Contact-form information is used only to receive, assess and respond to the message. Depending on the enquiry, the legal basis is taking steps at your request before entering into an agreement (Article 6(1)(b) GDPR) or the legitimate interest in handling correspondence and enquiries (Article 6(1)(f)).</p>
+                    </div>
+                    <div>
+                        <h3>Technical service requests and estimates</h3>
+                        <p className="mt-2">When you choose Request a professional fix, the selected findings and contact details are stored so the requested work can be reviewed, scoped, quoted and, if accepted, delivered. The automated price range is only preliminary decision support and is reviewed before any final quote. The legal basis is taking steps at your request before entering into a service agreement and, after acceptance, performance of that agreement (Article 6(1)(b) GDPR). Related administrative records may also be processed where necessary for legitimate operational or legal-claims interests (Article 6(1)(f)).</p>
                     </div>
                     <div>
                         <h3>Comments and community interaction</h3>
@@ -79,7 +84,7 @@ export default async function PrivacyPage() {
 
             <section>
                 <h2>4. Recipients and service providers</h2>
-                <p className="mt-4">Personal data is not sold. It may be processed by service providers only where necessary to operate the site, including hosting/infrastructure providers, the configured email provider for contact messages and the configured AI provider when you use the assistant.</p>
+                <p className="mt-4">Personal data is not sold. It may be processed by service providers only where necessary to operate the site, including hosting/infrastructure providers, the configured email provider for contact and service-request notifications, and the configured AI provider when you use the assistant.</p>
                 <p className="mt-3">Hosting or proxy infrastructure may provide country-level and coarse city request headers used by the first-party traffic analytics layer. When no supported city header is available, the server may send the public client IP address to <strong>ipwho.is</strong> to resolve a country code and coarse city label. NecrotixLab does not store latitude, longitude or other precise coordinates returned by a geolocation provider. Raw IP context remains only for the short IP-retention window and is not retained for the full page-activity or country/device aggregate retention period.</p>
                 <p className="mt-3">Gallery pages may contain media hosted by services such as YouTube, Vimeo, TikTok, Instagram, Facebook, X/Twitter, Pinterest or Dailymotion. External media is treated separately because loading it can disclose technical information such as your IP address and browser details to that provider. See the <Link href="/cookies">Cookie Policy</Link>.</p>
             </section>
@@ -93,6 +98,7 @@ export default async function PrivacyPage() {
                 <h2>6. Retention</h2>
                 <ul className="mt-4 list-disc">
                     <li>Contact-form submissions are sent by email and are not stored in the website database by the contact API. Correspondence is retained only for as long as reasonably necessary for the enquiry, ongoing relationship, security or legal claims.</li>
+                    <li>Web Health scans are not stored unless you explicitly create a service request. Service-request records are retained while the request is being reviewed or fulfilled and afterwards only as reasonably necessary for customer support, contractual/accounting administration, security or legal claims. Data that is no longer necessary should be deleted or minimised.</li>
                     <li>Contact-form IP rate-limit entries are held in server memory for about 10 minutes.</li>
                     <li>AI rate-limit entries are short-lived, about one minute. The site does not persist submitted assistant messages in its database in the current implementation; the browser keeps the visible chat history for the current session.</li>
                     <li>A/B variant assignment and the random experiment-session identifier are first-party session cookies. Deduplicated experiment-session rows are intended to be retained for up to about 31 days and contain only experiment ID, hashed session reference, variant, event and timestamp. Aggregate experiment counters may be retained for longitudinal comparison and do not contain the session hash or a named visitor identifier.</li>
@@ -117,7 +123,7 @@ export default async function PrivacyPage() {
 
             <section>
                 <h2>9. Automated decisions and profiling</h2>
-                <p className="mt-4">NecrotixLab does not use the website data described here to make decisions about visitors that produce legal or similarly significant effects. A/B variants are randomly assigned for interface comparison, and experiment statistics are used only as aggregate product-improvement decision support. Traffic analytics is used for site measurement, content/navigation analysis and short-lived operational monitoring, not automated eligibility or legal-effect profiling. The AI assistant generates conversational responses but is not used for automated eligibility, employment, credit or similar decisions.</p>
+                <p className="mt-4">NecrotixLab does not use the website data described here to make decisions about visitors that produce legal or similarly significant effects. Web Health price ranges are automated preliminary estimates only and do not accept or reject a customer, create a binding price or replace manual review. A/B variants are randomly assigned for interface comparison, and experiment statistics are used only as aggregate product-improvement decision support. Traffic analytics is used for site measurement, content/navigation analysis and short-lived operational monitoring, not automated eligibility or legal-effect profiling. The AI assistant generates conversational responses but is not used for automated eligibility, employment, credit or similar decisions.</p>
             </section>
 
             <section>
