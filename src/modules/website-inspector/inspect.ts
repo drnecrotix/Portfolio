@@ -31,10 +31,11 @@ function isBlockedIpv4(address: string) {
         || (a === 100 && b >= 64 && b <= 127)
         || (a === 169 && b === 254)
         || (a === 172 && b >= 16 && b <= 31)
-        || (a === 192 && b === 0)
+        || (a === 192 && b === 0 && (c === 0 || c === 2))
+        || (a === 192 && b === 88 && c === 99)
         || (a === 192 && b === 168)
-        || (a === 192 && b === 0 && c === 2)
-        || (a === 198 && (b === 18 || b === 19 || b === 51))
+        || (a === 198 && (b === 18 || b === 19))
+        || (a === 198 && b === 51 && c === 100)
         || (a === 203 && b === 0 && c === 113)
         || a >= 224;
 }
@@ -97,14 +98,18 @@ function normalizeInput(input: string) {
 }
 
 const safeLookup: LookupFunction = (hostname, options, callback) => {
-    dnsLookup(hostname, options, (error, address, family) => {
+    const lookupOptions = typeof options === 'number'
+        ? { family: options, all: false as const }
+        : { ...options, all: false as const };
+
+    dnsLookup(hostname, lookupOptions, (error, address, family) => {
         if (error) {
-            callback(error, address, family);
+            callback(error, '', family);
             return;
         }
         if (isBlockedIp(address)) {
             const blocked = Object.assign(new Error('Target resolved to a private or reserved IP address.'), { code: 'EACCES' });
-            callback(blocked, address, family);
+            callback(blocked, '', family);
             return;
         }
         callback(null, address, family);
@@ -351,7 +356,7 @@ export async function inspectWebsite(input: string): Promise<WebsiteInspection> 
 
     addCheck(checks, { id: 'csp', category: 'security', label: 'Content Security Policy', status: csp ? 'pass' : 'warning', summary: csp ? 'A Content-Security-Policy header is present.' : 'No Content-Security-Policy header was detected.' });
     addCheck(checks, { id: 'hsts', category: 'security', label: 'HSTS', status: raw.finalUrl.protocol !== 'https:' ? 'fail' : hsts ? 'pass' : 'warning', summary: hsts ? 'Strict-Transport-Security is enabled.' : 'Strict-Transport-Security was not detected.' });
-    addCheck(checks, { id: 'nosniff', category: 'security', label: 'MIME sniffing protection', status: nosn?.toLowerCase().includes('nosniff') ? 'pass' : 'warning', summary: nosn ? `X-Content-Type-Options: ${nosn}` : 'X-Content-Type-Options: nosniff was not detected.' });
+    addCheck(checks, { id: 'nosniff', category: 'security', label: 'MIME sniffing protection', status: nosniff?.toLowerCase().includes('nosniff') ? 'pass' : 'warning', summary: nosniff ? `X-Content-Type-Options: ${nosniff}` : 'X-Content-Type-Options: nosniff was not detected.' });
     addCheck(checks, { id: 'frame-protection', category: 'security', label: 'Frame protection', status: frame || csp?.toLowerCase().includes('frame-ancestors') ? 'pass' : 'warning', summary: frame ? `X-Frame-Options: ${frame}` : csp?.toLowerCase().includes('frame-ancestors') ? 'CSP frame-ancestors protection is present.' : 'No X-Frame-Options or CSP frame-ancestors directive was detected.' });
     addCheck(checks, { id: 'referrer-policy', category: 'privacy', label: 'Referrer Policy', status: referrer ? 'pass' : 'warning', summary: referrer ? `Referrer-Policy: ${referrer}` : 'No Referrer-Policy header was detected.' });
     addCheck(checks, { id: 'permissions-policy', category: 'privacy', label: 'Permissions Policy', status: permissions ? 'pass' : 'warning', summary: permissions ? 'A Permissions-Policy header is present.' : 'No Permissions-Policy header was detected.' });
@@ -363,19 +368,21 @@ export async function inspectWebsite(input: string): Promise<WebsiteInspection> 
         addCheck(checks, { id: 'description', category: 'seo', label: 'Meta description', status: descriptionStatus, summary: !description ? 'No meta description was found.' : descriptionStatus === 'pass' ? `Description length is ${description.length} characters.` : `Description exists but is ${description.length} characters; roughly 50-160 is a useful target.` });
         addCheck(checks, { id: 'viewport', category: 'seo', label: 'Mobile viewport', status: viewport ? 'pass' : 'warning', summary: viewport ? 'A viewport meta tag is present.' : 'No viewport meta tag was detected.' });
         addCheck(checks, { id: 'canonical', category: 'seo', label: 'Canonical URL', status: canonical ? 'pass' : 'warning', summary: canonical ? `Canonical: ${canonical}` : 'No canonical link was detected.' });
-        addCheck(checks, { id: 'h1', category: 'seo', label: 'Primary heading', status: h1Count === 1 ? 'pass' : h1Count === 0 ? 'warning' : 'warning', summary: h1Count === 1 ? 'Exactly one H1 heading was detected.' : `${h1Count} H1 headings were detected.` });
+        addCheck(checks, { id: 'h1', category: 'seo', label: 'Primary heading', status: h1Count === 1 ? 'pass' : 'warning', summary: h1Count === 1 ? 'Exactly one H1 heading was detected.' : `${h1Count} H1 headings were detected.` });
         if (robots?.includes('noindex')) {
             addCheck(checks, { id: 'robots-noindex', category: 'seo', label: 'Indexing directive', status: 'warning', summary: 'The page asks search engines not to index it (noindex).' });
         } else {
             addCheck(checks, { id: 'robots-noindex', category: 'seo', label: 'Indexing directive', status: 'pass', summary: 'No page-level noindex directive was detected.' });
         }
-        addCheck(checks, { id: 'privacy-link', category: 'privacy', label: 'Privacy information', status: hasPolicyLink(html, 'privacy') ? 'pass' : 'info', summary: hasPolicyLink(html, 'privacy') ? 'A privacy/data-protection link was detected on the page.' : 'No obvious privacy-policy link was detected on this page. This is informational, not a compliance verdict.' });
-        addCheck(checks, { id: 'cookie-link', category: 'privacy', label: 'Cookie information', status: hasPolicyLink(html, 'cookie') ? 'pass' : 'info', summary: hasPolicyLink(html, 'cookie') ? 'A cookie-related link was detected on the page.' : 'No obvious cookie-policy link was detected on this page. This is informational, not a compliance verdict.' });
+        const privacyLink = hasPolicyLink(html, 'privacy');
+        const cookieLink = hasPolicyLink(html, 'cookie');
+        addCheck(checks, { id: 'privacy-link', category: 'privacy', label: 'Privacy information', status: privacyLink ? 'pass' : 'info', summary: privacyLink ? 'A privacy/data-protection link was detected on the page.' : 'No obvious privacy-policy link was detected on this page. This is informational, not a compliance verdict.' });
+        addCheck(checks, { id: 'cookie-link', category: 'privacy', label: 'Cookie information', status: cookieLink ? 'pass' : 'info', summary: cookieLink ? 'A cookie-related link was detected on the page.' : 'No obvious cookie-policy link was detected on this page. This is informational, not a compliance verdict.' });
     }
 
     addCheck(checks, {
         id: 'response-time', category: 'performance', label: 'Server response',
-        status: raw.responseTimeMs <= 1_000 ? 'pass' : raw.responseTimeMs <= 2_500 ? 'warning' : 'warning',
+        status: raw.responseTimeMs <= 1_000 ? 'pass' : 'warning',
         summary: `The inspected request completed in ${raw.responseTimeMs} ms. This is a single server-side sample, not a Core Web Vitals measurement.`,
     });
     addCheck(checks, {
