@@ -13,7 +13,7 @@ function sourceLabel(source: string) {
 }
 
 function money(cents: number | null | undefined, currency = 'EUR') {
-    if (!cents) return '—';
+    if (!cents) return '-';
     return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: 0 }).format(cents / 100);
 }
 
@@ -65,7 +65,7 @@ export default async function ServiceRequestsAdminPage() {
                                                     </div>
                                                 )) : <p className="py-4 text-xs text-white/40">Manual review requested without selected automated findings.</p>}
                                             </div>
-                                            <div className="mt-5 grid gap-3 text-xs text-white/45 sm:grid-cols-2"><p><strong className="text-white/65">CMS:</strong> {request.cms || 'Unknown'}</p><p><strong className="text-white/65">Access:</strong> {request.accessStatus || 'Not specified'}</p><p><strong className="text-white/65">Company:</strong> {request.company || '—'}</p><p><strong className="text-white/65">Budget:</strong> {money(request.budgetCents, request.currency)}</p></div>
+                                            <div className="mt-5 grid gap-3 text-xs text-white/45 sm:grid-cols-2"><p><strong className="text-white/65">CMS:</strong> {request.cms || 'Unknown'}</p><p><strong className="text-white/65">Access:</strong> {request.accessStatus || 'Not specified'}</p><p><strong className="text-white/65">Company:</strong> {request.company || '-'}</p><p><strong className="text-white/65">Budget:</strong> {money(request.budgetCents, request.currency)}</p></div>
                                             {request.customerMessage ? <div className="mt-5 border-l border-white/15 pl-4 text-sm leading-6 text-white/55">{request.customerMessage}</div> : null}
                                         </div>
 
