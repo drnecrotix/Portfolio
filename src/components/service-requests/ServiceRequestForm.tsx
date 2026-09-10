@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Loader2, Wrench } from 'lucide-react';
+import { ExternalLink, Loader2, Wrench } from 'lucide-react';
 import { estimateServiceRange, type ServiceRequestIssue, type ServiceRequestSource } from '@/modules/service-requests/estimate';
 
 export function ServiceRequestForm({
@@ -24,6 +24,7 @@ export function ServiceRequestForm({
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [reference, setReference] = useState('');
+    const [statusUrl, setStatusUrl] = useState('');
     const [startedAt, setStartedAt] = useState(() => Date.now());
     const selectedIssues = issues.filter((issue) => selected.has(issue.id));
     const estimate = estimateServiceRange(source, selectedIssues);
@@ -48,6 +49,7 @@ export function ServiceRequestForm({
         setLoading(true);
         setMessage('Sending service request...');
         setReference('');
+        setStatusUrl('');
         try {
             const response = await fetch('/api/service-requests', {
                 method: 'POST',
@@ -70,9 +72,10 @@ export function ServiceRequestForm({
                     startedAt,
                 }),
             });
-            const payload = await response.json().catch(() => ({})) as { reference?: string; error?: string; estimate?: { min: number; max: number } };
+            const payload = await response.json().catch(() => ({})) as { reference?: string; statusUrl?: string; error?: string; estimate?: { min: number; max: number } };
             if (!response.ok || !payload.reference) throw new Error(payload.error || 'The service request could not be created.');
             setReference(payload.reference);
+            setStatusUrl(payload.statusUrl || '');
             setMessage(`Request ${payload.reference} was created. I will review the audit before confirming a final quote.`);
         } catch (error) {
             setMessage(error instanceof Error ? error.message : 'The service request could not be created.');
@@ -123,10 +126,11 @@ export function ServiceRequestForm({
                 <label className="flex items-start gap-3 text-xs leading-5 text-muted-foreground sm:col-span-2"><input name="privacyAccepted" type="checkbox" required className="mt-0.5 size-4" /><span>I agree that the selected audit details and contact information may be stored to process this service request. Ordinary scans remain unstored.</span></label>
                 <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
                     <button disabled={loading} className="inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground disabled:opacity-50">{loading ? <Loader2 className="size-4 animate-spin" /> : <Wrench className="size-4" />}{loading ? 'Sending...' : 'Create request'}</button>
-                    <button type="button" onClick={() => setOpen(false)} className="px-3 py-3 text-xs font-semibold text-muted-foreground hover:text-foreground">Cancel</button>
+                    {!reference ? <button type="button" onClick={() => setOpen(false)} className="px-3 py-3 text-xs font-semibold text-muted-foreground hover:text-foreground">Cancel</button> : null}
                 </div>
             </form>
             {message ? <p role="status" className={`mt-5 text-sm ${reference ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>{message}</p> : null}
+            {statusUrl ? <a href={statusUrl} className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-sky-500 hover:underline">Open private status page <ExternalLink className="size-3" /></a> : null}
         </section>
     );
 }
