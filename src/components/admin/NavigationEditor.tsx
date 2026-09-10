@@ -37,6 +37,10 @@ function normalize(items: NavigationEditorItem[]): EditableState[] {
     return items.map((item) => ({ ...item, itemType: item.isDropdown ? 'dropdown' : 'link' }));
 }
 
+function isExternalUrl(value: string) {
+    return /^https?:\/\//i.test(value.trim());
+}
+
 function DropdownVariantPreview({ value, active }: { value: DropdownStyleValue; active: boolean }) {
     const line = active ? 'bg-white/75' : 'bg-white/25';
     const surface = active ? 'border-white/25 bg-white/[0.08]' : 'border-white/[0.08] bg-white/[0.025]';
@@ -167,14 +171,15 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
     const createItem = (form: FormData) => {
         startTransition(async () => {
             const itemType = String(form.get('itemType') || 'link') === 'dropdown' ? 'dropdown' as const : 'link' as const;
+            const href = String(form.get('href') || '');
             const result = await createNavigationItemAjax({
                 label: String(form.get('label') || ''),
-                href: String(form.get('href') || ''),
+                href,
                 parentId: String(form.get('parentId') || '') || null,
                 itemType,
                 dropdownStyle: String(form.get('dropdownStyle') || 'auto'),
                 isVisible: form.get('isVisible') === 'on',
-                isExternal: form.get('isExternal') === 'on',
+                isExternal: form.get('isExternal') === 'on' || isExternalUrl(href),
             });
             if (!result.ok) {
                 setMessage({ type: 'error', text: result.error });
@@ -243,7 +248,7 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
                                 </select>
                             </label>
                             <label className="text-xs text-white/45">Label<input value={item.label} onChange={(event) => patch(item.id, { label: event.target.value })} className={input} /></label>
-                            <label className="text-xs text-white/45 xl:col-span-2">URL<input value={item.href === '#' ? '' : item.href} onChange={(event) => patch(item.id, { href: event.target.value })} placeholder={item.itemType === 'dropdown' ? 'Optional' : '/projects'} className={input} /></label>
+                            <label className="text-xs text-white/45 xl:col-span-2">URL<input value={item.href === '#' ? '' : item.href} onChange={(event) => { const href = event.target.value; patch(item.id, { href, isExternal: item.itemType === 'link' && isExternalUrl(href) ? true : item.isExternal }); }} placeholder={item.itemType === 'dropdown' ? 'Optional' : '/projects or https://example.com'} className={input} /></label>
                             <label className="text-xs text-white/45">Parent
                                 <select value={item.parentId ?? ''} disabled={item.itemType === 'dropdown' || hasChildren} onChange={(event) => patch(item.id, { parentId: event.target.value || null })} className={input}>
                                     <option value="">Top level</option>
@@ -315,7 +320,7 @@ export function NavigationEditor({ initialItems }: { initialItems: NavigationEdi
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         <label className="text-xs text-white/45">Type<select name="itemType" defaultValue="link" className={input}><option value="link">Link</option><option value="dropdown">Dropdown menu</option></select></label>
                         <label className="text-xs text-white/45">Label<input name="label" required className={input} /></label>
-                        <label className="text-xs text-white/45 xl:col-span-2">URL<input name="href" placeholder="/projects" className={input} /></label>
+                        <label className="text-xs text-white/45 xl:col-span-2">URL<input name="href" placeholder="/projects or https://example.com" className={input} /></label>
                         <label className="text-xs text-white/45">Parent<select name="parentId" className={input}><option value="">Top level</option>{dropdowns.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
                         <label className="text-xs text-white/45">Dropdown variant<select name="dropdownStyle" defaultValue="auto" className={input}>{dropdownStyles.map((style) => <option key={style.value} value={style.value}>{style.label}</option>)}</select></label>
                         <div className="flex items-end gap-5 pb-2"><label className="flex items-center gap-2 text-xs text-white/55"><input name="isVisible" type="checkbox" defaultChecked /> Visible</label><label className="flex items-center gap-2 text-xs text-white/55"><input name="isExternal" type="checkbox" /> External</label></div>
