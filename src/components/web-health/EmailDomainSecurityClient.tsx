@@ -32,7 +32,9 @@ export function EmailDomainSecurityClient() {
         }
     }
 
-    const actionable = (report?.checks ?? []).filter((check): check is typeof check & { status: 'warning' | 'fail' } => check.status === 'warning' || check.status === 'fail');
+    const actionable = (report?.checks ?? [])
+        .filter((check) => check.status === 'warning' || check.status === 'fail')
+        .map((check) => ({ ...check, status: check.status as 'warning' | 'fail' }));
 
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
