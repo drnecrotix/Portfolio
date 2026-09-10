@@ -8,10 +8,14 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 const publicAssetCacheHeader = { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' };
 const publicAssetExtensions = ['ico', 'svg', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'woff', 'woff2'];
 
-function buildContentSecurityPolicy({ allowWasm = false } = {}) {
-    const scriptSources = ["'self'", "'unsafe-inline'"];
+function buildContentSecurityPolicy() {
+    // `wasm-unsafe-eval` permits WebAssembly compilation without enabling the
+    // broader JavaScript `unsafe-eval` capability used by eval()/new Function().
+    // Spline can be loaded from more than one client route/chunk, so keeping this
+    // capability in the single effective production CSP avoids intersecting
+    // global + route-specific policies that would otherwise block WASM.
+    const scriptSources = ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"];
     if (isDevelopment) scriptSources.push("'unsafe-eval'");
-    if (allowWasm) scriptSources.push("'wasm-unsafe-eval'");
 
     return [
         "default-src 'self'",
@@ -31,7 +35,6 @@ function buildContentSecurityPolicy({ allowWasm = false } = {}) {
 }
 
 const contentSecurityPolicy = buildContentSecurityPolicy();
-const labContentSecurityPolicy = buildContentSecurityPolicy({ allowWasm: true });
 const securityHeaders = [
     { key: 'Content-Security-Policy', value: contentSecurityPolicy },
     { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
@@ -85,21 +88,6 @@ const nextConfig = {
                 source: '/:path*',
                 headers: securityHeaders,
             },
-            // Spline on The Lab compiles a WebAssembly module in the browser.
-            // Allow only the CSP3 WebAssembly capability here instead of restoring
-            // the broader unsafe-eval permission across the whole production app.
-            {
-                source: '/lab',
-                headers: [
-                    { key: 'Content-Security-Policy', value: labContentSecurityPolicy },
-                ],
-            },
-            {
-                source: '/lab/:path*',
-                headers: [
-                    { key: 'Content-Security-Policy', value: labContentSecurityPolicy },
-                ],
-            },
             {
                 source: '/admin/:path*',
                 headers: [
@@ -110,6 +98,13 @@ const nextConfig = {
                 source: '/api/:path*',
                 headers: [
                     { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' },
+                ],
+            },
+            {
+                source: '/service/:path*',
+                headers: [
+                    { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet, noimageindex' },
+                    { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
                 ],
             },
             ...publicAssetExtensions.map((extension) => ({
