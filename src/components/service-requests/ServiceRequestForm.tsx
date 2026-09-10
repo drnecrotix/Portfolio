@@ -26,8 +26,10 @@ export function ServiceRequestForm({
     const [reference, setReference] = useState('');
     const [statusUrl, setStatusUrl] = useState('');
     const [startedAt, setStartedAt] = useState(() => Date.now());
+    const [cms, setCms] = useState(defaultCms);
+    const [accessStatus, setAccessStatus] = useState('Need guidance');
     const selectedIssues = issues.filter((issue) => selected.has(issue.id));
-    const estimate = estimateServiceRange(source, selectedIssues);
+    const estimate = estimateServiceRange(source, selectedIssues, { cms, accessStatus });
 
     function toggle(id: string) {
         setSelected((current) => {
@@ -63,8 +65,8 @@ export function ServiceRequestForm({
                     name: form.get('name'),
                     email: form.get('email'),
                     company: form.get('company'),
-                    cms: form.get('cms'),
-                    accessStatus: form.get('accessStatus'),
+                    cms,
+                    accessStatus,
                     budget: form.get('budget'),
                     message: form.get('message'),
                     privacyAccepted: form.get('privacyAccepted') === 'on',
@@ -90,7 +92,7 @@ export function ServiceRequestForm({
                 <button type="button" onClick={openForm} className="inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">
                     <Wrench className="size-4" /> Request a professional fix
                 </button>
-                <p className="mt-2 text-xs text-muted-foreground">Current automated estimate: €{estimate.min}-€{estimate.max}. Final pricing is confirmed after manual review.</p>
+                <p className="mt-2 text-xs text-muted-foreground">Current automated estimate: €{estimate.min}-€{estimate.max}. It is based on the selected findings and is refined by CMS/access details before submission.</p>
             </div>
         );
     }
@@ -118,9 +120,10 @@ export function ServiceRequestForm({
                 <label className="text-xs text-muted-foreground">Name<input name="name" required minLength={2} maxLength={80} className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" /></label>
                 <label className="text-xs text-muted-foreground">Email<input name="email" required type="email" maxLength={200} className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" /></label>
                 <label className="text-xs text-muted-foreground">Company / project <span className="opacity-60">optional</span><input name="company" maxLength={120} className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" /></label>
-                <label className="text-xs text-muted-foreground">CMS / technology<select name="cms" defaultValue={defaultCms} className="mt-2 w-full border-0 border-b border-border bg-background py-2 text-sm text-foreground outline-none focus:border-sky-500"><option>Unknown</option><option>WordPress</option><option>WooCommerce</option><option>Next.js</option><option>Shopify</option><option>Custom</option><option>Other</option></select></label>
-                <label className="text-xs text-muted-foreground">Access available?<select name="accessStatus" defaultValue="Need guidance" className="mt-2 w-full border-0 border-b border-border bg-background py-2 text-sm text-foreground outline-none focus:border-sky-500"><option>Need guidance</option><option>Hosting access available</option><option>CMS admin access available</option><option>Both available</option><option>No access yet</option></select></label>
+                <label className="text-xs text-muted-foreground">CMS / technology<select name="cms" value={cms} onChange={(event) => setCms(event.target.value)} className="mt-2 w-full border-0 border-b border-border bg-background py-2 text-sm text-foreground outline-none focus:border-sky-500"><option>Unknown</option><option>WordPress</option><option>WooCommerce</option><option>Next.js</option><option>Shopify</option><option>Custom</option><option>Other</option></select></label>
+                <label className="text-xs text-muted-foreground">Access available?<select name="accessStatus" value={accessStatus} onChange={(event) => setAccessStatus(event.target.value)} className="mt-2 w-full border-0 border-b border-border bg-background py-2 text-sm text-foreground outline-none focus:border-sky-500"><option>Need guidance</option><option>Hosting access available</option><option>CMS admin access available</option><option>Both available</option><option>No access yet</option></select></label>
                 <label className="text-xs text-muted-foreground">Budget <span className="opacity-60">optional, EUR</span><input name="budget" type="number" min="0" max="10000" step="1" className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" /></label>
+                <p className="sm:col-span-2 text-[11px] leading-5 text-muted-foreground">Estimate basis: finding-specific complexity, WARN/FAIL severity, bounded affected-item volume, CMS/technology and access availability. Your entered budget does not change the automated estimate.</p>
                 <label className="sm:col-span-2 text-xs text-muted-foreground">Notes <span className="opacity-60">optional</span><textarea name="message" maxLength={1500} rows={4} className="mt-2 w-full border border-border bg-transparent p-3 text-sm text-foreground outline-none focus:border-sky-500" placeholder="Anything I should know before reviewing the site?" /></label>
                 <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
                 <label className="flex items-start gap-3 text-xs leading-5 text-muted-foreground sm:col-span-2"><input name="privacyAccepted" type="checkbox" required className="mt-0.5 size-4" /><span>I agree that the selected audit details and contact information may be stored to process this service request. Ordinary scans remain unstored.</span></label>
