@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { estimateServiceRange } from '../../src/modules/service-requests/estimate.ts';
-import { REMEDIATION_RATE_CARD, SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
+import { estimateServiceRange, REMEDIATION_RATE_CARD } from '../../src/modules/service-requests/estimate.ts';
+import { SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
 
 function issue(id, status = 'warning', summary = 'Finding detected.') {
   return {

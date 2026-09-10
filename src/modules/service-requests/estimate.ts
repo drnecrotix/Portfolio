@@ -1,5 +1,3 @@
-import { REMEDIATION_RATE_CARD } from './pricing';
-
 export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK';
 
 export type ServiceRequestIssue = {
@@ -16,6 +14,57 @@ export type ServiceEstimateContext = {
 };
 
 type Complexity = 'simple' | 'moderate' | 'complex' | 'specialist';
+
+export const REMEDIATION_RATE_CARD = {
+    currency: 'EUR',
+    market: 'Bulgaria',
+    reviewedAt: '2026-09-10',
+    baseBySource: {
+        WEBSITE_INSPECTOR: 35,
+        EMAIL_DOMAIN_SECURITY: 45,
+        SITE_CRAWL: 45,
+        ACCESSIBILITY_CHECK: 55,
+    },
+    costByComplexity: {
+        simple: { min: 10, max: 22 },
+        moderate: { min: 22, max: 48 },
+        complex: { min: 42, max: 90 },
+        specialist: { min: 70, max: 140 },
+    },
+    severity: {
+        warning: 1,
+        fail: 1.25,
+    },
+    affectedItems: {
+        cap: 12,
+        minEach: 4,
+        maxEach: 8,
+    },
+    bundleModifiers: {
+        threePlus: 0.9,
+        sixPlus: 0.82,
+    },
+    cmsModifiers: {
+        wordpress: 1,
+        woocommerce: 1.12,
+        'next.js': 1.08,
+        shopify: 1.12,
+        custom: 1.22,
+        other: 1.12,
+        unknown: 1.06,
+    },
+    accessModifiers: {
+        'both available': 0.9,
+        'hosting access available': 1,
+        'cms admin access available': 1,
+        'no access yet': 1.18,
+        'need guidance': 1.06,
+    },
+    caps: {
+        min: 590,
+        max: 790,
+    },
+} as const;
 
 const complexityBySource: Record<ServiceRequestSource, Record<string, Complexity>> = {
     WEBSITE_INSPECTOR: {
