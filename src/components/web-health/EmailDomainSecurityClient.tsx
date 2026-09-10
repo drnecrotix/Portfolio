@@ -55,7 +55,7 @@ export function EmailDomainSecurityClient() {
                 {report ? <>
                     <ScoreLine score={report.score} right={<span>{report.domain} · {report.records.mx.length} MX record{report.records.mx.length === 1 ? '' : 's'}</span>} />
                     <HealthCheckRows checks={report.checks} />
-                    <ServiceRequestForm source="EMAIL_DOMAIN_SECURITY" target={report.domain} score={report.score} issues={actionable} snapshot={{ checkedAt: report.checkedAt, records: report.records }} />
+                    <ServiceRequestForm key={report.checkedAt} source="EMAIL_DOMAIN_SECURITY" target={report.domain} score={report.score} issues={actionable} snapshot={{ checkedAt: report.checkedAt, records: report.records }} />
                 </> : <section className="mt-10 border-t border-border/80 pt-5"><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Report area</p><p className="mt-3 text-sm text-muted-foreground">Enter a domain to inspect its public mail-security posture.</p></section>}
 
                 <footer className="mt-12 border-t border-border/80 pt-5 text-xs leading-5 text-muted-foreground">This tool reads public DNS records only. Results are configuration signals, not a guarantee that mail is deliverable or immune to spoofing. Scan results are not stored unless you explicitly create a service request.</footer>
