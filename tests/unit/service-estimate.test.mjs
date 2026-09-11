@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { estimateServiceRange, REMEDIATION_RATE_CARD } from '../../src/modules/service-requests/estimate.ts';
 import { SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
+import { estimateWebsiteProject, parseWebsiteProjectScope, WEBSITE_PROJECT_RATE_CARD } from '../../src/modules/service-requests/website-project.ts';
 
 function issue(id, status = 'warning', summary = 'Finding detected.') {
   return {
@@ -88,6 +89,7 @@ test('Bulgarian market pricing is published in EUR with ordered monthly tiers', 
   assert.equal(SERVICE_PRICING.currency, 'EUR');
   assert.deepEqual(SERVICE_PRICING.monthly.map((plan) => plan.price), [89, 149, 249, 399]);
   assert.equal(SERVICE_PRICING.oneOff.find((item) => item.id === 'technical-seo-audit')?.priceFrom, 119);
+  assert.equal(SERVICE_PRICING.oneOff.find((item) => item.id === 'website-development')?.priceFrom, 250);
 });
 
 test('automated remediation estimates cannot exceed published safety caps', () => {
@@ -97,4 +99,37 @@ test('automated remediation estimates cannot exceed published safety caps', () =
   assert.ok(estimate.min <= REMEDIATION_RATE_CARD.caps.min);
   assert.ok(estimate.max <= REMEDIATION_RATE_CARD.caps.max);
   assert.equal(estimate.currency, 'EUR');
+});
+
+test('website project estimator grows with scope and complex features', () => {
+  const small = estimateWebsiteProject({
+    projectType: 'business', pages: 5, design: 'starter', cms: 'none', languages: 1, content: 'ready', seo: 'basic', hosting: 'existing', deadline: 'standard', maintenance: 'none', integrations: [],
+  });
+  const complex = estimateWebsiteProject({
+    projectType: 'business', pages: 12, design: 'premium', cms: 'custom', languages: 2, content: 'full', seo: 'advanced', hosting: 'managed', deadline: 'priority', maintenance: 'monthly', integrations: ['payments', 'accounts', 'roles', 'custom_api'],
+  });
+
+  assert.ok(complex.min > small.min);
+  assert.ok(complex.max > small.max);
+  assert.ok(complex.weeks.max >= small.weeks.max);
+  assert.equal(complex.maintenanceQuotedSeparately, true);
+  assert.equal(complex.currency, 'EUR');
+});
+
+test('website project parser rejects client-side scope tampering', () => {
+  const valid = parseWebsiteProjectScope({
+    projectType: 'landing', pages: 1, design: 'custom', cms: 'wordpress', languages: 1, content: 'ready', seo: 'basic', hosting: 'setup', deadline: 'standard', maintenance: 'none', integrations: ['analytics'],
+  });
+  const invalidPages = parseWebsiteProjectScope({
+    projectType: 'landing', pages: 999, design: 'custom', cms: 'wordpress', languages: 1, content: 'ready', seo: 'basic', hosting: 'setup', deadline: 'standard', maintenance: 'none', integrations: ['analytics'],
+  });
+  const invalidFeature = parseWebsiteProjectScope({
+    projectType: 'landing', pages: 1, design: 'custom', cms: 'wordpress', languages: 1, content: 'ready', seo: 'basic', hosting: 'setup', deadline: 'standard', maintenance: 'none', integrations: ['invented_feature'],
+  });
+
+  assert.ok(valid);
+  assert.equal(invalidPages, null);
+  assert.equal(invalidFeature, null);
+  assert.equal(WEBSITE_PROJECT_RATE_CARD.market, 'Bulgaria');
+  assert.equal(WEBSITE_PROJECT_RATE_CARD.currency, 'EUR');
 });
