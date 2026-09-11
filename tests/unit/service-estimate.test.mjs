@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { estimateServiceRange, REMEDIATION_RATE_CARD } from '../../src/modules/service-requests/estimate.ts';
 import { SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
+import { domainTld, normalizeDomainCandidate } from '../../src/modules/domain-availability/domain.ts';
 
 function issue(id, status = 'warning', summary = 'Finding detected.') {
   return {
@@ -107,4 +108,11 @@ test('website build estimates react to type, size, design and functionality', ()
   assert.ok(business.min > basic.min);
   assert.ok(store.min > business.min);
   assert.equal(store.currency, 'EUR');
+});
+
+test('domain availability input is normalized without accepting invalid labels', () => {
+  assert.equal(normalizeDomainCandidate('https://WWW.Example.COM/path'), 'example.com');
+  assert.equal(normalizeDomainCandidate('my--project.bg'), 'my--project.bg');
+  assert.equal(normalizeDomainCandidate('-invalid.com'), '');
+  assert.equal(domainTld('example.co.uk'), 'uk');
 });
