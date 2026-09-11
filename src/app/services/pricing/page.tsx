@@ -4,7 +4,7 @@ import { SERVICE_PRICING } from '@/modules/service-requests/pricing';
 
 export const metadata: Metadata = {
     title: 'Service Pricing',
-    description: 'Transparent EUR pricing for NecrotixLab and Kreatrics SEO, web health and remediation services, calibrated for the Bulgarian market.',
+    description: 'Transparent EUR pricing for NecrotixLab and Kreatrics website development, SEO, web health and remediation services, calibrated for the Bulgarian market.',
     alternates: { canonical: '/services/pricing' },
 };
 
@@ -25,14 +25,14 @@ export default function ServicePricingPage() {
                     </div>
                     <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Service pricing</h1>
                     <p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">
-                        Transparent EUR pricing positioned for the Bulgarian market. Automated NecrotixLab checks remain free; paid work starts when you request human review, implementation, ongoing monitoring or deeper SEO research.
+                        Transparent EUR pricing positioned for the Bulgarian market. Automated NecrotixLab checks remain free; paid work starts when you request website development, human review, implementation, ongoing monitoring or deeper SEO research.
                     </p>
                 </header>
 
                 <section className="mt-10 border-t border-border/80">
                     <div className="grid gap-2 border-b border-border/80 py-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
-                        <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-sky-500">One-off</p><h2 className="mt-2 text-xl font-black tracking-tight">Audits & implementation</h2></div>
-                        <p className="text-sm leading-6 text-muted-foreground">Good for a focused problem, a first SEO baseline or a defined remediation sprint without a recurring contract.</p>
+                        <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-sky-500">One-off</p><h2 className="mt-2 text-xl font-black tracking-tight">Builds, audits & implementation</h2></div>
+                        <p className="text-sm leading-6 text-muted-foreground">Use the website project configurator for new builds, or start with a focused audit/remediation service for an existing site.</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[680px] border-collapse text-left">
@@ -75,7 +75,10 @@ export default function ServicePricingPage() {
                             {SERVICE_PRICING.exclusions.map((item) => <li key={item}>- {item}</li>)}
                         </ul>
                     </div>
-                    <Link href="/contact" className="inline-flex items-center justify-center border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">Request a quote</Link>
+                    <div className="flex flex-wrap gap-3">
+                        <Link href="/website-project" className="inline-flex items-center justify-center border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">Configure a website project</Link>
+                        <Link href="/contact" className="inline-flex items-center justify-center border border-border px-5 py-3 text-sm font-bold transition hover:border-foreground">General enquiry</Link>
+                    </div>
                 </section>
 
                 <footer className="mt-6 text-xs leading-5 text-muted-foreground">
