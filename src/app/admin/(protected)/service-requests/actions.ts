@@ -31,19 +31,28 @@ function escapeHtml(value: string) {
     return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+function normalizeTarget(value: FormDataEntryValue | null) {
+    if (value === null) return undefined;
+    const target = String(value).trim();
+    if (target.length < 3 || target.length > 2048 || /[\u0000-\u001f\u007f]/.test(target)) throw new Error('Enter a valid target or live website URL.');
+    return target;
+}
+
 export async function updateServiceRequest(id: string, formData: FormData) {
     await requireAdmin();
     const status = String(formData.get('status') ?? 'NEW').trim();
     if (!statuses.has(status)) throw new Error('Invalid service request status.');
     const quote = Number(formData.get('finalQuote') ?? 0);
     const internalNotes = String(formData.get('internalNotes') ?? '').trim().slice(0, 5000);
+    const target = normalizeTarget(formData.get('target'));
 
     await prisma.serviceRequest.update({
         where: { id },
         data: {
             status: status as 'NEW' | 'REVIEWING' | 'QUOTE_SENT' | 'ACCEPTED' | 'IN_PROGRESS' | 'WAITING_CUSTOMER' | 'COMPLETED' | 'REJECTED',
-            finalQuoteCents: Number.isFinite(quote) && quote > 0 ? Math.round(quote * 100) : null,
+            finalQuoteCents: Number.isFinite(quote) && quote > 0 && quote <= 50_000 ? Math.round(quote * 100) : null,
             internalNotes: internalNotes || null,
+            ...(target !== undefined ? { target } : {}),
         },
     });
     revalidatePath('/admin/service-requests');
@@ -52,7 +61,7 @@ export async function updateServiceRequest(id: string, formData: FormData) {
 export async function sendServiceQuote(id: string, formData: FormData) {
     await requireAdmin();
     const quote = Number(formData.get('finalQuote') ?? 0);
-    if (!Number.isFinite(quote) || quote <= 0 || quote > 10_000) throw new Error('Enter a valid final quote.');
+    if (!Number.isFinite(quote) || quote <= 0 || quote > 50_000) throw new Error('Enter a valid final quote.');
     const note = String(formData.get('quoteNote') ?? '').trim().slice(0, 1500);
     const request = await prisma.serviceRequest.findUnique({ where: { id } });
     if (!request) throw new Error('Service request not found.');
@@ -83,7 +92,7 @@ async function runAfterAudit(source: string, target: string) {
     if (source === 'EMAIL_DOMAIN_SECURITY') return inspectEmailDomain(target);
     if (source === 'SITE_CRAWL') return crawlSite(target);
     if (source === 'ACCESSIBILITY_CHECK') return inspectAccessibility(target);
-    throw new Error('Unsupported service request audit source.');
+    throw new Error('This service request does not use before/after audit verification.');
 }
 
 export async function captureAfterAudit(id: string) {
