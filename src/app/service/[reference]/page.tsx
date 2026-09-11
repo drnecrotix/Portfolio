@@ -33,6 +33,7 @@ function scoreFrom(value: unknown) {
 }
 
 function sourceLabel(value: string) {
+    if (value === 'WEBSITE_CREATION') return 'Website design & development';
     return value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
@@ -56,8 +57,11 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
     const beforeScore = request.scanScore ?? scoreFrom(before);
     const afterScore = scoreFrom(after);
     const monitoring = parseMonitoringState(request.auditSnapshot);
+    const planning = object((snapshot.planning ?? null) as Prisma.JsonValue | null);
+    const weeks = object((planning.weeks ?? null) as Prisma.JsonValue | null);
     const selectedIssues = Array.isArray(request.selectedIssues) ? request.selectedIssues.filter((item): item is Prisma.JsonObject => Boolean(item && typeof item === 'object' && !Array.isArray(item))) : [];
     const stepIndex = request.status === 'REJECTED' ? -1 : Math.max(0, steps.indexOf(request.status as typeof steps[number]));
+    const isWebsiteProject = request.source === 'WEBSITE_CREATION';
 
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
@@ -76,6 +80,8 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
                     <Metric label="Final quote" value={money(request.finalQuoteCents, request.currency)} />
                 </section>
 
+                {isWebsiteProject && weeks.min && weeks.max ? <section className="border-b border-border/80 py-5"><p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Indicative delivery</p><p className="mt-2 text-sm font-semibold">{String(weeks.min)}-{String(weeks.max)} weeks <span className="font-normal text-muted-foreground">· confirmed after manual scope review</span></p></section> : null}
+
                 <section className="border-b border-border/80 py-6">
                     <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Progress</p>
                     {request.status === 'REJECTED' ? <p className="mt-3 text-sm text-rose-500">This request was closed without proceeding.</p> : (
@@ -85,7 +91,7 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
                     )}
                 </section>
 
-                {(beforeScore !== null || afterScore !== null) ? (
+                {!isWebsiteProject && (beforeScore !== null || afterScore !== null) ? (
                     <section className="grid border-b border-border/80 md:grid-cols-2">
                         <div className="py-6 md:border-r md:border-border/80 md:pr-6"><p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Before audit</p><p className="mt-2 text-4xl font-black tracking-[-0.06em]">{beforeScore ?? '-'}<span className="ml-1 text-xs text-muted-foreground">/100</span></p></div>
                         <div className="py-6 md:pl-6"><p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">After audit</p><p className="mt-2 text-4xl font-black tracking-[-0.06em]">{afterScore ?? 'Pending'}{afterScore !== null ? <span className="ml-1 text-xs text-muted-foreground">/100</span> : null}</p>{beforeScore !== null && afterScore !== null ? <p className={`mt-2 text-xs font-semibold ${afterScore >= beforeScore ? 'text-emerald-500' : 'text-amber-500'}`}>{afterScore >= beforeScore ? '+' : ''}{afterScore - beforeScore} points</p> : null}</div>
@@ -93,15 +99,15 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
                 ) : null}
 
                 <section className="border-b border-border/80 py-6">
-                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Selected findings</p>
+                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{isWebsiteProject ? 'Project scope' : 'Selected findings'}</p>
                     <div className="mt-3 border-y border-border/60">
                         {selectedIssues.length ? selectedIssues.map((issue, index) => (
                             <div key={index} className={`grid gap-2 py-3 sm:grid-cols-[80px_200px_minmax(0,1fr)] ${index ? 'border-t border-border/50' : ''}`}>
-                                <span className="font-mono text-[9px] font-bold uppercase text-amber-500">{String(issue.status ?? 'issue')}</span>
-                                <span className="text-xs font-semibold">{String(issue.label ?? 'Finding')}</span>
+                                <span className={`font-mono text-[9px] font-bold uppercase ${String(issue.status) === 'scope' ? 'text-sky-500' : 'text-amber-500'}`}>{String(issue.status ?? (isWebsiteProject ? 'scope' : 'issue'))}</span>
+                                <span className="text-xs font-semibold">{String(issue.label ?? (isWebsiteProject ? 'Scope item' : 'Finding'))}</span>
                                 <span className="text-xs leading-5 text-muted-foreground">{String(issue.summary ?? '')}</span>
                             </div>
-                        )) : <p className="py-4 text-xs text-muted-foreground">Manual review request.</p>}
+                        )) : <p className="py-4 text-xs text-muted-foreground">{isWebsiteProject ? 'No project scope is available.' : 'Manual review request.'}</p>}
                     </div>
                 </section>
 
@@ -109,7 +115,7 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
                     <section className="border-b border-border/80 py-6">
                         <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-sky-500">Quote ready</p>
                         <p className="mt-2 text-2xl font-black">{money(request.finalQuoteCents, request.currency)}</p>
-                        <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground">Accepting confirms that you want the work to proceed at the quoted price. Payment and access arrangements are handled separately.</p>
+                        <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground">Accepting confirms that you want the work to proceed at the quoted price. Payment, access and delivery arrangements are handled separately.</p>
                         <form action={customerServiceAction} className="mt-4"><input type="hidden" name="reference" value={request.reference} /><input type="hidden" name="token" value={token} /><input type="hidden" name="action" value="accept_quote" /><button className="border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">Accept quote</button></form>
                     </section>
                 ) : null}
@@ -140,7 +146,7 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
                     </section>
                 ) : null}
 
-                <footer className="pt-6 text-xs leading-5 text-muted-foreground">This is a private status link. Do not share it publicly. Automated estimates and audit scores are informational until a final quote and manual review are provided.</footer>
+                <footer className="pt-6 text-xs leading-5 text-muted-foreground">This is a private status link. Do not share it publicly. Automated estimates are informational until a final quote and manual scope review are provided.</footer>
             </div>
         </main>
     );
