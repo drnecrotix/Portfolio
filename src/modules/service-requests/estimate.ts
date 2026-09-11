@@ -1,4 +1,5 @@
-export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK';
+export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK' | 'WEBSITE_CREATION';
+export type AuditServiceRequestSource = Exclude<ServiceRequestSource, 'WEBSITE_CREATION'>;
 
 export type ServiceRequestIssue = {
     id: string;
@@ -66,7 +67,7 @@ export const REMEDIATION_RATE_CARD = {
     },
 } as const;
 
-const complexityBySource: Record<ServiceRequestSource, Record<string, Complexity>> = {
+const complexityBySource: Record<AuditServiceRequestSource, Record<string, Complexity>> = {
     WEBSITE_INSPECTOR: {
         'http-status': 'complex',
         'content-type': 'moderate',
@@ -127,7 +128,7 @@ const complexityBySource: Record<ServiceRequestSource, Record<string, Complexity
     },
 };
 
-function complexityFor(source: ServiceRequestSource, issue: ServiceRequestIssue): Complexity {
+function complexityFor(source: AuditServiceRequestSource, issue: ServiceRequestIssue): Complexity {
     return complexityBySource[source][issue.id] ?? 'moderate';
 }
 
@@ -145,14 +146,14 @@ function affectedCount(issue: ServiceRequestIssue) {
     return Number.isFinite(count) && count > 0 ? Math.min(20, Math.round(count)) : 1;
 }
 
-function cmsModifier(source: ServiceRequestSource, cms?: string) {
+function cmsModifier(source: AuditServiceRequestSource, cms?: string) {
     if (source === 'EMAIL_DOMAIN_SECURITY') return 1;
     const value = String(cms ?? 'unknown').trim().toLowerCase();
     return REMEDIATION_RATE_CARD.cmsModifiers[value as keyof typeof REMEDIATION_RATE_CARD.cmsModifiers]
         ?? REMEDIATION_RATE_CARD.cmsModifiers.unknown;
 }
 
-function accessModifier(source: ServiceRequestSource, accessStatus?: string) {
+function accessModifier(source: AuditServiceRequestSource, accessStatus?: string) {
     if (source === 'EMAIL_DOMAIN_SECURITY') return 1;
     const value = String(accessStatus ?? 'Need guidance').trim().toLowerCase();
     return REMEDIATION_RATE_CARD.accessModifiers[value as keyof typeof REMEDIATION_RATE_CARD.accessModifiers]
@@ -164,7 +165,7 @@ function roundFive(value: number) {
 }
 
 export function estimateServiceRange(
-    source: ServiceRequestSource,
+    source: AuditServiceRequestSource,
     issues: ServiceRequestIssue[],
     context: ServiceEstimateContext = {},
 ) {
