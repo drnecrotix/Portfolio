@@ -38,7 +38,7 @@ function jsonValue(value: unknown): Prisma.InputJsonValue {
 }
 
 function source(value: string): ServiceRequestSource {
-    if (value === 'WEBSITE_INSPECTOR' || value === 'EMAIL_DOMAIN_SECURITY' || value === 'SITE_CRAWL' || value === 'ACCESSIBILITY_CHECK') return value;
+    if (value === 'WEBSITE_INSPECTOR' || value === 'EMAIL_DOMAIN_SECURITY' || value === 'SITE_CRAWL' || value === 'ACCESSIBILITY_CHECK' || value === 'WEBSITE_CREATION') return value;
     throw new Error('Unsupported monitoring source.');
 }
 
@@ -149,7 +149,7 @@ function compactReport(report: unknown) {
 
 async function runAudit(requestSource: string, target: string) {
     const normalized = source(requestSource);
-    if (normalized === 'WEBSITE_INSPECTOR') return inspectWebsite(target);
+    if (normalized === 'WEBSITE_INSPECTOR' || normalized === 'WEBSITE_CREATION') return inspectWebsite(target);
     if (normalized === 'EMAIL_DOMAIN_SECURITY') return inspectEmailDomain(target);
     if (normalized === 'SITE_CRAWL') return crawlSite(target);
     return inspectAccessibility(target);
