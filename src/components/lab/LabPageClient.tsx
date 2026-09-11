@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
-import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, ExternalLink, Fingerprint, Github, LayoutTemplate, Palette, Wrench } from 'lucide-react';
+import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, ExternalLink, Github, PanelsTopLeft, Palette } from 'lucide-react';
 import { SplineScene } from '@/components/ui/SplineScene';
 import { DeferredMount } from '@/components/ui/DeferredMount';
 import { portfolioData } from '@/data/portfolio';
@@ -239,25 +239,27 @@ export function LabPageClient() {
                 </motion.div>
             </section>
 
-            <section className="mx-auto grid max-w-7xl gap-4 px-5 pt-24 sm:px-8 lg:grid-cols-3">
-                <Link href="/services/website-inspector" id="website-inspector" className="group block rounded-[2rem] border border-sky-500/20 bg-sky-500/[0.04] p-6 transition hover:border-sky-500/45 sm:p-8">
-                    <div className="flex h-full flex-col gap-6 sm:justify-between">
-                        <div className="flex items-start gap-4"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-sky-500/25 bg-background"><Fingerprint className="size-5 text-sky-500" /></span><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-sky-500">Lab tool · Website Inspector</p><h2 className="mt-2 text-2xl font-black tracking-tight">Website Health Check</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Check an existing website for delivery, security headers, SEO basics, privacy signals and response timing.</p></div></div>
-                        <span className="inline-flex w-full shrink-0 items-center justify-between rounded-xl bg-sky-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-sky-500/15 transition group-hover:bg-sky-400">Check a website <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
-                    </div>
-                </Link>
-                <Link href="/services/website" id="website-builder" className="group block rounded-[2rem] border border-violet-500/20 bg-violet-500/[0.04] p-6 transition hover:border-violet-500/45 sm:p-8">
-                    <div className="flex h-full flex-col gap-6 sm:justify-between">
-                        <div className="flex items-start gap-4"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/25 bg-background"><LayoutTemplate className="size-5 text-violet-500" /></span><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-violet-500">Kreatrics service · v1</p><h2 className="mt-2 text-2xl font-black tracking-tight">Website Builder</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Configure a new website by type, size, design and functionality, then create a trackable project request with an instant EUR estimate.</p></div></div>
-                        <span className="inline-flex w-full shrink-0 items-center justify-between rounded-xl bg-violet-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-violet-500/15 transition group-hover:bg-violet-400">Configure a new website <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
-                    </div>
-                </Link>
-                <Link href="/services/support" id="website-support" className="group block rounded-[2rem] border border-cyan-500/20 bg-cyan-500/[0.04] p-6 transition hover:border-cyan-500/45 sm:p-8">
-                    <div className="flex h-full flex-col gap-6 sm:justify-between">
-                        <div className="flex items-start gap-4"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/25 bg-background"><Wrench className="size-5 text-cyan-500" /></span><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-cyan-500">Kreatrics service · Support</p><h2 className="mt-2 text-2xl font-black tracking-tight">Website Support</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Configure WordPress, WooCommerce or custom website repairs and maintenance with transparent EUR pricing.</p></div></div>
-                        <span className="inline-flex w-full shrink-0 items-center justify-between rounded-xl bg-cyan-500 px-4 py-3 text-sm font-black text-slate-950 shadow-lg shadow-cyan-500/15 transition group-hover:bg-cyan-400">Configure support <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
-                    </div>
-                </Link>
+            <section className="mx-auto max-w-7xl px-5 pt-24 sm:px-8">
+                <motion.div initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: reduceMotion ? 0 : 0.55 }} whileHover={reduceMotion ? undefined : { y: -4 }}>
+                    <Link href="/services" id="services" className="group relative block overflow-hidden rounded-[2rem] bg-gradient-to-r from-cyan-500 via-sky-500 to-violet-500 p-px shadow-[0_18px_70px_-35px_rgba(56,189,248,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-4 focus-visible:ring-offset-background">
+                        <span className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-sky-500 to-violet-500 bg-[length:200%_100%] animate-gradient-shift opacity-70 transition-opacity group-hover:opacity-100 motion-reduce:animate-none" />
+                        <span className="relative flex min-h-48 flex-col justify-between gap-8 rounded-[calc(2rem-1px)] bg-background/95 p-6 backdrop-blur-xl sm:min-h-0 sm:flex-row sm:items-center sm:p-8 lg:px-10 lg:py-9">
+                            <span className="flex min-w-0 items-start gap-4 sm:items-center sm:gap-6">
+                                <span className="relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-violet-500 text-white shadow-lg shadow-sky-500/20 sm:size-14">
+                                    <PanelsTopLeft className="size-5 sm:size-6" />
+                                    <span className="absolute inset-0 rounded-2xl ring-1 ring-white/30 transition group-hover:scale-110 group-hover:opacity-0 motion-reduce:transition-none" />
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-sky-500 sm:tracking-[0.26em]">Kreatrics services</span>
+                                    <span className="mt-2 block text-2xl font-black tracking-[-0.04em] sm:text-3xl">Website Services</span>
+                                    <span className="mt-2 block max-w-2xl text-sm leading-6 text-muted-foreground">Inspect a website, configure a new build or request WordPress and custom support.</span>
+                                    <span className="mt-4 flex flex-wrap gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground"><span>Inspect</span><span aria-hidden="true">/</span><span>Build</span><span aria-hidden="true">/</span><span>Support</span></span>
+                                </span>
+                            </span>
+                            <span className="inline-flex w-full shrink-0 items-center justify-between rounded-xl bg-gradient-to-r from-cyan-500 to-violet-500 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-sky-500/15 sm:w-auto sm:min-w-44 sm:gap-8">Explore services <ArrowRight className="size-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none" /></span>
+                        </span>
+                    </Link>
+                </motion.div>
             </section>
 
             <section id="capabilities" className="relative mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:py-32">
