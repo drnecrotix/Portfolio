@@ -85,7 +85,7 @@ export function WebsiteInspectorClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
-                <BackToLabLink />
+                <BackToLabLink href="/services" label="Services" />
                 <header className="max-w-4xl">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
                         <span className="text-sky-500">NecrotixLab</span><span aria-hidden="true">/</span><span>Website Inspector</span><span aria-hidden="true">/</span><span>v1.2.61</span>
