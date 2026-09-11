@@ -11,6 +11,10 @@ type RedirectPayload = {
     redirect: null | { target: string; permanent: boolean };
 };
 
+const SITE_MODE_CACHE_MS = 5_000;
+let siteModeCache: { value: SiteModePayload; expiresAt: number } | null = null;
+let pendingSiteMode: Promise<SiteModePayload | null> | null = null;
+
 function contentSecurityPolicy() {
     // CSP belongs to the current document and is not replaced during Next.js
     // client-side navigation. The Lab can therefore load inside a document that
@@ -66,32 +70,39 @@ async function hasValidPrivateAccess(request: NextRequest) {
 }
 
 async function fetchSiteMode(request: NextRequest): Promise<SiteModePayload | null> {
-    const bases = [process.env.SITE_URL, process.env.AUTH_URL, process.env.NEXT_PUBLIC_SITE_URL, request.nextUrl.origin]
+    if (siteModeCache && siteModeCache.expiresAt > Date.now()) return siteModeCache.value;
+    if (pendingSiteMode) return pendingSiteMode;
+
+    const bases = [request.nextUrl.origin, process.env.SITE_URL, process.env.AUTH_URL, process.env.NEXT_PUBLIC_SITE_URL]
         .filter((value): value is string => Boolean(value))
         .map((value) => value.replace(/\/$/, ''));
     const uniqueBases = [...new Set(bases)];
 
-    for (const base of uniqueBases) {
-        try {
-            const endpoint = new URL('/api/site-mode', base);
-            endpoint.searchParams.set('_siteModeCheck', Date.now().toString());
-            const response = await fetch(endpoint, {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, max-age=0',
-                    Pragma: 'no-cache',
-                    Accept: 'application/json',
-                },
-                signal: AbortSignal.timeout(5_000),
-            });
-            if (!response.ok) continue;
-            return await response.json() as SiteModePayload;
-        } catch {
-            // Try the next origin. Some Passenger/N0C setups cannot loop back through request.url reliably.
+    pendingSiteMode = (async () => {
+        for (const base of uniqueBases) {
+            try {
+                const response = await fetch(new URL('/api/site-mode', base), {
+                    cache: 'no-store',
+                    headers: { Accept: 'application/json' },
+                    signal: AbortSignal.timeout(2_000),
+                });
+                if (!response.ok) continue;
+                const value = await response.json() as SiteModePayload;
+                siteModeCache = { value, expiresAt: Date.now() + SITE_MODE_CACHE_MS };
+                return value;
+            } catch {
+                // Try the next configured origin if this server cannot loop back through it.
+            }
         }
-    }
 
-    return null;
+        return null;
+    })();
+
+    try {
+        return await pendingSiteMode;
+    } finally {
+        pendingSiteMode = null;
+    }
 }
 
 export async function proxy(request: NextRequest) {
