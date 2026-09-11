@@ -93,7 +93,7 @@ export default async function ServiceRequestStatusPage({ params, searchParams }:
                 ) : null}
 
                 <section className="border-b border-border/80 py-6">
-                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Selected findings</p>
+                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{request.source === 'WEBSITE_BUILD' ? 'Selected project requirements' : 'Selected findings'}</p>
                     <div className="mt-3 border-y border-border/60">
                         {selectedIssues.length ? selectedIssues.map((issue, index) => (
                             <div key={index} className={`grid gap-2 py-3 sm:grid-cols-[80px_200px_minmax(0,1fr)] ${index ? 'border-t border-border/50' : ''}`}>

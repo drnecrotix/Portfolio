@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useMotionValue, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
-import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, ExternalLink, Fingerprint, Github, Palette } from 'lucide-react';
+import { ArrowDown, ArrowRight, Bot, Boxes, Braces, BrainCircuit, CloudCog, Database, ExternalLink, Fingerprint, Github, LayoutTemplate, Palette } from 'lucide-react';
 import { SplineScene } from '@/components/ui/SplineScene';
 import { DeferredMount } from '@/components/ui/DeferredMount';
 import { portfolioData } from '@/data/portfolio';
@@ -239,11 +239,17 @@ export function LabPageClient() {
                 </motion.div>
             </section>
 
-            <section className="mx-auto max-w-7xl px-5 pt-24 sm:px-8">
+            <section className="mx-auto grid max-w-7xl gap-4 px-5 pt-24 sm:px-8 lg:grid-cols-2">
                 <Link href="/website-inspector" id="website-inspector" className="group block rounded-[2rem] border border-sky-500/20 bg-sky-500/[0.04] p-6 transition hover:border-sky-500/45 sm:p-8">
-                    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-start gap-4"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-sky-500/25 bg-background"><Fingerprint className="size-5 text-sky-500" /></span><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-sky-500">Lab tool · v1</p><h2 className="mt-2 text-2xl font-black tracking-tight">Website Inspector</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Run a lightweight public-page audit for delivery, security headers, SEO basics, privacy signals and response timing.</p></div></div>
-                        <span className="inline-flex shrink-0 items-center gap-2 text-sm font-bold">Open inspector <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
+                    <div className="flex h-full flex-col gap-6 sm:justify-between">
+                        <div className="flex items-start gap-4"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-sky-500/25 bg-background"><Fingerprint className="size-5 text-sky-500" /></span><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-sky-500">Lab tool · Website Inspector</p><h2 className="mt-2 text-2xl font-black tracking-tight">Website Health Check</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Check an existing website for delivery, security headers, SEO basics, privacy signals and response timing.</p></div></div>
+                        <span className="inline-flex w-full shrink-0 items-center justify-between rounded-xl bg-sky-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-sky-500/15 transition group-hover:bg-sky-400">Check a website <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
+                    </div>
+                </Link>
+                <Link href="/services/website" id="website-builder" className="group block rounded-[2rem] border border-violet-500/20 bg-violet-500/[0.04] p-6 transition hover:border-violet-500/45 sm:p-8">
+                    <div className="flex h-full flex-col gap-6 sm:justify-between">
+                        <div className="flex items-start gap-4"><span className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-violet-500/25 bg-background"><LayoutTemplate className="size-5 text-violet-500" /></span><div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-violet-500">Kreatrics service · v1</p><h2 className="mt-2 text-2xl font-black tracking-tight">Website Builder</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Configure a new website by type, size, design and functionality, then create a trackable project request with an instant EUR estimate.</p></div></div>
+                        <span className="inline-flex w-full shrink-0 items-center justify-between rounded-xl bg-violet-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-violet-500/15 transition group-hover:bg-violet-400">Configure a new website <ArrowRight className="size-4 transition group-hover:translate-x-1" /></span>
                     </div>
                 </Link>
             </section>

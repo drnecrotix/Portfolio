@@ -98,3 +98,13 @@ test('automated remediation estimates cannot exceed published safety caps', () =
   assert.ok(estimate.max <= REMEDIATION_RATE_CARD.caps.max);
   assert.equal(estimate.currency, 'EUR');
 });
+
+test('website build estimates react to type, size, design and functionality', () => {
+  const basic = estimateServiceRange('WEBSITE_BUILD', [issue('site-landing'), issue('pages-1-3'), issue('design-adapted')]);
+  const business = estimateServiceRange('WEBSITE_BUILD', [issue('site-business'), issue('pages-4-7'), issue('design-custom'), issue('feature-contact'), issue('feature-seo')]);
+  const store = estimateServiceRange('WEBSITE_BUILD', [issue('site-store'), issue('pages-8-15'), issue('design-custom'), issue('feature-payments'), issue('feature-accounts')]);
+  assert.equal(basic.min, 200);
+  assert.ok(business.min > basic.min);
+  assert.ok(store.min > business.min);
+  assert.equal(store.currency, 'EUR');
+});

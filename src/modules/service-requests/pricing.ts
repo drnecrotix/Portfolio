@@ -93,6 +93,14 @@ export const SERVICE_PRICING = {
             description: 'For larger or e-commerce projects needing broader tracking, implementation and priority support.',
         },
     ],
+    websiteBuilds: [
+        { id: 'landing', name: 'Landing page', priceFrom: 199, description: 'A focused one-page site for a campaign, service or product.' },
+        { id: 'portfolio', name: 'Portfolio', priceFrom: 299, description: 'A personal or creative portfolio with project presentation and contact flow.' },
+        { id: 'business', name: 'Business website', priceFrom: 399, description: 'A professional small-business website with core pages, enquiry flow and basic SEO setup.' },
+        { id: 'blog', name: 'Blog / publication', priceFrom: 449, description: 'A structured publishing website with categories, authoring and search-ready content templates.' },
+        { id: 'store', name: 'Online store', priceFrom: 749, description: 'Product catalogue, cart and checkout foundation. Products and payment integrations affect scope.' },
+        { id: 'custom', name: 'Custom web platform', priceFrom: 990, description: 'A tailored application, portal or workflow requiring discovery and a manually confirmed scope.' },
+    ],
     exclusions: [
         'Paid media, sponsored placements and paid backlinks are not included.',
         'Long-form content production and translation are quoted separately.',

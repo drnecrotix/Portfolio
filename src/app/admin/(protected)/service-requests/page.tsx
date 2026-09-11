@@ -78,7 +78,7 @@ export default async function ServiceRequestsAdminPage() {
                                                 <a href={statusUrl} target="_blank" rel="noreferrer" className="text-sky-300 hover:underline">Open customer status</a>
                                                 {monitoring.requested === true ? <span className="text-emerald-300">Monitoring requested · {String(monitoring.cadence ?? 'monthly')}</span> : null}
                                             </div>
-                                            <p className="mt-5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">Selected audit findings</p>
+                                            <p className="mt-5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">{request.source === 'WEBSITE_BUILD' ? 'Selected project requirements' : 'Selected audit findings'}</p>
                                             <div className="mt-3 border-y border-white/10">
                                                 {selectedIssues.length ? selectedIssues.map((issue, issueIndex) => (
                                                     <div key={`${request.id}-${issueIndex}`} className={`grid gap-2 py-3 sm:grid-cols-[80px_180px_minmax(0,1fr)] ${issueIndex ? 'border-t border-white/5' : ''}`}>
@@ -86,7 +86,7 @@ export default async function ServiceRequestsAdminPage() {
                                                         <span className="text-xs font-semibold">{String(issue.label ?? 'Finding')}</span>
                                                         <span className="text-xs leading-5 text-white/45">{String(issue.summary ?? '')}</span>
                                                     </div>
-                                                )) : <p className="py-4 text-xs text-white/40">Manual review requested without selected automated findings.</p>}
+                                                )) : <p className="py-4 text-xs text-white/40">Manual review requested without selected requirements.</p>}
                                             </div>
                                             <div className="mt-5 grid gap-3 text-xs text-white/45 sm:grid-cols-2"><p><strong className="text-white/65">CMS:</strong> {request.cms || 'Unknown'}</p><p><strong className="text-white/65">Access:</strong> {request.accessStatus || 'Not specified'}</p><p><strong className="text-white/65">Company:</strong> {request.company || '-'}</p><p><strong className="text-white/65">Budget:</strong> {money(request.budgetCents, request.currency)}</p></div>
                                             {request.customerMessage ? <div className="mt-5 border-l border-white/15 pl-4 text-sm leading-6 text-white/55">{request.customerMessage}</div> : null}
