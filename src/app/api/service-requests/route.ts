@@ -9,12 +9,18 @@ import { normalizeGeneralSiteSettings } from '@/lib/site-settings';
 import { isPublicWriteBlocked } from '@/lib/public-write-guard';
 import { estimateServiceRange } from '@/modules/service-requests/estimate';
 import { serviceStatusUrl } from '@/modules/service-requests/status-access';
+import {
+    estimateWebsiteProject,
+    parseWebsiteProjectScope,
+    websiteProjectLabels,
+    websiteProjectScopeLines,
+} from '@/modules/service-requests/website-project';
 import { hasValidOrigin, isRateLimited, noStoreHeaders } from '@/modules/web-health/route-guard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const sourceSchema = z.enum(['WEBSITE_INSPECTOR', 'EMAIL_DOMAIN_SECURITY', 'SITE_CRAWL', 'ACCESSIBILITY_CHECK']);
+const sourceSchema = z.enum(['WEBSITE_INSPECTOR', 'EMAIL_DOMAIN_SECURITY', 'SITE_CRAWL', 'ACCESSIBILITY_CHECK', 'WEBSITE_CREATION']);
 const issueSchema = z.object({
     id: z.string().trim().min(1).max(100),
     label: z.string().trim().min(1).max(160),
@@ -28,13 +34,14 @@ const schema = z.object({
     score: z.number().int().min(0).max(100).optional(),
     issues: z.array(issueSchema).max(40),
     snapshot: z.unknown().optional(),
+    project: z.unknown().optional(),
     name: z.string().trim().min(2).max(80),
     email: z.string().trim().email().max(200),
     company: z.string().trim().max(120).optional().default(''),
     cms: z.string().trim().max(80).optional().default('Unknown'),
     accessStatus: z.string().trim().max(120).optional().default('Need guidance'),
     budget: z.union([z.string(), z.number(), z.null()]).optional(),
-    message: z.string().trim().max(1500).optional().default(''),
+    message: z.string().trim().max(2000).optional().default(''),
     privacyAccepted: z.literal(true),
     website: z.string().max(200).optional().default(''),
     startedAt: z.number().int().positive(),
@@ -75,27 +82,29 @@ async function mailContext() {
     return { smtp, recipient, transporter };
 }
 
-async function notifyParties(request: { reference: string; name: string; email: string; source: string; target: string; estimateMin: number; estimateMax: number; issueCount: number; statusUrl: string }) {
+async function notifyParties(request: { reference: string; name: string; email: string; source: string; target: string; estimateMin: number; estimateMax: number; lineCount: number; statusUrl: string; websiteProject: boolean }) {
     try {
         const context = await mailContext();
         if (!context) return;
         const { smtp, recipient, transporter } = context;
+        const scopeLabel = request.websiteProject ? 'Scope items' : 'Selected issues';
+        const requestKind = request.websiteProject ? 'Website project request' : 'Service request';
         if (recipient) {
             await transporter.sendMail({
                 from: `Kreatrics Service Requests <${smtp.user}>`,
                 to: recipient,
                 replyTo: request.email,
                 subject: `[${request.reference}] ${request.source} - ${request.target}`,
-                text: `Service request ${request.reference}\nCustomer: ${request.name} <${request.email}>\nSource: ${request.source}\nTarget: ${request.target}\nIssues: ${request.issueCount}\nEstimate: EUR ${request.estimateMin}-${request.estimateMax}\nStatus: ${request.statusUrl}`,
-                html: `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px"><p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#64748b">Kreatrics service request</p><h2>${escapeHtml(request.reference)}</h2><p><strong>Customer:</strong> ${escapeHtml(request.name)} &lt;${escapeHtml(request.email)}&gt;</p><p><strong>Source:</strong> ${escapeHtml(request.source)}</p><p><strong>Target:</strong> ${escapeHtml(request.target)}</p><p><strong>Selected issues:</strong> ${request.issueCount}</p><p><strong>Automated estimate:</strong> EUR ${request.estimateMin}-${request.estimateMax}</p><p><a href="${escapeHtml(request.statusUrl)}">Open customer status page</a></p></div>`,
+                text: `${requestKind} ${request.reference}\nCustomer: ${request.name} <${request.email}>\nSource: ${request.source}\nTarget: ${request.target}\n${scopeLabel}: ${request.lineCount}\nEstimate: EUR ${request.estimateMin}-${request.estimateMax}\nStatus: ${request.statusUrl}`,
+                html: `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px"><p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#64748b">Kreatrics ${request.websiteProject ? 'website project' : 'service request'}</p><h2>${escapeHtml(request.reference)}</h2><p><strong>Customer:</strong> ${escapeHtml(request.name)} &lt;${escapeHtml(request.email)}&gt;</p><p><strong>Source:</strong> ${escapeHtml(request.source)}</p><p><strong>Target:</strong> ${escapeHtml(request.target)}</p><p><strong>${escapeHtml(scopeLabel)}:</strong> ${request.lineCount}</p><p><strong>Automated estimate:</strong> EUR ${request.estimateMin}-${request.estimateMax}</p><p><a href="${escapeHtml(request.statusUrl)}">Open customer status page</a></p></div>`,
             });
         }
         await transporter.sendMail({
             from: `Kreatrics Service Requests <${smtp.user}>`,
             to: request.email,
-            subject: `${request.reference} - service request received`,
-            text: `Hello ${request.name},\n\nYour Kreatrics service request ${request.reference} was received. The automated estimate is EUR ${request.estimateMin}-${request.estimateMax}; the final quote is confirmed only after manual review.\n\nTrack your request: ${request.statusUrl}\n\nKeep this private link because it provides access to your request status.`,
-            html: `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px"><p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#64748b">Kreatrics customer service</p><h2>Request received</h2><p>Hello ${escapeHtml(request.name)},</p><p>Your request <strong>${escapeHtml(request.reference)}</strong> was received.</p><p>The automated estimate is <strong>EUR ${request.estimateMin}-${request.estimateMax}</strong>. The final quote is confirmed after manual review.</p><p><a href="${escapeHtml(request.statusUrl)}">Track your service request</a></p><p style="color:#64748b;font-size:12px">Keep this private link because it provides access to your request status.</p></div>`,
+            subject: `${request.reference} - ${request.websiteProject ? 'website project' : 'service request'} received`,
+            text: `Hello ${request.name},\n\nYour Kreatrics ${request.websiteProject ? 'website project' : 'service'} request ${request.reference} was received. The automated estimate is EUR ${request.estimateMin}-${request.estimateMax}; the final quote is confirmed only after manual review.\n\nTrack your request: ${request.statusUrl}\n\nKeep this private link because it provides access to your request status.`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:24px"><p style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#64748b">Kreatrics customer service</p><h2>${request.websiteProject ? 'Website project received' : 'Request received'}</h2><p>Hello ${escapeHtml(request.name)},</p><p>Your request <strong>${escapeHtml(request.reference)}</strong> was received.</p><p>The automated estimate is <strong>EUR ${request.estimateMin}-${request.estimateMax}</strong>. The final quote is confirmed after manual review.</p><p><a href="${escapeHtml(request.statusUrl)}">Track your service request</a></p><p style="color:#64748b;font-size:12px">Keep this private link because it provides access to your request status.</p></div>`,
         });
     } catch (error) {
         console.error('[Service Requests] email notification failed', error);
@@ -114,11 +123,21 @@ export async function POST(request: Request) {
     const completionMs = Date.now() - data.startedAt;
     if (data.website || completionMs < 1500 || completionMs > 2 * 60 * 60 * 1000) return NextResponse.json({ reference: 'REQUEST-RECEIVED' }, { headers: noStoreHeaders });
 
-    const estimate = estimateServiceRange(data.source, data.issues, { cms: data.cms, accessStatus: data.accessStatus });
+    const websiteProject = data.source === 'WEBSITE_CREATION';
+    const projectScope = websiteProject ? parseWebsiteProjectScope(data.project) : null;
+    if (websiteProject && !projectScope) return NextResponse.json({ error: 'Check the website project scope and try again.' }, { status: 400, headers: noStoreHeaders });
+
+    const projectEstimate = projectScope ? estimateWebsiteProject(projectScope) : null;
+    const estimate = projectEstimate ?? estimateServiceRange(data.source as Exclude<typeof data.source, 'WEBSITE_CREATION'>, data.issues, { cms: data.cms, accessStatus: data.accessStatus });
+    const selectedLines = projectScope ? websiteProjectScopeLines(projectScope) : data.issues;
+    const projectSnapshot = projectScope ? safeSnapshot({ project: projectScope, planning: { weeks: projectEstimate?.weeks, maintenanceQuotedSeparately: projectEstimate?.maintenanceQuotedSeparately } }) : undefined;
+    const snapshot = projectSnapshot ?? safeSnapshot(data.snapshot);
+    const storedCms = projectScope ? websiteProjectLabels.cms[projectScope.cms] : data.cms;
+    const storedAccessStatus = projectScope ? `New project · ${websiteProjectLabels.hosting[projectScope.hosting]}` : data.accessStatus;
+
     const budgetNumber = Number(data.budget ?? 0);
-    const budgetCents = Number.isFinite(budgetNumber) && budgetNumber > 0 ? Math.min(1_000_000, Math.round(budgetNumber * 100)) : undefined;
+    const budgetCents = Number.isFinite(budgetNumber) && budgetNumber > 0 ? Math.min(5_000_000, Math.round(budgetNumber * 100)) : undefined;
     const requestReference = reference();
-    const snapshot = safeSnapshot(data.snapshot);
 
     const created = await prisma.serviceRequest.create({
         data: {
@@ -128,12 +147,12 @@ export async function POST(request: Request) {
             customerName: data.name,
             customerEmail: data.email,
             company: data.company || undefined,
-            cms: data.cms || undefined,
-            accessStatus: data.accessStatus || undefined,
+            cms: storedCms || undefined,
+            accessStatus: storedAccessStatus || undefined,
             budgetCents,
-            selectedIssues: data.issues as Prisma.InputJsonValue,
-            ...(snapshot ? { auditSnapshot: { before: snapshot } as Prisma.InputJsonValue } : {}),
-            scanScore: data.score,
+            selectedIssues: selectedLines as Prisma.InputJsonValue,
+            ...(snapshot ? { auditSnapshot: websiteProject ? snapshot : { before: snapshot } as Prisma.InputJsonValue } : {}),
+            scanScore: websiteProject ? undefined : data.score,
             estimateMinCents: estimate.min * 100,
             estimateMaxCents: estimate.max * 100,
             currency: estimate.currency,
@@ -143,6 +162,6 @@ export async function POST(request: Request) {
     });
 
     const statusUrl = serviceStatusUrl(created.reference, created.customerEmail);
-    await notifyParties({ reference: created.reference, name: data.name, email: data.email, source: data.source, target: data.target, estimateMin: estimate.min, estimateMax: estimate.max, issueCount: data.issues.length, statusUrl });
+    await notifyParties({ reference: created.reference, name: data.name, email: data.email, source: data.source, target: data.target, estimateMin: estimate.min, estimateMax: estimate.max, lineCount: selectedLines.length, statusUrl, websiteProject });
     return NextResponse.json({ reference: created.reference, statusUrl, estimate: { min: estimate.min, max: estimate.max, currency: estimate.currency } }, { status: 201, headers: noStoreHeaders });
 }
