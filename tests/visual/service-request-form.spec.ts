@@ -58,7 +58,7 @@ test('service request estimate reacts to remediation context but not customer bu
     });
   });
 
-  await page.goto('/website-inspector', { waitUntil: 'domcontentloaded' });
+  await page.goto('/services/website-inspector', { waitUntil: 'domcontentloaded' });
   await page.getByPlaceholder('https://example.com').fill('https://example.com');
   await page.getByRole('button', { name: 'Inspect site' }).click();
 

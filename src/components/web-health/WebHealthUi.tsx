@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import type { HealthCheck, HealthStatus } from '@/modules/web-health/types';
 
 const tools = [
-    ['Website Inspector', '/website-inspector', 'website'],
+    ['Website Inspector', '/services/website-inspector', 'website'],
     ['Email Domain Security', '/email-domain-security', 'email'],
     ['Site Crawl', '/site-crawl', 'crawl'],
     ['Accessibility Check', '/accessibility-check', 'accessibility'],

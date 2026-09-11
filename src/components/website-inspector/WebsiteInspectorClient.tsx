@@ -5,6 +5,7 @@ import { ExternalLink, Loader2, Search, ShieldCheck } from 'lucide-react';
 import type { WebsiteInspection, WebsiteInspectorCategory, WebsiteInspectorCheck } from '@/modules/website-inspector/types';
 import { WebHealthNav } from '@/components/web-health/WebHealthUi';
 import { ServiceRequestForm } from '@/components/service-requests/ServiceRequestForm';
+import { BackToLabLink } from '@/components/services/BackToLabLink';
 
 const categories: Array<{ id: WebsiteInspectorCategory; label: string; code: string }> = [
     { id: 'delivery', label: 'Delivery', code: '01' },
@@ -84,6 +85,7 @@ export function WebsiteInspectorClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
+                <BackToLabLink />
                 <header className="max-w-4xl">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
                         <span className="text-sky-500">NecrotixLab</span><span aria-hidden="true">/</span><span>Website Inspector</span><span aria-hidden="true">/</span><span>v1.2.61</span>
