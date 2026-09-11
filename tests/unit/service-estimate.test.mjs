@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { estimateServiceRange, REMEDIATION_RATE_CARD } from '../../src/modules/service-requests/estimate.ts';
 import { SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
+import { domainSuggestions, domainTld, normalizeDomainCandidate } from '../../src/modules/domain-availability/domain.ts';
 
 function issue(id, status = 'warning', summary = 'Finding detected.') {
   return {
@@ -117,4 +118,12 @@ test('website support estimates distinguish WordPress from custom work and urgen
   assert.equal(custom.currency, 'EUR');
   assert.deepEqual(SERVICE_PRICING.websiteBuilds.map((item) => item.priceFrom), [199, 299, 399, 449, 749, 990]);
   assert.deepEqual(SERVICE_PRICING.supportMonthly.map((plan) => plan.price), [49, 89, 149, 119, 229, 399]);
+});
+
+test('domain availability input is normalized and produces distinct alternatives', () => {
+  assert.equal(normalizeDomainCandidate('https://WWW.Example.COM/path'), 'example.com');
+  assert.equal(domainTld('example.co.uk'), 'uk');
+  const suggestions = domainSuggestions('example.com');
+  assert.ok(suggestions.length >= 3);
+  assert.ok(!suggestions.includes('example.com'));
 });
