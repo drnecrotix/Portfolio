@@ -90,11 +90,11 @@ const nextConfig = {
                     { key: 'Content-Security-Policy', value: contentSecurityPolicy },
                 ],
             },
-            // Keep the default CSP off /lab. Browsers intersect multiple CSP
-            // policies, so a stricter global script-src would still block Spline
-            // WebAssembly even when /lab sends its own wasm-enabled policy.
+            // Next.js route sources use path-to-regexp. Keep the default CSP on
+            // every route except /lab and its descendants; those routes receive
+            // the dedicated WebAssembly-enabled policy below.
             {
-                source: '/:path((?!lab(?:/|$)).*)',
+                source: '/((?!lab(?:/|$)).*)',
                 headers: [
                     { key: 'Content-Security-Policy', value: contentSecurityPolicy },
                 ],
