@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Home, MoveLeft, RefreshCcw } from 'lucide-react';
-import Link from 'next/link';
 import { usePerformance } from '@/hooks/usePerformance';
 
 interface QuantumErrorProps {
@@ -123,19 +122,17 @@ export function QuantumError({ type = '404', reset }: QuantumErrorProps) {
                     transition={{ delay: 0.4 }}
                     className="flex flex-col sm:flex-row items-center gap-6 mt-16"
                 >
-                    <Link href="/">
-                        <button className="group relative flex items-center gap-3 px-8 py-4 rounded-full bg-foreground text-background font-bold text-sm tracking-wide transition-all hover:pr-10">
-                            <Home size={18} />
-                            <span>Return Home</span>
-                            <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoveLeft size={16} className="rotate-180" />
-                            </div>
-                        </button>
-                    </Link>
+                    <button onClick={() => window.location.assign('/')} className="group relative flex items-center gap-3 px-8 py-4 rounded-full bg-foreground text-background font-bold text-sm tracking-wide transition-all hover:pr-10">
+                        <Home size={18} />
+                        <span>Return Home</span>
+                        <span className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoveLeft size={16} className="rotate-180" />
+                        </span>
+                    </button>
 
                     {reset ? (
                         <button
-                            onClick={reset}
+                            onClick={() => window.location.reload()}
                             className="flex items-center gap-3 text-muted-foreground hover:text-foreground font-bold text-sm tracking-wide transition-colors"
                         >
                             <RefreshCcw size={18} />

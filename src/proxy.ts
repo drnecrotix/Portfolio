@@ -11,10 +11,13 @@ type RedirectPayload = {
     redirect: null | { target: string; permanent: boolean };
 };
 
-function contentSecurityPolicy(pathname: string) {
-    const scripts = ["'self'", "'unsafe-inline'"];
+function contentSecurityPolicy() {
+    // CSP belongs to the current document and is not replaced during Next.js
+    // client-side navigation. The Lab can therefore load inside a document that
+    // originated on any public route, so its WebAssembly permission must travel
+    // with every document. This does not permit JavaScript eval().
+    const scripts = ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'"];
     if (process.env.NODE_ENV !== 'production') scripts.push("'unsafe-eval'");
-    if (pathname === '/lab' || pathname.startsWith('/lab/')) scripts.push("'wasm-unsafe-eval'");
 
     return [
         "default-src 'self'",
@@ -33,13 +36,13 @@ function contentSecurityPolicy(pathname: string) {
     ].join('; ');
 }
 
-function withCsp(response: NextResponse, pathname: string) {
-    response.headers.set('Content-Security-Policy', contentSecurityPolicy(pathname));
+function withCsp(response: NextResponse) {
+    response.headers.set('Content-Security-Policy', contentSecurityPolicy());
     return response;
 }
 
-function nextWithCsp(pathname: string) {
-    return withCsp(NextResponse.next(), pathname);
+function nextWithCsp() {
+    return withCsp(NextResponse.next());
 }
 
 function bytesToBase64Url(bytes: Uint8Array) {
@@ -95,7 +98,7 @@ export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     if (pathname.startsWith('/api')) return NextResponse.next();
-    if (pathname.startsWith('/admin') || pathname === '/site-status') return nextWithCsp(pathname);
+    if (pathname.startsWith('/admin') || pathname === '/site-status') return nextWithCsp();
 
     try {
         const redirectEndpoint = new URL('/api/redirects/resolve', request.url);
@@ -105,7 +108,7 @@ export async function proxy(request: NextRequest) {
             const payload = (await redirectResponse.json()) as RedirectPayload;
             if (payload.redirect) {
                 const target = payload.redirect.target.startsWith('/') ? new URL(payload.redirect.target, request.url) : new URL(payload.redirect.target);
-                if (target.toString() !== request.nextUrl.toString()) return withCsp(NextResponse.redirect(target, payload.redirect.permanent ? 308 : 307), pathname);
+                if (target.toString() !== request.nextUrl.toString()) return withCsp(NextResponse.redirect(target, payload.redirect.permanent ? 308 : 307));
             }
         }
     } catch {
@@ -113,22 +116,22 @@ export async function proxy(request: NextRequest) {
     }
 
     const settings = await fetchSiteMode(request);
-    if (!settings) return nextWithCsp(pathname);
+    if (!settings) return nextWithCsp();
 
     const adminBypassRevision = request.cookies.get('portfolio-admin-bypass')?.value;
     const hasAdminBypass = Boolean(adminBypassRevision && adminBypassRevision === settings.updatedAt);
-    if (settings.bypassAdmins && hasAdminBypass) return nextWithCsp(pathname);
+    if (settings.bypassAdmins && hasAdminBypass) return nextWithCsp();
 
-    if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return nextWithCsp(pathname);
+    if (settings.mode === 'PRIVATE' && await hasValidPrivateAccess(request)) return nextWithCsp();
 
     if (settings.mode === 'MAINTENANCE' || settings.mode === 'COMING_SOON' || settings.mode === 'PRIVATE' || settings.mode === 'ARCHIVE') {
         const target = request.nextUrl.clone();
         target.pathname = '/site-status';
         target.search = '';
-        return withCsp(NextResponse.redirect(target), pathname);
+        return withCsp(NextResponse.redirect(target));
     }
 
-    return nextWithCsp(pathname);
+    return nextWithCsp();
 }
 
 export const config = {

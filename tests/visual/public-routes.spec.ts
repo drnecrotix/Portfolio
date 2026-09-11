@@ -48,11 +48,7 @@ for (const theme of themes) {
 
       const csp = (await response?.headerValue('content-security-policy')) ?? '';
       expect(csp, `${route} should return a Content-Security-Policy header`).not.toBe('');
-      if (route === '/lab') {
-        expect(csp, 'The Lab must explicitly permit WebAssembly compilation').toContain("'wasm-unsafe-eval'");
-      } else {
-        expect(csp, `${route} must not inherit The Lab WebAssembly exception`).not.toContain("'wasm-unsafe-eval'");
-      }
+      expect(csp, `${route} must permit WebAssembly after client-side navigation to The Lab`).toContain("'wasm-unsafe-eval'");
 
       const dimensions = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth,
