@@ -78,7 +78,7 @@ export default async function ServiceRequestsAdminPage() {
                                                 <a href={statusUrl} target="_blank" rel="noreferrer" className="text-sky-300 hover:underline">Open customer status</a>
                                                 {monitoring.requested === true ? <span className="text-emerald-300">Monitoring requested · {String(monitoring.cadence ?? 'monthly')}</span> : null}
                                             </div>
-                                            <p className="mt-5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">{request.source === 'WEBSITE_BUILD' ? 'Selected project requirements' : 'Selected audit findings'}</p>
+                                            <p className="mt-5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">{request.source === 'WEBSITE_BUILD' ? 'Selected project requirements' : request.source === 'WEBSITE_SUPPORT' ? 'Selected support requirements' : 'Selected audit findings'}</p>
                                             <div className="mt-3 border-y border-white/10">
                                                 {selectedIssues.length ? selectedIssues.map((issue, issueIndex) => (
                                                     <div key={`${request.id}-${issueIndex}`} className={`grid gap-2 py-3 sm:grid-cols-[80px_180px_minmax(0,1fr)] ${issueIndex ? 'border-t border-white/5' : ''}`}>

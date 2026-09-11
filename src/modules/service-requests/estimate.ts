@@ -1,4 +1,4 @@
-export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK' | 'WEBSITE_BUILD';
+export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK' | 'WEBSITE_BUILD' | 'WEBSITE_SUPPORT';
 
 export type ServiceRequestIssue = {
     id: string;
@@ -25,6 +25,7 @@ export const REMEDIATION_RATE_CARD = {
         SITE_CRAWL: 45,
         ACCESSIBILITY_CHECK: 55,
         WEBSITE_BUILD: 95,
+        WEBSITE_SUPPORT: 29,
     },
     costByComplexity: {
         simple: { min: 10, max: 22 },
@@ -95,7 +96,55 @@ export const WEBSITE_BUILD_RATE_CARD = {
         'feature-copywriting': { min: 140, max: 390 },
         'feature-domain': { min: 20, max: 40 },
         'feature-hosting': { min: 35, max: 70 },
+        'feature-business-email': { min: 35, max: 90 },
+        'feature-analytics': { min: 45, max: 90 },
+        'feature-cookie-consent': { min: 45, max: 100 },
+        'feature-accessibility': { min: 70, max: 160 },
+        'feature-search': { min: 70, max: 160 },
+        'feature-newsletter': { min: 60, max: 140 },
+        'feature-social': { min: 25, max: 60 },
+        'feature-migration': { min: 120, max: 390 },
+        'feature-maintenance': { min: 45, max: 120 },
+        'feature-cms': { min: 70, max: 140 },
+        'feature-map': { min: 25, max: 60 },
+        'feature-live-chat': { min: 45, max: 100 },
+        'feature-product-import': { min: 90, max: 290 },
+        'feature-shipping': { min: 90, max: 220 },
+        'feature-reviews': { min: 60, max: 140 },
+        'feature-security': { min: 70, max: 160 },
+        'feature-backups': { min: 45, max: 100 },
+        'feature-performance': { min: 90, max: 240 },
+        'feature-staging': { min: 70, max: 160 },
+        'platform-custom': { min: 160, max: 390 },
+        'content-not-ready': { min: 90, max: 260 },
+        'brand-not-ready': { min: 90, max: 220 },
         'deadline-priority': { min: 180, max: 490 },
+    },
+} as const;
+
+export const WEBSITE_SUPPORT_RATE_CARD = {
+    baseByPlatform: {
+        'support-wordpress': { min: 29, max: 49 },
+        'support-woocommerce': { min: 39, max: 69 },
+        'support-custom': { min: 49, max: 89 },
+    },
+    work: {
+        'support-diagnosis': { min: 0, max: 20 },
+        'support-small-fix': { min: 20, max: 55 },
+        'support-standard-fix': { min: 55, max: 130 },
+        'support-complex-fix': { min: 130, max: 340 },
+        'support-updates': { min: 25, max: 60 },
+        'support-backup': { min: 20, max: 50 },
+        'support-security': { min: 60, max: 160 },
+        'support-malware': { min: 110, max: 290 },
+        'support-performance': { min: 70, max: 210 },
+        'support-migration': { min: 90, max: 260 },
+        'support-content': { min: 25, max: 90 },
+        'support-feature': { min: 90, max: 320 },
+        'support-api': { min: 100, max: 360 },
+        'support-database': { min: 90, max: 290 },
+        'support-deployment': { min: 60, max: 190 },
+        'support-urgent': { min: 70, max: 190 },
     },
 } as const;
 
@@ -114,6 +163,23 @@ function estimateWebsiteBuild(issues: ServiceRequestIssue[]) {
         min: roundFive(min),
         max: roundFive(max),
         currency: REMEDIATION_RATE_CARD.currency,
+        breakdown: { complexity: { simple: 0, moderate: 0, complex: 0, specialist: 0 }, additionalAffectedItems: 0, cmsModifier: 1, accessModifier: 1, bundleModifier: 1 },
+    };
+}
+
+function estimateWebsiteSupport(issues: ServiceRequestIssue[]) {
+    const ids = new Set(issues.map((issue) => issue.id));
+    const platformId = Object.keys(WEBSITE_SUPPORT_RATE_CARD.baseByPlatform).find((id) => ids.has(id)) as keyof typeof WEBSITE_SUPPORT_RATE_CARD.baseByPlatform | undefined;
+    const base = WEBSITE_SUPPORT_RATE_CARD.baseByPlatform[platformId ?? 'support-wordpress'];
+    let min = base.min;
+    let max = base.max;
+    for (const [id, addition] of Object.entries(WEBSITE_SUPPORT_RATE_CARD.work)) {
+        if (!ids.has(id)) continue;
+        min += addition.min;
+        max += addition.max;
+    }
+    return {
+        min: roundFive(min), max: roundFive(max), currency: REMEDIATION_RATE_CARD.currency,
         breakdown: { complexity: { simple: 0, moderate: 0, complex: 0, specialist: 0 }, additionalAffectedItems: 0, cmsModifier: 1, accessModifier: 1, bundleModifier: 1 },
     };
 }
@@ -202,8 +268,21 @@ const complexityBySource: Record<ServiceRequestSource, Record<string, Complexity
         'feature-copywriting': 'complex',
         'feature-domain': 'simple',
         'feature-hosting': 'moderate',
+        'feature-business-email': 'moderate',
+        'feature-analytics': 'simple',
+        'feature-cookie-consent': 'moderate',
+        'feature-accessibility': 'complex',
+        'feature-search': 'moderate',
+        'feature-newsletter': 'moderate',
+        'feature-social': 'simple',
+        'feature-migration': 'complex',
+        'feature-maintenance': 'moderate',
+        'platform-custom': 'complex',
+        'content-not-ready': 'moderate',
+        'brand-not-ready': 'moderate',
         'deadline-priority': 'complex',
     },
+    WEBSITE_SUPPORT: {},
 };
 
 function complexityFor(source: ServiceRequestSource, issue: ServiceRequestIssue): Complexity {
@@ -248,6 +327,7 @@ export function estimateServiceRange(
     context: ServiceEstimateContext = {},
 ) {
     if (source === 'WEBSITE_BUILD') return estimateWebsiteBuild(issues);
+    if (source === 'WEBSITE_SUPPORT') return estimateWebsiteSupport(issues);
     const counts: Record<Complexity, number> = { simple: 0, moderate: 0, complex: 0, specialist: 0 };
     let laborMin = 0;
     let laborMax = 0;

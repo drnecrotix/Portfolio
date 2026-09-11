@@ -66,6 +66,23 @@ export default function ServicePricingPage() {
                     <Link href="/services/website" className="mt-5 inline-flex items-center justify-center border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">Configure a website</Link>
                 </section>
 
+                <section id="website-support" className="mt-12 scroll-mt-28 border-t border-border/80">
+                    <div className="grid gap-2 border-b border-border/80 py-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
+                        <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-500">Support</p><h2 className="mt-2 text-xl font-black tracking-tight">One-off website support</h2></div>
+                        <p className="text-sm leading-6 text-muted-foreground">Clear freelancer pricing for WordPress, WooCommerce and custom websites. The final quote reflects access, code quality and the confirmed scope.</p>
+                    </div>
+                    <div className="overflow-x-auto"><table className="w-full min-w-[680px] border-collapse text-left"><thead className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground"><tr className="border-b border-border/70"><th className="py-3 pr-5">Service</th><th className="py-3 pr-5">Scope</th><th className="py-3 text-right">Price</th></tr></thead><tbody>{SERVICE_PRICING.supportOneOff.map((item) => <tr key={item.id} className="border-b border-border/60 align-top"><th className="py-4 pr-5 text-sm font-semibold">{item.name}</th><td className="py-4 pr-5 text-xs leading-5 text-muted-foreground">{item.description}</td><td className="whitespace-nowrap py-4 text-right font-mono text-sm font-bold">{item.price}</td></tr>)}</tbody></table></div>
+                    <Link href="/services/support" className="mt-5 inline-flex items-center justify-center border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">Configure support</Link>
+                </section>
+
+                <section className="mt-12 border-t border-border/80">
+                    <div className="grid gap-2 border-b border-border/80 py-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
+                        <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-500">Care plans</p><h2 className="mt-2 text-xl font-black tracking-tight">Website maintenance</h2></div>
+                        <p className="text-sm leading-6 text-muted-foreground">Fixed monthly plans with a defined work allowance. Unused development time does not roll over and larger tasks receive a separate quote.</p>
+                    </div>
+                    <div className="grid border-b border-border/80 md:grid-cols-2 xl:grid-cols-3">{SERVICE_PRICING.supportMonthly.map((plan, index) => <article key={plan.id} className={`py-6 md:px-6 ${index ? 'border-t border-border/60 md:border-l md:border-t-0' : ''}`}><p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-500">{plan.platform}</p><h3 className="mt-2 text-sm font-black">{plan.name}</h3><p className="mt-2 text-3xl font-black tracking-[-0.04em]">€{plan.price}<span className="ml-1 text-xs font-semibold tracking-normal text-muted-foreground">/mo</span></p><p className="mt-3 text-xs leading-5 text-muted-foreground">{plan.description}</p></article>)}</div>
+                </section>
+
                 <section className="mt-12 border-t border-border/80">
                     <div className="grid gap-2 border-b border-border/80 py-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
                         <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-sky-500">Monthly</p><h2 className="mt-2 text-xl font-black tracking-tight">SEO monitoring & growth</h2></div>

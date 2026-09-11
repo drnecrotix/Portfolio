@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import { estimateServiceRange, REMEDIATION_RATE_CARD } from '../../src/modules/service-requests/estimate.ts';
 import { SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
+import { domainTld, normalizeDomainCandidate } from '../../src/modules/domain-availability/domain.ts';
 
 function issue(id, status = 'warning', summary = 'Finding detected.') {
   return {
@@ -107,4 +108,21 @@ test('website build estimates react to type, size, design and functionality', ()
   assert.ok(business.min > basic.min);
   assert.ok(store.min > business.min);
   assert.equal(store.currency, 'EUR');
+});
+
+test('website support estimates distinguish WordPress from custom work and urgency', () => {
+  const wordpress = estimateServiceRange('WEBSITE_SUPPORT', [issue('support-wordpress'), issue('support-small-fix')]);
+  const custom = estimateServiceRange('WEBSITE_SUPPORT', [issue('support-custom'), issue('support-feature'), issue('support-urgent')]);
+  assert.ok(wordpress.min >= 45);
+  assert.ok(custom.min > wordpress.min);
+  assert.equal(custom.currency, 'EUR');
+  assert.deepEqual(SERVICE_PRICING.websiteBuilds.map((item) => item.priceFrom), [199, 299, 399, 449, 749, 990]);
+  assert.deepEqual(SERVICE_PRICING.supportMonthly.map((plan) => plan.price), [49, 89, 149, 119, 229, 399]);
+});
+
+test('domain availability input is normalized without accepting invalid labels', () => {
+  assert.equal(normalizeDomainCandidate('https://WWW.Example.COM/path'), 'example.com');
+  assert.equal(normalizeDomainCandidate('my--project.bg'), 'my--project.bg');
+  assert.equal(normalizeDomainCandidate('-invalid.com'), '');
+  assert.equal(domainTld('example.co.uk'), 'uk');
 });
