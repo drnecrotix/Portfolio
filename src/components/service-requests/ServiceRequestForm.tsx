@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { ExternalLink, Loader2, Wrench } from 'lucide-react';
-import { estimateServiceRange, type ServiceRequestIssue, type ServiceRequestSource } from '@/modules/service-requests/estimate';
+import { estimateServiceRange, type AuditServiceRequestSource, type ServiceRequestIssue } from '@/modules/service-requests/estimate';
 
 export function ServiceRequestForm({
     source,
@@ -12,7 +12,7 @@ export function ServiceRequestForm({
     snapshot,
     defaultCms = 'Unknown',
 }: {
-    source: ServiceRequestSource;
+    source: AuditServiceRequestSource;
     target: string;
     score?: number;
     issues: ServiceRequestIssue[];
