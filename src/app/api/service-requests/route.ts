@@ -14,7 +14,7 @@ import { hasValidOrigin, isRateLimited, noStoreHeaders } from '@/modules/web-hea
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const sourceSchema = z.enum(['WEBSITE_INSPECTOR', 'EMAIL_DOMAIN_SECURITY', 'SITE_CRAWL', 'ACCESSIBILITY_CHECK']);
+const sourceSchema = z.enum(['WEBSITE_INSPECTOR', 'EMAIL_DOMAIN_SECURITY', 'SITE_CRAWL', 'ACCESSIBILITY_CHECK', 'WEBSITE_BUILD']);
 const issueSchema = z.object({
     id: z.string().trim().min(1).max(100),
     label: z.string().trim().min(1).max(160),
@@ -64,6 +64,7 @@ const sourceLabels: Record<z.infer<typeof sourceSchema>, string> = {
     EMAIL_DOMAIN_SECURITY: 'Email Domain Security remediation',
     SITE_CRAWL: 'Site Crawl remediation',
     ACCESSIBILITY_CHECK: 'Accessibility remediation',
+    WEBSITE_BUILD: 'New website build',
 };
 
 function escapeHtml(value: string) {

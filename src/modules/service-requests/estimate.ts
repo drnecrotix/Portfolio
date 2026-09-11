@@ -1,4 +1,4 @@
-export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK';
+export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK' | 'WEBSITE_BUILD';
 
 export type ServiceRequestIssue = {
     id: string;
@@ -24,6 +24,7 @@ export const REMEDIATION_RATE_CARD = {
         EMAIL_DOMAIN_SECURITY: 45,
         SITE_CRAWL: 45,
         ACCESSIBILITY_CHECK: 55,
+        WEBSITE_BUILD: 95,
     },
     costByComplexity: {
         simple: { min: 10, max: 22 },
@@ -65,6 +66,57 @@ export const REMEDIATION_RATE_CARD = {
         max: 790,
     },
 } as const;
+
+export const WEBSITE_BUILD_RATE_CARD = {
+    baseByType: {
+        'site-landing': { min: 199, max: 299 },
+        'site-portfolio': { min: 299, max: 449 },
+        'site-business': { min: 399, max: 599 },
+        'site-blog': { min: 449, max: 699 },
+        'site-store': { min: 749, max: 1190 },
+        'site-custom': { min: 990, max: 1690 },
+    },
+    additions: {
+        'pages-4-7': { min: 80, max: 140 },
+        'pages-8-15': { min: 190, max: 340 },
+        'pages-16-plus': { min: 390, max: 690 },
+        'design-custom': { min: 140, max: 260 },
+        'design-premium': { min: 340, max: 620 },
+        'feature-contact': { min: 25, max: 45 },
+        'feature-blog': { min: 90, max: 160 },
+        'feature-bilingual': { min: 140, max: 260 },
+        'feature-booking': { min: 190, max: 390 },
+        'feature-commerce': { min: 290, max: 590 },
+        'feature-payments': { min: 140, max: 280 },
+        'feature-accounts': { min: 240, max: 490 },
+        'feature-integrations': { min: 160, max: 390 },
+        'feature-seo': { min: 70, max: 140 },
+        'feature-content-entry': { min: 90, max: 260 },
+        'feature-copywriting': { min: 140, max: 390 },
+        'feature-domain': { min: 20, max: 40 },
+        'feature-hosting': { min: 35, max: 70 },
+        'deadline-priority': { min: 180, max: 490 },
+    },
+} as const;
+
+function estimateWebsiteBuild(issues: ServiceRequestIssue[]) {
+    const ids = new Set(issues.map((issue) => issue.id));
+    const typeId = Object.keys(WEBSITE_BUILD_RATE_CARD.baseByType).find((id) => ids.has(id)) as keyof typeof WEBSITE_BUILD_RATE_CARD.baseByType | undefined;
+    const base = WEBSITE_BUILD_RATE_CARD.baseByType[typeId ?? 'site-business'];
+    let min = base.min;
+    let max = base.max;
+    for (const [id, addition] of Object.entries(WEBSITE_BUILD_RATE_CARD.additions)) {
+        if (!ids.has(id)) continue;
+        min += addition.min;
+        max += addition.max;
+    }
+    return {
+        min: roundFive(min),
+        max: roundFive(max),
+        currency: REMEDIATION_RATE_CARD.currency,
+        breakdown: { complexity: { simple: 0, moderate: 0, complex: 0, specialist: 0 }, additionalAffectedItems: 0, cmsModifier: 1, accessModifier: 1, bundleModifier: 1 },
+    };
+}
 
 const complexityBySource: Record<ServiceRequestSource, Record<string, Complexity>> = {
     WEBSITE_INSPECTOR: {
@@ -125,6 +177,33 @@ const complexityBySource: Record<ServiceRequestSource, Record<string, Complexity
         'main-landmark': 'moderate',
         'skip-link': 'simple',
     },
+    WEBSITE_BUILD: {
+        'site-landing': 'moderate',
+        'site-portfolio': 'complex',
+        'site-business': 'complex',
+        'site-blog': 'complex',
+        'site-store': 'specialist',
+        'site-custom': 'specialist',
+        'pages-4-7': 'moderate',
+        'pages-8-15': 'complex',
+        'pages-16-plus': 'specialist',
+        'design-custom': 'complex',
+        'design-premium': 'specialist',
+        'feature-contact': 'simple',
+        'feature-blog': 'moderate',
+        'feature-bilingual': 'complex',
+        'feature-booking': 'complex',
+        'feature-commerce': 'specialist',
+        'feature-payments': 'specialist',
+        'feature-accounts': 'specialist',
+        'feature-integrations': 'complex',
+        'feature-seo': 'moderate',
+        'feature-content-entry': 'moderate',
+        'feature-copywriting': 'complex',
+        'feature-domain': 'simple',
+        'feature-hosting': 'moderate',
+        'deadline-priority': 'complex',
+    },
 };
 
 function complexityFor(source: ServiceRequestSource, issue: ServiceRequestIssue): Complexity {
@@ -168,6 +247,7 @@ export function estimateServiceRange(
     issues: ServiceRequestIssue[],
     context: ServiceEstimateContext = {},
 ) {
+    if (source === 'WEBSITE_BUILD') return estimateWebsiteBuild(issues);
     const counts: Record<Complexity, number> = { simple: 0, moderate: 0, complex: 0, specialist: 0 };
     let laborMin = 0;
     let laborMax = 0;

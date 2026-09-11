@@ -54,6 +54,20 @@ export default function ServicePricingPage() {
 
                 <section className="mt-12 border-t border-border/80">
                     <div className="grid gap-2 border-b border-border/80 py-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
+                        <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-sky-500">Website creation</p><h2 className="mt-2 text-xl font-black tracking-tight">New website projects</h2></div>
+                        <p className="text-sm leading-6 text-muted-foreground">Choose the project characteristics and receive an immediate indicative range before submitting it for review.</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[680px] border-collapse text-left">
+                            <thead className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground"><tr className="border-b border-border/70"><th className="py-3 pr-5">Website</th><th className="py-3 pr-5">Scope</th><th className="py-3 text-right">Starting at</th></tr></thead>
+                            <tbody>{SERVICE_PRICING.websiteBuilds.map((item) => <tr key={item.id} className="border-b border-border/60 align-top"><th className="py-4 pr-5 text-sm font-semibold">{item.name}</th><td className="py-4 pr-5 text-xs leading-5 text-muted-foreground">{item.description}</td><td className="whitespace-nowrap py-4 text-right font-mono text-sm font-bold">€{item.priceFrom}</td></tr>)}</tbody>
+                        </table>
+                    </div>
+                    <Link href="/services/website" className="mt-5 inline-flex items-center justify-center border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">Configure a website</Link>
+                </section>
+
+                <section className="mt-12 border-t border-border/80">
+                    <div className="grid gap-2 border-b border-border/80 py-5 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
                         <div><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-sky-500">Monthly</p><h2 className="mt-2 text-xl font-black tracking-tight">SEO monitoring & growth</h2></div>
                         <p className="text-sm leading-6 text-muted-foreground">Lower-cost recurring plans focused on measurement, technical follow-up and practical optimization rather than bundled media spend or paid link packages.</p>
                     </div>
