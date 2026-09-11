@@ -1,7 +1,7 @@
 export const SERVICE_PRICING = {
     currency: 'EUR',
     market: 'Bulgaria',
-    reviewedAt: '2026-09-10',
+    reviewedAt: '2026-09-11',
     oneOff: [
         {
             id: 'automated-health-checks',
@@ -9,6 +9,13 @@ export const SERVICE_PRICING = {
             priceFrom: 0,
             priceTo: 0,
             description: 'Self-service Website Inspector, Site Crawl, Accessibility and Email Domain Security checks.',
+        },
+        {
+            id: 'website-development',
+            name: 'Website design & development',
+            priceFrom: 250,
+            priceTo: null,
+            description: 'New landing pages, business sites, portfolios, content sites, e-commerce and custom web applications. Use the project configurator for a scope-based estimate.',
         },
         {
             id: 'manual-audit-review',
@@ -95,7 +102,8 @@ export const SERVICE_PRICING = {
     ],
     exclusions: [
         'Paid media, sponsored placements and paid backlinks are not included.',
-        'Long-form content production and translation are quoted separately.',
+        'Long-form content production and translation are quoted separately unless selected in a website project scope.',
+        'Third-party subscriptions, licences, payment-provider fees and purchased premium assets are confirmed separately.',
         'Unusually high third-party data/API usage is confirmed before chargeable work starts.',
         'Final pricing is confirmed after scope review; applicable taxes are shown on the final quote or invoice.',
     ],
