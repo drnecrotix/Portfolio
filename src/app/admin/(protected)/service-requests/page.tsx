@@ -45,7 +45,7 @@ export default async function ServiceRequestsAdminPage() {
             <header className="mb-8 border-b border-white/10 pb-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/35">Customer service</p>
                 <h1 className="mt-2 text-3xl font-bold tracking-tight">Service Requests</h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Review audit-generated leads, send final quotes, track acceptance and capture a fresh after-audit when work is complete.</p>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-white/45">Review Web Health repair leads and website project requests, send final quotes, track acceptance and verify completed audit work.</p>
                 <div className="mt-5 flex gap-5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/40"><span>{requests.length} recent</span><span>{openCount} open</span></div>
             </header>
 
@@ -56,15 +56,18 @@ export default async function ServiceRequestsAdminPage() {
                         const snapshot = object(request.auditSnapshot);
                         const afterScore = reportScore(snapshot.after);
                         const monitoring = object((snapshot.monitoring ?? null) as Prisma.JsonValue | null);
+                        const planning = object((snapshot.planning ?? null) as Prisma.JsonValue | null);
                         const statusUrl = serviceStatusUrl(request.reference, request.customerEmail);
+                        const isWebsiteProject = request.source === 'WEBSITE_CREATION';
+                        const scopeNoun = isWebsiteProject ? 'scope item' : 'issue';
                         return (
                             <details key={request.id} className={index ? 'border-t border-white/10' : ''}>
                                 <summary className="grid cursor-pointer list-none gap-3 py-5 md:grid-cols-[150px_120px_minmax(0,1fr)_180px_150px] md:items-center">
                                     <div><p className="font-mono text-[10px] font-bold text-sky-300">{request.reference}</p><p className="mt-1 text-[10px] text-white/30">{request.createdAt.toLocaleString('en-GB')}</p></div>
                                     <span className="font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-white/55">{request.status.replaceAll('_', ' ')}</span>
-                                    <div className="min-w-0"><p className="truncate text-sm font-semibold">{request.target}</p><p className="mt-1 text-xs text-white/40">{sourceLabel(request.source)} · {selectedIssues.length} issue{selectedIssues.length === 1 ? '' : 's'}</p></div>
+                                    <div className="min-w-0"><p className="truncate text-sm font-semibold">{request.target}</p><p className="mt-1 text-xs text-white/40">{sourceLabel(request.source)} · {selectedIssues.length} {scopeNoun}{selectedIssues.length === 1 ? '' : 's'}</p></div>
                                     <div><p className="text-sm">{request.customerName}</p><a href={`mailto:${request.customerEmail}`} className="text-xs text-sky-300 hover:underline">{request.customerEmail}</a></div>
-                                    <div className="text-xs text-white/45"><p>Quote {money(request.finalQuoteCents, request.currency)}</p><p className="mt-1">Audit {request.scanScore ?? '-'} → {afterScore ?? '-'}</p></div>
+                                    <div className="text-xs text-white/45"><p>Quote {money(request.finalQuoteCents, request.currency)}</p>{isWebsiteProject ? <p className="mt-1">Est. {money(request.estimateMinCents, request.currency)}-{money(request.estimateMaxCents, request.currency)}</p> : <p className="mt-1">Audit {request.scanScore ?? '-'} → {afterScore ?? '-'}</p>}</div>
                                 </summary>
 
                                 <div className="border-t border-white/5 pb-7 pt-5 md:pl-[150px]">
@@ -73,39 +76,40 @@ export default async function ServiceRequestsAdminPage() {
                                             <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[9px] uppercase tracking-[0.12em] text-white/35">
                                                 <a href={statusUrl} target="_blank" rel="noreferrer" className="text-sky-300 hover:underline">Open customer status</a>
                                                 {monitoring.requested === true ? <span className="text-emerald-300">Monitoring requested · {String(monitoring.cadence ?? 'monthly')}</span> : null}
+                                                {isWebsiteProject && planning.weeks && typeof planning.weeks === 'object' && !Array.isArray(planning.weeks) ? <span>Delivery planning stored</span> : null}
                                             </div>
-                                            <p className="mt-5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">Selected audit findings</p>
+                                            <p className="mt-5 font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">{isWebsiteProject ? 'Project scope' : 'Selected audit findings'}</p>
                                             <div className="mt-3 border-y border-white/10">
                                                 {selectedIssues.length ? selectedIssues.map((issue, issueIndex) => (
                                                     <div key={`${request.id}-${issueIndex}`} className={`grid gap-2 py-3 sm:grid-cols-[80px_180px_minmax(0,1fr)] ${issueIndex ? 'border-t border-white/5' : ''}`}>
-                                                        <span className="font-mono text-[9px] font-bold uppercase text-amber-300">{String(issue.status ?? 'issue')}</span>
-                                                        <span className="text-xs font-semibold">{String(issue.label ?? 'Finding')}</span>
+                                                        <span className={`font-mono text-[9px] font-bold uppercase ${String(issue.status) === 'scope' ? 'text-sky-300' : 'text-amber-300'}`}>{String(issue.status ?? (isWebsiteProject ? 'scope' : 'issue'))}</span>
+                                                        <span className="text-xs font-semibold">{String(issue.label ?? (isWebsiteProject ? 'Scope item' : 'Finding'))}</span>
                                                         <span className="text-xs leading-5 text-white/45">{String(issue.summary ?? '')}</span>
                                                     </div>
-                                                )) : <p className="py-4 text-xs text-white/40">Manual review requested without selected automated findings.</p>}
+                                                )) : <p className="py-4 text-xs text-white/40">{isWebsiteProject ? 'No project scope was stored.' : 'Manual review requested without selected automated findings.'}</p>}
                                             </div>
-                                            <div className="mt-5 grid gap-3 text-xs text-white/45 sm:grid-cols-2"><p><strong className="text-white/65">CMS:</strong> {request.cms || 'Unknown'}</p><p><strong className="text-white/65">Access:</strong> {request.accessStatus || 'Not specified'}</p><p><strong className="text-white/65">Company:</strong> {request.company || '-'}</p><p><strong className="text-white/65">Budget:</strong> {money(request.budgetCents, request.currency)}</p></div>
+                                            <div className="mt-5 grid gap-3 text-xs text-white/45 sm:grid-cols-2"><p><strong className="text-white/65">CMS:</strong> {request.cms || 'Unknown'}</p><p><strong className="text-white/65">Access / hosting:</strong> {request.accessStatus || 'Not specified'}</p><p><strong className="text-white/65">Company:</strong> {request.company || '-'}</p><p><strong className="text-white/65">Budget:</strong> {money(request.budgetCents, request.currency)}</p></div>
                                             {request.customerMessage ? <div className="mt-5 border-l border-white/15 pl-4 text-sm leading-6 text-white/55">{request.customerMessage}</div> : null}
 
-                                            <div className="mt-7 border-t border-white/10 pt-5">
+                                            {!isWebsiteProject ? <div className="mt-7 border-t border-white/10 pt-5">
                                                 <p className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">Before / after verification</p>
                                                 <div className="mt-3 flex flex-wrap items-center gap-5 text-sm"><span>Before <strong className="ml-1 text-white">{request.scanScore ?? '-'}</strong></span><span>After <strong className="ml-1 text-white">{afterScore ?? 'Pending'}</strong></span>{request.scanScore !== null && afterScore !== null ? <span className={afterScore >= request.scanScore ? 'text-emerald-300' : 'text-amber-300'}>{afterScore >= request.scanScore ? '+' : ''}{afterScore - request.scanScore} points</span> : null}</div>
                                                 <form action={captureAfterAudit.bind(null, request.id)} className="mt-4"><button className="border border-white/15 px-4 py-2 text-xs font-semibold text-white/70 hover:border-white/30 hover:text-white">Run & capture after audit</button></form>
-                                            </div>
+                                            </div> : null}
                                         </div>
 
                                         <div className="space-y-6 border-l border-white/10 pl-0 xl:pl-6">
                                             <form action={updateServiceRequest.bind(null, request.id)}>
                                                 <p className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-white/35">Internal workflow</p>
                                                 <label className="mt-4 block text-xs text-white/45">Status<select name="status" defaultValue={request.status} className="mt-2 w-full border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30">{statuses.map((status) => <option key={status} value={status}>{status.replaceAll('_', ' ')}</option>)}</select></label>
-                                                <label className="mt-4 block text-xs text-white/45">Final quote, EUR<input name="finalQuote" type="number" min="0" max="10000" step="1" defaultValue={request.finalQuoteCents ? request.finalQuoteCents / 100 : ''} className="mt-2 w-full border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30" /></label>
+                                                <label className="mt-4 block text-xs text-white/45">Final quote, EUR<input name="finalQuote" type="number" min="0" max="50000" step="1" defaultValue={request.finalQuoteCents ? request.finalQuoteCents / 100 : ''} className="mt-2 w-full border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30" /></label>
                                                 <label className="mt-4 block text-xs text-white/45">Internal notes<textarea name="internalNotes" rows={5} maxLength={5000} defaultValue={request.internalNotes ?? ''} className="mt-2 w-full border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/30" /></label>
                                                 <button className="mt-4 bg-white px-4 py-2.5 text-xs font-bold text-black">Save request</button>
                                             </form>
 
                                             <form action={sendServiceQuote.bind(null, request.id)} className="border-t border-white/10 pt-5">
                                                 <p className="font-mono text-[9px] font-bold uppercase tracking-[0.15em] text-sky-300">Customer quote</p>
-                                                <label className="mt-3 block text-xs text-white/45">Final quote, EUR<input name="finalQuote" required type="number" min="1" max="10000" step="1" defaultValue={request.finalQuoteCents ? request.finalQuoteCents / 100 : ''} className="mt-2 w-full border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30" /></label>
+                                                <label className="mt-3 block text-xs text-white/45">Final quote, EUR<input name="finalQuote" required type="number" min="1" max="50000" step="1" defaultValue={request.finalQuoteCents ? request.finalQuoteCents / 100 : ''} className="mt-2 w-full border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none focus:border-white/30" /></label>
                                                 <label className="mt-3 block text-xs text-white/45">Customer note<textarea name="quoteNote" rows={4} maxLength={1500} className="mt-2 w-full border border-white/10 bg-black/20 p-3 text-sm text-white outline-none focus:border-white/30" placeholder="Scope, assumptions, next steps..." /></label>
                                                 <button className="mt-4 border border-sky-300/40 px-4 py-2.5 text-xs font-bold text-sky-200 hover:border-sky-200">Send final quote</button>
                                             </form>
