@@ -1,7 +1,7 @@
 export const SERVICE_PRICING = {
     currency: 'EUR',
     market: 'Bulgaria',
-    reviewedAt: '2026-09-10',
+    reviewedAt: '2026-09-11',
     oneOff: [
         {
             id: 'automated-health-checks',
@@ -100,6 +100,25 @@ export const SERVICE_PRICING = {
         { id: 'blog', name: 'Blog / publication', priceFrom: 449, description: 'A structured publishing website with categories, authoring and search-ready content templates.' },
         { id: 'store', name: 'Online store', priceFrom: 749, description: 'Product catalogue, cart and checkout foundation. Products and payment integrations affect scope.' },
         { id: 'custom', name: 'Custom web platform', priceFrom: 990, description: 'A tailored application, portal or workflow requiring discovery and a manually confirmed scope.' },
+    ],
+    supportOneOff: [
+        { id: 'diagnosis', name: 'Initial diagnosis', price: '€29-€69', description: 'Review of the reported problem, technical checks and a clear repair recommendation.' },
+        { id: 'small-fix', name: 'Small correction', price: '€49-€99', description: 'One bounded visual, content, configuration or plugin correction.' },
+        { id: 'standard-fix', name: 'Standard repair', price: '€89-€199', description: 'A contained functional issue requiring investigation, implementation and verification.' },
+        { id: 'complex-fix', name: 'Complex repair', price: '€199-€449', description: 'Multi-layer failure, custom-code repair or several connected issues.' },
+        { id: 'performance', name: 'Speed optimization', price: '€99-€249', description: 'Caching, assets, database and delivery review with practical improvements.' },
+        { id: 'malware', name: 'Malware cleanup and hardening', price: '€149-€349', description: 'Cleanup, access review, updates and reasonable hardening. Recovery depends on available backups.' },
+        { id: 'migration', name: 'Website migration', price: '€129-€349', description: 'Migration to a new host or server, DNS guidance and launch verification.' },
+        { id: 'hourly-wordpress', name: 'WordPress hourly work', price: '€29/hour', description: 'Suitable for small, clearly defined WordPress tasks.' },
+        { id: 'hourly-custom', name: 'Custom development hourly work', price: '€39/hour', description: 'Frontend, backend, API, database or deployment work on a custom codebase.' },
+    ],
+    supportMonthly: [
+        { id: 'wp-care', name: 'WordPress Care', platform: 'WordPress', price: 49, description: 'Core and plugin updates, backups, uptime checks and up to 30 minutes of small changes.' },
+        { id: 'wp-business', name: 'WordPress Business', platform: 'WordPress', price: 89, description: 'Care features plus security checks, performance review and up to 90 minutes of changes.' },
+        { id: 'woo-care', name: 'WooCommerce Care', platform: 'WooCommerce', price: 149, description: 'Store updates, backups, checkout checks and up to 2 hours of technical work.' },
+        { id: 'custom-care', name: 'Custom Care', platform: 'Custom', price: 119, description: 'Dependency review, uptime checks, backups/deployment guidance and up to 90 minutes of work.' },
+        { id: 'custom-growth', name: 'Custom Growth', platform: 'Custom', price: 229, description: 'Custom Care plus performance follow-up and up to 4 hours of development.' },
+        { id: 'custom-priority', name: 'Custom Priority', platform: 'Custom', price: 399, description: 'Priority handling, proactive technical review and up to 8 hours of development.' },
     ],
     exclusions: [
         'Paid media, sponsored placements and paid backlinks are not included.',
