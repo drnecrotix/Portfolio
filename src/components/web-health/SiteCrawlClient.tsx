@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Link2, Loader2 } from 'lucide-react';
 import { HealthCheckRows, ScoreLine, WebHealthNav } from './WebHealthUi';
 import { ServiceRequestForm } from '@/components/service-requests/ServiceRequestForm';
+import { BackToLabLink } from '@/components/services/BackToLabLink';
 import type { SiteCrawlReport } from '@/modules/web-health/types';
 
 export function SiteCrawlClient() {
@@ -36,6 +37,7 @@ export function SiteCrawlClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
+                <BackToLabLink href="/services" label="Services" />
                 <header className="max-w-4xl"><div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / Web Health Suite / v1.2.61</div><h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">Site Crawl / Broken Links</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">A deliberately bounded same-origin crawl that samples internal pages, broken targets, redirects and title hygiene without turning the shared host into a large crawler.</p></header>
                 <WebHealthNav active="crawl" />
 

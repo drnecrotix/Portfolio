@@ -110,6 +110,16 @@ test('website build estimates react to type, size, design and functionality', ()
   assert.equal(store.currency, 'EUR');
 });
 
+test('specialized community and content builds include their tailored scope', () => {
+  const recipeSite = estimateServiceRange('WEBSITE_BUILD', [issue('site-recipes'), issue('feature-recipes'), issue('feature-filters')]);
+  const gamingCommunity = estimateServiceRange('WEBSITE_BUILD', [issue('site-community'), issue('feature-community'), issue('feature-discord'), issue('feature-moderation')]);
+  const customDirectory = estimateServiceRange('WEBSITE_BUILD', [issue('site-directory'), issue('feature-directory'), issue('feature-accounts'), issue('feature-filters')]);
+
+  assert.ok(gamingCommunity.min > recipeSite.min);
+  assert.ok(customDirectory.min > gamingCommunity.min);
+  assert.equal(customDirectory.currency, 'EUR');
+});
+
 test('website support estimates distinguish WordPress from custom work and urgency', () => {
   const wordpress = estimateServiceRange('WEBSITE_SUPPORT', [issue('support-wordpress'), issue('support-small-fix')]);
   const custom = estimateServiceRange('WEBSITE_SUPPORT', [issue('support-custom'), issue('support-feature'), issue('support-urgent')]);
