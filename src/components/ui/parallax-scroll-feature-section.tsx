@@ -48,24 +48,28 @@ export const ParallaxScrollFeatureSection = () => {
     const scroll2 = useScroll({ target: sectionRefs[1], offset: ["start 85%", "end 15%"] }).scrollYProgress;
     const scroll3 = useScroll({ target: sectionRefs[2], offset: ["start 85%", "end 15%"] }).scrollYProgress;
 
-    const rawScrolls = [scroll1, scroll2, scroll3];
-
-    // Lighter, GPU-accelerated animations to eliminate delay
-    const opacityContents = rawScrolls.map(progress =>
-        useTransform(progress, [0.05, 0.3, 0.7, 0.95], [0, 1, 1, 0])
-    );
-
-    const translateContents = rawScrolls.map(progress =>
-        useTransform(progress, [0, 1], [80, -80])
-    );
-
-    const imageY = rawScrolls.map(progress =>
-        useTransform(progress, [0, 1], [-40, 40])
-    );
-
-    const scales = rawScrolls.map(progress =>
-        useTransform(progress, [0.05, 0.3, 0.7, 0.95], [0.9, 1, 1, 0.9])
-    );
+    // The section count is fixed, so each hook remains at component scope and
+    // keeps a stable call order across renders.
+    const opacityContents = [
+        useTransform(scroll1, [0.05, 0.3, 0.7, 0.95], [0, 1, 1, 0]),
+        useTransform(scroll2, [0.05, 0.3, 0.7, 0.95], [0, 1, 1, 0]),
+        useTransform(scroll3, [0.05, 0.3, 0.7, 0.95], [0, 1, 1, 0]),
+    ];
+    const translateContents = [
+        useTransform(scroll1, [0, 1], [80, -80]),
+        useTransform(scroll2, [0, 1], [80, -80]),
+        useTransform(scroll3, [0, 1], [80, -80]),
+    ];
+    const imageY = [
+        useTransform(scroll1, [0, 1], [-40, 40]),
+        useTransform(scroll2, [0, 1], [-40, 40]),
+        useTransform(scroll3, [0, 1], [-40, 40]),
+    ];
+    const scales = [
+        useTransform(scroll1, [0.05, 0.3, 0.7, 0.95], [0.9, 1, 1, 0.9]),
+        useTransform(scroll2, [0.05, 0.3, 0.7, 0.95], [0.9, 1, 1, 0.9]),
+        useTransform(scroll3, [0.05, 0.3, 0.7, 0.95], [0.9, 1, 1, 0.9]),
+    ];
 
     return (
         <div className="relative z-20 bg-background dark:bg-black transition-colors duration-500 overflow-visible isolate">
@@ -177,4 +181,3 @@ export const ParallaxScrollFeatureSection = () => {
         </div>
     );
 };
-

@@ -52,7 +52,7 @@ export function HomeBlogSection({ posts, onPostOpen }: Props) {
 
                                 <div className="hidden h-24 w-40 overflow-hidden rounded-lg border border-foreground/10 bg-foreground/[0.025] sm:block">
                                     {post.content.featuredImage ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
+                                         
                                         <img src={post.content.featuredImage} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
                                     ) : null}
                                 </div>

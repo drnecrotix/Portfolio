@@ -42,7 +42,7 @@ export function HomeProjectsSection({ projects, onProjectOpen }: Props) {
 
                                 <div className="hidden h-24 w-40 overflow-hidden rounded-lg border border-foreground/10 bg-foreground/[0.025] sm:block">
                                     {project.image ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
+                                         
                                         <img src={project.image} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
                                     ) : null}
                                 </div>

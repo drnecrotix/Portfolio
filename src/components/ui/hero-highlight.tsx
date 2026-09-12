@@ -14,8 +14,8 @@ export const HeroHighlight = ({
   containerClassName?: string;
   isLowPowerMode?: boolean;
 }) => {
-  let mouseX = useMotionValue(0);
-  let mouseY = useMotionValue(0);
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
   const rafRef = useRef<number | null>(null);
 
   // SVG patterns for different states and themes

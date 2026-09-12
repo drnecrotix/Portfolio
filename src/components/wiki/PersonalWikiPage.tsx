@@ -148,7 +148,7 @@ export function PersonalWikiPage({ content, identity, updatedAt }: { content: Pe
                     {content.showInfobox ? (
                         <div className="sticky top-28 overflow-hidden rounded-[1.4rem] border border-foreground/10 bg-foreground/[0.018]">
                             <div className="border-b border-foreground/10 p-4 text-center">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                { }
                                 <img src={portrait} alt={content.title || identity.name} className="mx-auto h-52 w-52 rounded-2xl border border-foreground/10 bg-foreground/[0.03] object-cover sm:h-56 sm:w-56 lg:h-52 lg:w-52 xl:h-56 xl:w-56" />
                                 <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.16em] text-muted-foreground">{content.portraitCaption}</p>
                             </div>

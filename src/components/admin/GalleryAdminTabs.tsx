@@ -19,11 +19,14 @@ export function GalleryAdminTabs({ works, published, page, interfacePanel, initi
   return (
     <div>
       <input type="hidden" name="adminTab" value={active} readOnly />
-      <div className="mb-5 flex gap-1 overflow-x-auto rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-1.5 scrollbar-hide">
+      <div role="tablist" className="mb-5 flex gap-1 overflow-x-auto rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-1.5 scrollbar-hide">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
+            role="tab"
+            aria-controls={`gallery-admin-panel-${id}`}
+            id={`gallery-admin-tab-${id}`}
             onClick={() => setActive(id)}
             aria-selected={active === id}
             className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition ${active === id ? 'bg-foreground text-background shadow-sm' : 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground'}`}
@@ -34,7 +37,13 @@ export function GalleryAdminTabs({ works, published, page, interfacePanel, initi
         ))}
       </div>
       {tabs.map(({ id }) => (
-        <div key={id} hidden={active !== id} aria-hidden={active !== id}>
+        <div
+          key={id}
+          id={`gallery-admin-panel-${id}`}
+          role="tabpanel"
+          aria-labelledby={`gallery-admin-tab-${id}`}
+          hidden={active !== id}
+        >
           {panels[id]}
         </div>
       ))}

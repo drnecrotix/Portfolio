@@ -113,7 +113,8 @@ export function TechStack({ techStack, tools, isLowPowerMode }: TechStackProps &
 
         setBodies(prevBodies => {
             return prevBodies.map(body => {
-                let { x, y, vx, vy, radius, mass } = body;
+                let { x, y, vx, vy } = body;
+                const { radius, mass } = body;
                 const dx = x - mousePos.x;
                 const dy = y - mousePos.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);

@@ -18,7 +18,7 @@ export const useTextScramble = (
         await new Promise(resolve => setTimeout(resolve, delay));
 
         const length = text.length;
-        let iteration = 0;
+        const iteration = 0;
         const maxIterations = 12; // iterations per char before locking
         const staggerDelay = 40; // delay between locking characters
 

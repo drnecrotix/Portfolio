@@ -84,7 +84,7 @@ export function CareerDossierPage({ identity, wiki, experience, resume }: { iden
                             <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground sm:text-base">A selective professional view generated from the same public Journey records used across the portfolio. Biography and deeper personal context stay in the Wiki.</p>
                         </div>
                         <div className="rounded-[1.6rem] border border-foreground/10 bg-foreground/[0.018] p-4">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            { }
                             <img src={portrait} alt={displayName} className="aspect-square w-full rounded-[1.2rem] border border-foreground/10 bg-foreground/[0.03] object-cover" />
                             {wiki.aliases.length ? <div className="mt-3 flex flex-wrap gap-1.5">{wiki.aliases.slice(0, 4).map((alias) => <span key={alias} className="rounded-full border border-foreground/10 px-2 py-1 font-mono text-[8px] uppercase tracking-[0.1em] text-muted-foreground">{alias}</span>)}</div> : null}
                         </div>

@@ -61,7 +61,7 @@ export default async function CmsPublicPage({ params }: { params: Promise<{ slug
                 <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-6xl">{page.title}</h1>
                 {featuredImage && (
                     <div className="mt-10 overflow-hidden rounded-2xl border border-foreground/10">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        { }
                         <img src={featuredImage} alt={page.title} className="max-h-[34rem] w-full object-cover" />
                     </div>
                 )}

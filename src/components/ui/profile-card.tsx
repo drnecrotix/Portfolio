@@ -52,7 +52,7 @@ export function ProfileCard(props: ProfileCardProps) {
       <div className='hidden md:flex relative items-center'>
         <div className='w-[480px] h-[480px] rounded-[2.5rem] overflow-hidden bg-gray-200 dark:bg-gray-800 flex-shrink-0 shadow-2xl relative z-0'>
           {/* CMS media can live on R2, another HTTPS CDN, or local /uploads. A native img avoids coupling this user-selected asset to Next Image's build-time host allowlist. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img
             src={safeImageUrl}
             alt={name}
@@ -101,7 +101,7 @@ export function ProfileCard(props: ProfileCardProps) {
         className='md:hidden max-w-sm mx-auto text-center bg-white dark:bg-zinc-900 p-6 rounded-[2.5rem] shadow-2xl border border-white/5'
       >
         <div className='w-full aspect-square bg-gray-200 dark:bg-gray-700 rounded-3xl overflow-hidden mb-6 flex items-center justify-center'>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img
             src={safeImageUrl}
             alt={name}

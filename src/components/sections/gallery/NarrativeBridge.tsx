@@ -25,7 +25,7 @@ export default function NarrativeBridge() {
                 </div>
 
                 <h2 className="text-4xl md:text-7xl font-serif leading-tight mb-8">
-                    You've seen the <span className="italic opacity-50">results</span>.
+                    You’ve seen the <span className="italic opacity-50">results</span>.
                     <br />
                     Now read the <span className="italic text-primary">process</span>.
                 </h2>
