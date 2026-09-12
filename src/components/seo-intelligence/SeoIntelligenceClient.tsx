@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Loader2, Search } from 'lucide-react';
 import { WebHealthNav } from '@/components/web-health/WebHealthUi';
+import { BackToLabLink } from '@/components/services/BackToLabLink';
 import type { SeoIntelligenceMode, SeoScoreBreakdown } from '@/modules/seo-intelligence/core';
 
 type Finding = { id: string; severity: 'fail' | 'warning' | 'info'; label: string; summary: string; recommendation?: string };
@@ -71,6 +72,7 @@ export function SeoIntelligenceClient() {
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
+                <BackToLabLink href="/services" label="Services" />
                 <header className="max-w-4xl">
                     <div className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground"><span className="text-sky-500">NecrotixLab</span> / SEO Intelligence</div>
                     <h1 className="mt-5 text-4xl font-black tracking-[-0.055em] sm:text-5xl">SEO Intelligence</h1>
