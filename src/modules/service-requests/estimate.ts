@@ -12,6 +12,7 @@ export type ServiceEstimateContext = {
     cms?: string;
     accessStatus?: string;
     websiteBuildBase?: Partial<Record<keyof typeof WEBSITE_BUILD_RATE_CARD.baseByType, { min: number; max: number }>>;
+    supportOneOff?: Record<string, { min: number; max: number }>;
 };
 
 type Complexity = 'simple' | 'moderate' | 'complex' | 'specialist';
@@ -224,7 +225,12 @@ function estimateWebsiteImprovement(issues: ServiceRequestIssue[], context: Serv
     };
 }
 
-function estimateWebsiteSupport(issues: ServiceRequestIssue[]) {
+const supportCatalogueByTask: Record<string, string> = {
+    'support-diagnosis': 'diagnosis', 'support-small-fix': 'small-fix', 'support-standard-fix': 'standard-fix',
+    'support-complex-fix': 'complex-fix', 'support-performance': 'performance', 'support-malware': 'malware', 'support-migration': 'migration',
+};
+
+function estimateWebsiteSupport(issues: ServiceRequestIssue[], context: ServiceEstimateContext) {
     const ids = new Set(issues.map((issue) => issue.id));
     const platformId = Object.keys(WEBSITE_SUPPORT_RATE_CARD.baseByPlatform).find((id) => ids.has(id)) as keyof typeof WEBSITE_SUPPORT_RATE_CARD.baseByPlatform | undefined;
     const base = WEBSITE_SUPPORT_RATE_CARD.baseByPlatform[platformId ?? 'support-wordpress'];
@@ -232,8 +238,9 @@ function estimateWebsiteSupport(issues: ServiceRequestIssue[]) {
     let max = base.max;
     for (const [id, addition] of Object.entries(WEBSITE_SUPPORT_RATE_CARD.work)) {
         if (!ids.has(id)) continue;
-        min += addition.min;
-        max += addition.max;
+        const catalogue = context.supportOneOff?.[supportCatalogueByTask[id]];
+        min += catalogue ? Math.max(0, catalogue.min - WEBSITE_SUPPORT_RATE_CARD.baseByPlatform['support-wordpress'].min) : addition.min;
+        max += catalogue ? Math.max(0, catalogue.max - WEBSITE_SUPPORT_RATE_CARD.baseByPlatform['support-wordpress'].max) : addition.max;
     }
     return {
         min: roundFive(min), max: roundFive(max), currency: REMEDIATION_RATE_CARD.currency,
@@ -386,7 +393,7 @@ export function estimateServiceRange(
 ) {
     if (source === 'WEBSITE_BUILD') return estimateWebsiteBuild(issues, context);
     if (source === 'WEBSITE_IMPROVEMENT') return estimateWebsiteImprovement(issues, context);
-    if (source === 'WEBSITE_SUPPORT') return estimateWebsiteSupport(issues);
+    if (source === 'WEBSITE_SUPPORT') return estimateWebsiteSupport(issues, context);
     const counts: Record<Complexity, number> = { simple: 0, moderate: 0, complex: 0, specialist: 0 };
     let laborMin = 0;
     let laborMax = 0;

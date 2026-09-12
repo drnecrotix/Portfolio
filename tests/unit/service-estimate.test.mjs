@@ -111,6 +111,13 @@ test('website build estimates react to type, size, design and functionality', ()
   assert.equal(store.currency, 'EUR');
 });
 
+test('admin pricing overrides are applied to website and support estimates', () => {
+  const website = estimateServiceRange('WEBSITE_BUILD', [issue('site-business')], { websiteBuildBase: { 'site-business': { min: 280, max: 420 } } });
+  const support = estimateServiceRange('WEBSITE_SUPPORT', [issue('support-wordpress'), issue('support-small-fix')], { supportOneOff: { 'small-fix': { min: 40, max: 80 } } });
+  assert.deepEqual([website.min, website.max], [280, 420]);
+  assert.deepEqual([support.min, support.max], [40, 80]);
+});
+
 test('specialized community and content builds include their tailored scope', () => {
   const recipeSite = estimateServiceRange('WEBSITE_BUILD', [issue('site-recipes'), issue('feature-recipes'), issue('feature-filters')]);
   const gamingCommunity = estimateServiceRange('WEBSITE_BUILD', [issue('site-community'), issue('feature-community'), issue('feature-discord'), issue('feature-moderation')]);

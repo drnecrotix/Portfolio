@@ -21,13 +21,17 @@ const tasks = [
     ['support-deployment', 'Deployment / CI support'],
 ] as const;
 
-const plans = ['No monthly plan', 'WordPress Care - €49/mo', 'WordPress Business - €89/mo', 'WooCommerce Care - €149/mo', 'Custom Care - €119/mo', 'Custom Growth - €229/mo', 'Custom Priority - €399/mo'] as const;
+const planDefinitions = [
+    ['wp-care', 'WordPress Care'], ['wp-business', 'WordPress Business'], ['woo-care', 'WooCommerce Care'],
+    ['custom-care', 'Custom Care'], ['custom-growth', 'Custom Growth'], ['custom-priority', 'Custom Priority'],
+] as const;
 
 function requirement(id: string, label: string, summary: string): ServiceRequestIssue {
     return { id, label, summary, status: 'warning' };
 }
 
-export function WebsiteSupportForm() {
+export function WebsiteSupportForm({ supportOneOff, supportMonthly }: { supportOneOff: Record<string, { min: number; max: number }>; supportMonthly: Record<string, number> }) {
+    const plans = useMemo(() => ['No monthly plan', ...planDefinitions.map(([id, name]) => `${name} - €${supportMonthly[id]}/mo`)], [supportMonthly]);
     const [platform, setPlatform] = useState('support-wordpress');
     const [selectedTasks, setSelectedTasks] = useState(() => new Set(['support-diagnosis']));
     const [plan, setPlan] = useState<string>(plans[0]);
@@ -46,7 +50,7 @@ export function WebsiteSupportForm() {
         if (urgent) rows.push(requirement('support-urgent', 'Urgent handling', 'Priority review, subject to availability'));
         return rows;
     }, [platform, plan, selectedTasks, urgent]);
-    const estimate = estimateServiceRange('WEBSITE_SUPPORT', requirements, { cms: platform, accessStatus: 'Need guidance' });
+    const estimate = estimateServiceRange('WEBSITE_SUPPORT', requirements, { cms: platform, accessStatus: 'Need guidance', supportOneOff });
 
     function toggleTask(id: string) {
         setSelectedTasks((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
