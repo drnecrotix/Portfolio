@@ -11,6 +11,8 @@ export type ServiceRequestIssue = {
 export type ServiceEstimateContext = {
     cms?: string;
     accessStatus?: string;
+    websiteBuildBase?: Partial<Record<keyof typeof WEBSITE_BUILD_RATE_CARD.baseByType, { min: number; max: number }>>;
+    supportOneOff?: Record<string, { min: number; max: number }>;
 };
 
 type Complexity = 'simple' | 'moderate' | 'complex' | 'specialist';
@@ -71,25 +73,24 @@ export const REMEDIATION_RATE_CARD = {
 
 export const WEBSITE_BUILD_RATE_CARD = {
     baseByType: {
-        'site-landing': { min: 199, max: 299 },
-        'site-portfolio': { min: 299, max: 449 },
-        'site-business': { min: 399, max: 599 },
-        'site-blog': { min: 449, max: 699 },
-        'site-store': { min: 749, max: 1190 },
-        'site-community': { min: 590, max: 990 },
-        'site-recipes': { min: 449, max: 749 },
-        'site-knowledge': { min: 490, max: 790 },
-        'site-courses': { min: 790, max: 1290 },
-        'site-booking': { min: 590, max: 990 },
-        'site-directory': { min: 890, max: 1490 },
-        'site-custom': { min: 990, max: 1690 },
+        'site-landing': { min: 149, max: 249 },
+        'site-portfolio': { min: 229, max: 349 },
+        'site-business': { min: 329, max: 499 },
+        'site-blog': { min: 349, max: 549 },
+        'site-store': { min: 599, max: 990 },
+        'site-community': { min: 449, max: 790 },
+        'site-recipes': { min: 349, max: 599 },
+        'site-knowledge': { min: 390, max: 650 },
+        'site-courses': { min: 650, max: 1090 },
+        'site-booking': { min: 490, max: 790 },
+        'site-directory': { min: 690, max: 1190 },
+        'site-custom': { min: 790, max: 1390 },
     },
     additions: {
         'pages-4-7': { min: 80, max: 140 },
         'pages-8-15': { min: 190, max: 340 },
         'pages-16-plus': { min: 390, max: 690 },
-        'design-custom': { min: 140, max: 260 },
-        'design-premium': { min: 340, max: 620 },
+        'design-custom': { min: 120, max: 220 },
         'feature-contact': { min: 25, max: 45 },
         'feature-blog': { min: 90, max: 160 },
         'feature-bilingual': { min: 140, max: 260 },
@@ -134,8 +135,7 @@ export const WEBSITE_BUILD_RATE_CARD = {
         'feature-notifications': { min: 90, max: 260 },
         'platform-custom': { min: 160, max: 390 },
         'content-not-ready': { min: 90, max: 260 },
-        'brand-not-ready': { min: 90, max: 220 },
-        'deadline-priority': { min: 180, max: 490 },
+        'brand-not-ready': { min: 60, max: 140 },
     },
 } as const;
 
@@ -178,10 +178,11 @@ export const WEBSITE_IMPROVEMENT_RATE_CARD = {
     existingFeatureFactor: 0.65,
 } as const;
 
-function estimateWebsiteBuild(issues: ServiceRequestIssue[]) {
+function estimateWebsiteBuild(issues: ServiceRequestIssue[], context: ServiceEstimateContext) {
     const ids = new Set(issues.map((issue) => issue.id));
     const typeId = Object.keys(WEBSITE_BUILD_RATE_CARD.baseByType).find((id) => ids.has(id)) as keyof typeof WEBSITE_BUILD_RATE_CARD.baseByType | undefined;
-    const base = WEBSITE_BUILD_RATE_CARD.baseByType[typeId ?? 'site-business'];
+    const baseKey = typeId ?? 'site-business';
+    const base = context.websiteBuildBase?.[baseKey] ?? WEBSITE_BUILD_RATE_CARD.baseByType[baseKey];
     let min = base.min;
     let max = base.max;
     for (const [id, addition] of Object.entries(WEBSITE_BUILD_RATE_CARD.additions)) {
@@ -224,7 +225,12 @@ function estimateWebsiteImprovement(issues: ServiceRequestIssue[], context: Serv
     };
 }
 
-function estimateWebsiteSupport(issues: ServiceRequestIssue[]) {
+const supportCatalogueByTask: Record<string, string> = {
+    'support-diagnosis': 'diagnosis', 'support-small-fix': 'small-fix', 'support-standard-fix': 'standard-fix',
+    'support-complex-fix': 'complex-fix', 'support-performance': 'performance', 'support-malware': 'malware', 'support-migration': 'migration',
+};
+
+function estimateWebsiteSupport(issues: ServiceRequestIssue[], context: ServiceEstimateContext) {
     const ids = new Set(issues.map((issue) => issue.id));
     const platformId = Object.keys(WEBSITE_SUPPORT_RATE_CARD.baseByPlatform).find((id) => ids.has(id)) as keyof typeof WEBSITE_SUPPORT_RATE_CARD.baseByPlatform | undefined;
     const base = WEBSITE_SUPPORT_RATE_CARD.baseByPlatform[platformId ?? 'support-wordpress'];
@@ -232,8 +238,9 @@ function estimateWebsiteSupport(issues: ServiceRequestIssue[]) {
     let max = base.max;
     for (const [id, addition] of Object.entries(WEBSITE_SUPPORT_RATE_CARD.work)) {
         if (!ids.has(id)) continue;
-        min += addition.min;
-        max += addition.max;
+        const catalogue = context.supportOneOff?.[supportCatalogueByTask[id]];
+        min += catalogue ? Math.max(0, catalogue.min - WEBSITE_SUPPORT_RATE_CARD.baseByPlatform['support-wordpress'].min) : addition.min;
+        max += catalogue ? Math.max(0, catalogue.max - WEBSITE_SUPPORT_RATE_CARD.baseByPlatform['support-wordpress'].max) : addition.max;
     }
     return {
         min: roundFive(min), max: roundFive(max), currency: REMEDIATION_RATE_CARD.currency,
@@ -384,9 +391,9 @@ export function estimateServiceRange(
     issues: ServiceRequestIssue[],
     context: ServiceEstimateContext = {},
 ) {
-    if (source === 'WEBSITE_BUILD') return estimateWebsiteBuild(issues);
+    if (source === 'WEBSITE_BUILD') return estimateWebsiteBuild(issues, context);
     if (source === 'WEBSITE_IMPROVEMENT') return estimateWebsiteImprovement(issues, context);
-    if (source === 'WEBSITE_SUPPORT') return estimateWebsiteSupport(issues);
+    if (source === 'WEBSITE_SUPPORT') return estimateWebsiteSupport(issues, context);
     const counts: Record<Complexity, number> = { simple: 0, moderate: 0, complex: 0, specialist: 0 };
     let laborMin = 0;
     let laborMax = 0;

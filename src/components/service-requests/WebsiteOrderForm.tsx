@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, ArrowRight, BookOpen, Briefcase, CalendarDays, Check, ExternalLink, FileText, Gamepad2, Globe2, GraduationCap, LayoutTemplate, Lightbulb, ListTree, Loader2, Newspaper, PanelsTopLeft, RefreshCw, Search, ShoppingCart, UserRound, Utensils, Wrench, type LucideIcon } from 'lucide-react';
 import { estimateServiceRange, type ServiceRequestIssue } from '@/modules/service-requests/estimate';
 import { validWebsiteUrl } from '@/modules/service-requests/website-order';
+import type { WebsiteBuildBase } from '@/modules/service-requests/pricing-settings';
 
 const siteTypes = [
     ['site-landing', 'Landing page', 'One focused campaign or conversion page'],
@@ -21,7 +22,7 @@ const siteTypes = [
     ['site-custom', 'Custom platform / web app', 'Portal, workflow, SaaS product or custom data model'],
 ] as const;
 
-const designOptions = [['design-adapted', 'Adapted design'], ['design-custom', 'Custom design'], ['design-premium', 'Advanced motion / art direction']] as const;
+const designOptions = [['design-ready', 'I already have a design'], ['design-adapted', 'Use and adapt the CMS theme'], ['design-custom', 'I need a custom design']] as const;
 
 const siteTypeIcons: Record<string, LucideIcon> = {
     'site-landing': LayoutTemplate,
@@ -68,16 +69,15 @@ type Recommendation = { title: string; platform: string; siteType?: string; reas
 
 const platforms = [
     'Recommend the best option', 'WordPress', 'WooCommerce', 'Shopify', 'Ghost', 'Drupal', 'Joomla',
-    'Webflow', 'Framer', 'Discourse', 'Next.js', 'Strapi', 'Sanity', 'Directus', 'Custom CMS / development', 'Other / not sure',
+    'Webflow', 'Framer', 'Discourse', 'Forem', 'Next.js', 'Strapi', 'Sanity', 'Directus', 'Custom CMS / development', 'Other / not sure',
 ] as const;
-const styles = ['Clean and minimal', 'Corporate and professional', 'Modern and bold', 'Dark and technological', 'Editorial', 'Luxury', 'Playful and colorful'] as const;
 
 const recommendations: Record<string, Recommendation> = {
     'Present a business': { title: 'WordPress business website', platform: 'WordPress', siteType: 'site-business', reason: 'Easy editing, mature SEO tools and a sensible cost for service pages.', alternatives: ['Webflow', 'Joomla'], features: ['feature-contact', 'feature-seo', 'feature-map', 'feature-analytics', 'feature-cookie-consent'] },
     'Generate enquiries': { title: 'Conversion-focused WordPress site', platform: 'WordPress', siteType: 'site-landing', reason: 'A focused structure with editable landing pages and lead capture.', alternatives: ['Webflow', 'Framer'], features: ['feature-contact', 'feature-copywriting', 'feature-analytics', 'feature-live-chat', 'feature-seo'] },
     'Sell products': { title: 'WooCommerce online store', platform: 'WooCommerce', siteType: 'site-store', reason: 'Strong ownership and flexibility for content-led stores. Shopify is suitable when hosted simplicity matters more.', alternatives: ['Shopify', 'Custom CMS / development'], features: ['feature-commerce', 'feature-payments', 'feature-product-import', 'feature-shipping', 'feature-reviews', 'feature-cookie-consent'] },
     'Publish a blog or magazine': { title: 'Editorial WordPress platform', platform: 'WordPress', siteType: 'site-blog', reason: 'A mature workflow for articles, authors, categories, media and search.', alternatives: ['Ghost', 'Drupal'], features: ['feature-blog', 'feature-search', 'feature-newsletter', 'feature-seo', 'feature-social', 'feature-reviews'] },
-    'Build a gaming community': { title: 'WordPress community hub', platform: 'WordPress', siteType: 'site-community', reason: 'Combines news, guides and landing pages with Discord and community integrations. Discourse can power a forum-heavy project.', alternatives: ['Discourse', 'Custom CMS / development'], features: ['feature-blog', 'feature-community', 'feature-discord', 'feature-accounts', 'feature-events', 'feature-moderation', 'feature-notifications'] },
+    'Build a gaming community': { title: 'WordPress community hub', platform: 'WordPress', siteType: 'site-community', reason: 'Combines news, guides and landing pages with Discord integrations. Forem suits article-led communities, while Discourse suits forum-led discussion.', alternatives: ['Forem', 'Discourse', 'Custom CMS / development'], features: ['feature-blog', 'feature-community', 'feature-discord', 'feature-accounts', 'feature-events', 'feature-moderation', 'feature-notifications'] },
     'Publish recipes or lifestyle content': { title: 'WordPress recipe publication', platform: 'WordPress', siteType: 'site-recipes', reason: 'Excellent recipe plugins, structured data, categories, filters and editorial tools.', alternatives: ['Ghost', 'Drupal'], features: ['feature-recipes', 'feature-blog', 'feature-search', 'feature-filters', 'feature-newsletter', 'feature-seo'] },
     'Create a wiki or knowledge base': { title: 'WordPress knowledge base', platform: 'WordPress', siteType: 'site-knowledge', reason: 'Efficient for an editable public knowledge base. Headless CMS is better for multiple channels or custom search.', alternatives: ['Drupal', 'Strapi', 'Directus'], features: ['feature-wiki', 'feature-search', 'feature-accounts', 'feature-content-entry', 'feature-seo'] },
     'Sell courses or memberships': { title: 'WordPress LMS and membership site', platform: 'WordPress', siteType: 'site-courses', reason: 'Established LMS, membership and payment integrations without building every workflow from scratch.', alternatives: ['Drupal', 'Custom CMS / development'], features: ['feature-lms', 'feature-accounts', 'feature-payments', 'feature-notifications', 'feature-community'] },
@@ -103,6 +103,21 @@ const wordpressPlugins: Record<string, string[]> = {
     'site-custom': ['ACF', 'WPGraphQL', 'WP Webhooks'],
 };
 
+const cmsFunctions: Record<string, FeatureId[]> = {
+    WordPress: ['feature-contact', 'feature-blog', 'feature-bilingual', 'feature-booking', 'feature-accounts', 'feature-seo', 'feature-search', 'feature-newsletter', 'feature-social', 'feature-analytics', 'feature-cookie-consent', 'feature-accessibility', 'feature-map', 'feature-live-chat', 'feature-reviews', 'feature-recipes', 'feature-filters', 'feature-community', 'feature-discord', 'feature-events', 'feature-lms', 'feature-directory', 'feature-wiki', 'feature-moderation', 'feature-notifications'],
+    WooCommerce: ['feature-commerce', 'feature-payments', 'feature-product-import', 'feature-shipping', 'feature-reviews', 'feature-accounts', 'feature-search', 'feature-filters', 'feature-bilingual', 'feature-seo', 'feature-analytics', 'feature-cookie-consent', 'feature-newsletter', 'feature-integrations'],
+    Shopify: ['feature-commerce', 'feature-payments', 'feature-product-import', 'feature-shipping', 'feature-reviews', 'feature-search', 'feature-filters', 'feature-bilingual', 'feature-seo', 'feature-analytics', 'feature-newsletter', 'feature-integrations'],
+    Ghost: ['feature-blog', 'feature-accounts', 'feature-payments', 'feature-newsletter', 'feature-search', 'feature-seo', 'feature-social', 'feature-analytics', 'feature-content-entry'],
+    Forem: ['feature-blog', 'feature-community', 'feature-accounts', 'feature-moderation', 'feature-notifications', 'feature-search', 'feature-seo', 'feature-social', 'feature-integrations'],
+    Discourse: ['feature-community', 'feature-accounts', 'feature-moderation', 'feature-notifications', 'feature-search', 'feature-discord', 'feature-integrations'],
+    Webflow: ['feature-contact', 'feature-cms', 'feature-bilingual', 'feature-seo', 'feature-analytics', 'feature-cookie-consent', 'feature-social', 'feature-map', 'feature-live-chat'],
+    Framer: ['feature-contact', 'feature-cms', 'feature-bilingual', 'feature-seo', 'feature-analytics', 'feature-social'],
+};
+
+function functionsForPlatform(platform: string) {
+    return cmsFunctions[platform] ?? features.map(([id]) => id);
+}
+
 function existingRecommendation(siteType: string, platform: string): Recommendation {
     const common: FeatureId[] = ['feature-accessibility', 'feature-seo'];
     const byType: Record<string, FeatureId[]> = {
@@ -126,17 +141,15 @@ function existingRecommendation(siteType: string, platform: string): Recommendat
 
 const req = (id: string, label: string, summary: string): ServiceRequestIssue => ({ id, label, summary, status: 'warning' });
 
-export function WebsiteOrderForm() {
+export function WebsiteOrderForm({ websiteBuildBase = {} }: { websiteBuildBase?: WebsiteBuildBase }) {
     const [step, setStep] = useState(1);
     const stepPanelRef = useRef<HTMLDivElement>(null);
     const [projectState, setProjectState] = useState<ProjectState>('new');
     const [siteType, setSiteType] = useState('');
     const [pageCount, setPageCount] = useState(1);
-    const [design, setDesign] = useState('design-adapted');
+    const [design, setDesign] = useState('design-ready');
     const [selectedFeatures, setSelectedFeatures] = useState<Set<string>>(() => new Set(['feature-domain', 'feature-hosting']));
     const [platform, setPlatform] = useState<string>(platforms[0]);
-    const [style, setStyle] = useState<string>(styles[0]);
-    const [contentReady, setContentReady] = useState('Most content is ready');
     const [brandReady, setBrandReady] = useState('Logo and colors are ready');
     const [hasDomain, setHasDomain] = useState(false);
     const [hasHosting, setHasHosting] = useState(false);
@@ -151,7 +164,6 @@ export function WebsiteOrderForm() {
     const [requiredPages, setRequiredPages] = useState('');
     const [additionalMessage, setAdditionalMessage] = useState('');
     const [privacyAccepted, setPrivacyAccepted] = useState(false);
-    const [priority, setPriority] = useState(false);
     const [domainLoading, setDomainLoading] = useState(false);
     const [domainResult, setDomainResult] = useState<{ status: string; message: string; domain?: string; suggestions?: string[] } | null>(null);
     const [loading, setLoading] = useState(false);
@@ -167,12 +179,14 @@ export function WebsiteOrderForm() {
     const goal = goalBySiteType[siteType] ?? '';
     const recommendation = useMemo(() => projectState === 'new' ? (recommendations[goal] ?? recommendations['Present a business']) : existingRecommendation(siteType, platform), [goal, platform, projectState, siteType]);
     const recommendedIds = useMemo(() => new Set(recommendation.features), [recommendation]);
+    const platformFeatureIds = useMemo(() => new Set(functionsForPlatform(platform)), [platform]);
     const visibleFeatures = useMemo(() => features.filter(([id]) => {
         if (id === 'feature-domain' && (hasDomain || projectState === 'existing')) return false;
         if (id === 'feature-hosting' && hasHosting) return false;
         if (projectState === 'existing' && ['feature-security', 'feature-backups', 'feature-performance', 'feature-maintenance'].includes(id)) return false;
+        if (!['feature-domain', 'feature-hosting', 'feature-business-email', 'feature-content-entry', 'feature-copywriting', 'feature-migration'].includes(id) && !platformFeatureIds.has(id)) return false;
         return true;
-    }), [hasDomain, hasHosting, projectState]);
+    }), [hasDomain, hasHosting, platformFeatureIds, projectState]);
     const recommendedFeatures = visibleFeatures.filter(([id]) => recommendedIds.has(id));
     const otherFeatures = visibleFeatures.filter(([id]) => !recommendedIds.has(id));
     const pages = pageCount >= 15 ? 'pages-16-plus' : pageCount >= 8 ? 'pages-8-15' : pageCount >= 4 ? 'pages-4-7' : 'pages-1-3';
@@ -181,22 +195,19 @@ export function WebsiteOrderForm() {
         const type = siteTypes.find(([id]) => id === siteType);
         const rows = [req(projectState === 'new' ? 'new-site-project' : 'existing-site-project', 'Starting point', projectState === 'new' ? 'New website' : 'Existing website redesign or expansion')];
         if (type) rows.push(req(type[0], type[1], type[2]));
-        rows.push(req(pages, 'Pages', pageCount >= 15 ? '15+ pages' : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`), req(design, 'Design direction', designOptions.find(([id]) => id === design)?.[1] ?? design), req('visual-style', 'Preferred style', style), req('platform', 'CMS / technology', platform), req('content-status', 'Content readiness', contentReady), req('brand-assets', 'Brand assets', brandReady));
+        rows.push(req(pages, 'Pages', pageCount >= 15 ? '15+ pages' : `${pageCount} ${pageCount === 1 ? 'page' : 'pages'}`), req(design, 'Design direction', designOptions.find(([id]) => id === design)?.[1] ?? design), req('platform', 'CMS / technology', platform), req('brand-assets', 'Brand assets', brandReady));
         if (hasDomain || projectState === 'existing') rows.push(req('existing-domain', 'Domain', 'Already available'));
         if (hasHosting) rows.push(req('existing-hosting', 'Hosting', 'Already available'));
         const visibleIds = new Set(visibleFeatures.map(([id]) => id));
         for (const [id, label] of features) if (selectedFeatures.has(id) && visibleIds.has(id)) rows.push(req(id, label, 'Included in the requested scope'));
         if (platform === 'Custom CMS / development') rows.push(req('platform-custom', 'Custom development', 'Custom technology implementation requested'));
-        if (contentReady === 'Content needs preparation') rows.push(req('content-not-ready', 'Content preparation', 'Website content needs preparation'));
         if (brandReady === 'Brand identity needs work') rows.push(req('brand-not-ready', 'Brand identity support', 'Logo, colors or visual identity need preparation'));
-        if (priority) rows.push(req('deadline-priority', 'Priority delivery', 'Accelerated delivery requested'));
         return rows;
-    }, [brandReady, contentReady, design, hasDomain, hasHosting, pageCount, pages, platform, priority, projectState, selectedFeatures, siteType, style, visibleFeatures]);
+    }, [brandReady, design, hasDomain, hasHosting, pageCount, pages, platform, projectState, selectedFeatures, siteType, visibleFeatures]);
     const requestSource = projectState === 'existing' ? 'WEBSITE_IMPROVEMENT' : 'WEBSITE_BUILD';
-    const estimate = estimateServiceRange(requestSource, requirements, { cms: platform, accessStatus: projectState === 'existing' ? 'Need guidance' : 'New website project' });
+    const estimate = estimateServiceRange(requestSource, requirements, { cms: platform, accessStatus: projectState === 'existing' ? 'Need guidance' : 'New website project', websiteBuildBase });
     const websiteUrlIsValid = projectState === 'new' || validWebsiteUrl(existingWebsite);
     const projectStepIsComplete = Boolean(siteType) && websiteUrlIsValid;
-    const recommendationApplied = recommendation.features.every((id) => selectedFeatures.has(id));
 
     function setInfrastructure(kind: 'domain' | 'hosting', checked: boolean) {
         if (kind === 'domain') { setHasDomain(checked); setDomainResult(null); if (checked) setDomainValue(''); } else setHasHosting(checked);
@@ -210,9 +221,6 @@ export function WebsiteOrderForm() {
         if (next === 'existing') setInfrastructure('domain', true);
     }
     function toggleFeature(id: string) { setSelectedFeatures((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; }); }
-    function applyRecommendation() {
-        setSelectedFeatures((current) => new Set([...current, ...recommendation.features]));
-    }
     async function checkDomain() {
         if (domainLoading || domainValue.trim().length < 3) return;
         setDomainLoading(true); setDomainResult(null);
@@ -229,7 +237,7 @@ export function WebsiteOrderForm() {
         const form = new FormData(event.currentTarget);
         setLoading(true); setMessage('Creating website request...'); setReference(''); setStatusUrl('');
         try {
-            const response = await fetch('/api/service-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: requestSource, target: existingWebsite.trim() || domainValue.trim() || projectName.trim(), issues: requirements, snapshot: { projectState, projectType: siteType, pages, design, features: [...selectedFeatures], priority, platform, goal, style, contentReady, brandReady, hasDomain, hasHosting, recommendation, audience, requiredPages, existingWebsite, domainCheck: domainResult }, name: customerName, email, company: form.get('company'), cms: platform, accessStatus: projectState === 'existing' ? 'Existing website - access to be confirmed' : 'New website project', budget, message: additionalMessage, privacyAccepted, website: form.get('website'), startedAt }) });
+            const response = await fetch('/api/service-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: requestSource, target: existingWebsite.trim() || domainValue.trim() || projectName.trim(), issues: requirements, snapshot: { projectState, projectType: siteType, pages, design, features: [...selectedFeatures], platform, goal, brandReady, hasDomain, hasHosting, recommendation, audience, requiredPages, existingWebsite, domainCheck: domainResult }, name: customerName, email, company: form.get('company'), cms: platform, accessStatus: projectState === 'existing' ? 'Existing website - access to be confirmed' : 'New website project', budget, message: additionalMessage, privacyAccepted, website: form.get('website'), startedAt }) });
             const data = await response.json().catch(() => ({})) as { reference?: string; statusUrl?: string; confirmationEmailSent?: boolean; error?: string };
             if (!response.ok || !data.reference) throw new Error(data.error || 'The website request could not be created.');
             setReference(data.reference); setStatusUrl(data.statusUrl || ''); setMessage(data.confirmationEmailSent ? `Request ${data.reference} was created and emailed to you.` : `Request ${data.reference} was created. Save the private status link below.`);
@@ -251,15 +259,15 @@ export function WebsiteOrderForm() {
             </div> : null}
 
             {step === 2 ? <div className="space-y-8">
-                <Section number="01" title="Recommended starting point"><div className="border border-sky-500/30 bg-sky-500/[0.05] p-5"><div className="flex gap-3"><Lightbulb className="mt-0.5 size-5 shrink-0 text-sky-500" /><div><p className="font-bold">{recommendation.title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{recommendation.reason}</p></div></div>{projectState === 'new' ? <div className="mt-4"><p className="mb-2 font-mono text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Choose a platform</p><div className="flex flex-wrap gap-2">{[recommendation.platform, ...recommendation.alternatives].map((option) => <button key={option} type="button" onClick={() => setPlatform(option)} className={`border px-3 py-2 text-xs font-bold transition ${platform === option ? 'border-sky-500 bg-sky-500 text-white' : 'border-border bg-background hover:border-foreground'}`}>{option}</button>)}</div><details className="mt-3"><summary className="cursor-pointer text-[11px] font-semibold text-sky-500">View all CMS options</summary><div className="mt-3"><CmsOptionButtons value={platform} onChange={setPlatform} options={platforms.filter((option) => option !== 'Recommend the best option' && option !== recommendation.platform && !recommendation.alternatives.includes(option))} /></div></details><RecommendationButton applied={recommendationApplied} existing={false} onClick={applyRecommendation} /></div> : <RecommendationButton applied={recommendationApplied} existing onClick={applyRecommendation} />}</div>{['WordPress', 'WooCommerce'].includes(platform) ? <PluginRecommendations plugins={wordpressPlugins[siteType] ?? wordpressPlugins['site-business']} /> : null}</Section>
+                <Section number="01" title="Recommended starting point"><div className="border border-sky-500/30 bg-sky-500/[0.05] p-5"><div className="flex gap-3"><Lightbulb className="mt-0.5 size-5 shrink-0 text-sky-500" /><div><p className="font-bold">{recommendation.title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{recommendation.reason}</p></div></div>{projectState === 'new' ? <div className="mt-4"><p className="mb-2 font-mono text-[8px] font-bold uppercase tracking-wider text-muted-foreground">Choose a platform</p><div className="flex flex-wrap gap-2">{[recommendation.platform, ...recommendation.alternatives].map((option) => <button key={option} type="button" onClick={() => setPlatform(option)} className={`border px-3 py-2 text-xs font-bold transition ${platform === option ? 'border-sky-500 bg-sky-500 text-white' : 'border-border bg-background hover:border-foreground'}`}>{option}</button>)}</div><details className="mt-3"><summary className="cursor-pointer text-[11px] font-semibold text-sky-500">View all CMS options</summary><div className="mt-3"><CmsOptionButtons value={platform} onChange={setPlatform} options={platforms.filter((option) => option !== 'Recommend the best option' && option !== recommendation.platform && !recommendation.alternatives.includes(option))} /></div></details></div> : null}</div>{['WordPress', 'WooCommerce'].includes(platform) ? <PluginRecommendations plugins={wordpressPlugins[siteType] ?? wordpressPlugins['site-business']} /> : null}</Section>
                 <Section number="02" title="Domain and hosting"><div className="grid gap-3 sm:grid-cols-2"><Toggle checked={hasDomain || projectState === 'existing'} disabled={projectState === 'existing'} title="I have a domain" detail="No domain setup needed." onChange={(checked) => setInfrastructure('domain', checked)} /><Toggle checked={hasHosting} title="I have hosting" detail="No hosting setup needed." onChange={(checked) => setInfrastructure('hosting', checked)} /></div>{!hasDomain && projectState === 'new' ? <DomainCheck value={domainValue} onValue={setDomainValue} loading={domainLoading} result={domainResult} onCheck={checkDomain} /> : null}</Section>
                 <WizardNav back={() => setStep(1)} next={() => setStep(3)} />
             </div> : null}
 
             {step === 3 ? <div className="space-y-8">
                 <Section number="01" title="Project size"><div className="space-y-6"><PageSlider value={pageCount} onChange={setPageCount} /><div className="border-l-2 border-sky-500 pl-3 text-xs"><p><span className="text-muted-foreground">Website:</span> <strong>{siteTypes.find(([id]) => id === siteType)?.[1]}</strong></p><p className="mt-1"><span className="text-muted-foreground">Platform:</span> <strong>{platform}</strong>{projectState === 'new' ? <button type="button" onClick={() => setStep(2)} className="ml-3 text-sky-500 hover:underline">Change</button> : null}</p></div></div></Section>
-                <Section number="02" title="Functions and add-ons"><p className="mb-3 text-xs leading-5 text-muted-foreground">Recommended for the selected website type. Add only what the project needs.</p><FeatureGrid items={recommendedFeatures} selected={selectedFeatures} onToggle={toggleFeature} recommended /><details className="mt-4 border-y border-border/70 py-4"><summary className="cursor-pointer text-xs font-bold text-sky-500">View all add-ons</summary><div className="mt-4"><FeatureGrid items={otherFeatures} selected={selectedFeatures} onToggle={toggleFeature} /></div></details></Section>
-                <details className="border-y border-border/70 py-5"><summary className="cursor-pointer text-sm font-bold">Advanced options <span className="ml-2 text-xs font-normal text-muted-foreground">design, content and delivery</span></summary><div className="mt-6 space-y-7"><div className="grid gap-5 sm:grid-cols-2"><TupleSelect label="Design level" value={design} onChange={setDesign} options={designOptions} /><Select label="Visual style" value={style} onChange={setStyle} options={styles} /><Select label="Content" value={contentReady} onChange={setContentReady} options={['All content is ready', 'Most content is ready', 'Content needs preparation']} /><Select label="Brand assets" value={brandReady} onChange={setBrandReady} options={['Logo and colors are ready', 'Some brand assets are ready', 'Brand identity needs work']} /></div><label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={priority} onChange={(event) => setPriority(event.target.checked)} className="mt-0.5 size-4" /><span><strong>Priority delivery</strong><span className="block text-xs text-muted-foreground">Subject to availability.</span></span></label></div></details>
+                <Section number="02" title="Functions and add-ons"><p className="mb-3 text-xs leading-5 text-muted-foreground">Options suitable for <strong>{platform}</strong> and this website type. Add only what the project needs.</p><FeatureGrid items={recommendedFeatures} selected={selectedFeatures} onToggle={toggleFeature} recommended /><details className="mt-4 border-y border-border/70 py-4"><summary className="cursor-pointer text-xs font-bold text-sky-500">View all compatible add-ons</summary><div className="mt-4"><FeatureGrid items={otherFeatures} selected={selectedFeatures} onToggle={toggleFeature} /></div></details></Section>
+                <details className="border-y border-border/70 py-5"><summary className="cursor-pointer text-sm font-bold">Advanced options <span className="ml-2 text-xs font-normal text-muted-foreground">design and logo</span></summary><div className="mt-6 grid gap-5 sm:grid-cols-2"><TupleSelect label="Website design" value={design} onChange={setDesign} options={designOptions} /><Select label="Logo" value={brandReady} onChange={setBrandReady} options={['Logo and colors are ready', 'Brand identity needs work']} /></div><p className="mt-4 text-[11px] leading-5 text-muted-foreground">No extra charge is added when your design or logo is ready. A custom design or new brand identity is priced separately.</p></details>
                 <WizardNav back={() => setStep(2)} next={() => setStep(4)} />
             </div> : null}
 
@@ -281,7 +289,6 @@ function Toggle({ checked, disabled = false, title, detail, onChange }: { checke
 function Section({ number, title, children }: { number: string; title: string; children: ReactNode }) { return <section><p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-sky-500">{number}</p><h2 className="mb-5 mt-2 text-xl font-black tracking-tight">{title}</h2>{children}</section>; }
 function Field({ name, label, value, onChange, type = 'text', required = false, placeholder }: { name: string; label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; placeholder?: string }) { return <label className="text-xs text-muted-foreground">{label}<input name={name} value={value} onChange={(event) => onChange(event.target.value)} type={type} required={required} min={type === 'number' ? 0 : undefined} max={type === 'number' ? 10000 : undefined} maxLength={type === 'number' ? undefined : 200} placeholder={placeholder} className="mt-2 w-full border-0 border-b border-border bg-transparent py-2 text-sm text-foreground outline-none focus:border-sky-500" /></label>; }
 function TextArea({ name, label, value, onChange, placeholder, rows = 3 }: { name: string; label: string; value: string; onChange: (value: string) => void; placeholder?: string; rows?: number }) { return <label className="text-xs text-muted-foreground sm:col-span-2">{label}<textarea name={name} value={value} onChange={(event) => onChange(event.target.value)} maxLength={1500} rows={rows} className="mt-2 w-full border border-border bg-transparent p-3 text-sm text-foreground" placeholder={placeholder} /></label>; }
-function RecommendationButton({ applied, existing, onClick }: { applied: boolean; existing: boolean; onClick: () => void }) { return <button type="button" disabled={applied} onClick={onClick} className={`mt-4 inline-flex items-center gap-2 text-xs font-bold ${existing ? 'border border-foreground px-4 py-2 transition hover:bg-foreground hover:text-background' : 'text-sky-500 hover:underline'} disabled:cursor-default disabled:opacity-70`}>{applied ? <Check className="size-3.5" /> : null}{applied ? 'Suggested options added' : existing ? 'Add suggested improvements' : 'Add suggested functions to the estimate'}</button>; }
 function Select({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: readonly string[] }) { return <label className="text-xs text-muted-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full border border-border bg-background px-3 py-3 text-sm text-foreground">{options.map((option) => <option key={option}>{option}</option>)}</select></label>; }
 function TupleSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: readonly (readonly [string, string])[] }) { return <label className="text-xs text-muted-foreground">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full border border-border bg-background px-3 py-3 text-sm text-foreground">{options.map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></label>; }
 function WizardNext({ onClick, disabled = false }: { onClick: () => void; disabled?: boolean }) { return <div className="flex justify-end"><button type="button" disabled={disabled} onClick={onClick} className="inline-flex items-center gap-2 border border-foreground px-5 py-3 text-sm font-bold transition hover:bg-foreground hover:text-background disabled:cursor-not-allowed disabled:opacity-40">Continue <ArrowRight className="size-4" /></button></div>; }

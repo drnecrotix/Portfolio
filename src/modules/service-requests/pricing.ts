@@ -1,7 +1,7 @@
 export const SERVICE_PRICING = {
     currency: 'EUR',
     market: 'Bulgaria',
-    reviewedAt: '2026-09-11',
+    reviewedAt: '2026-09-12',
     oneOff: [
         {
             id: 'automated-health-checks',
@@ -94,12 +94,12 @@ export const SERVICE_PRICING = {
         },
     ],
     websiteBuilds: [
-        { id: 'landing', name: 'Landing page', priceFrom: 199, description: 'A focused one-page site for a campaign, service or product.' },
-        { id: 'portfolio', name: 'Portfolio', priceFrom: 299, description: 'A personal or creative portfolio with project presentation and contact flow.' },
-        { id: 'business', name: 'Business website', priceFrom: 399, description: 'A professional small-business website with core pages, enquiry flow and basic SEO setup.' },
-        { id: 'blog', name: 'Blog / publication', priceFrom: 449, description: 'A structured publishing website with categories, authoring and search-ready content templates.' },
-        { id: 'store', name: 'Online store', priceFrom: 749, description: 'Product catalogue, cart and checkout foundation. Products and payment integrations affect scope.' },
-        { id: 'custom', name: 'Custom web platform', priceFrom: 990, description: 'A tailored application, portal or workflow requiring discovery and a manually confirmed scope.' },
+        { id: 'landing', name: 'Landing page', priceFrom: 149, description: 'A focused one-page site for a campaign, service or product.' },
+        { id: 'portfolio', name: 'Portfolio', priceFrom: 229, description: 'A personal or creative portfolio with project presentation and contact flow.' },
+        { id: 'business', name: 'Business website', priceFrom: 329, description: 'A professional small-business website with core pages, enquiry flow and basic SEO setup.' },
+        { id: 'blog', name: 'Blog / publication', priceFrom: 349, description: 'A structured publishing website with categories, authoring and search-ready content templates.' },
+        { id: 'store', name: 'Online store', priceFrom: 599, description: 'Product catalogue, cart and checkout foundation. Products and payment integrations affect scope.' },
+        { id: 'custom', name: 'Custom web platform', priceFrom: 790, description: 'A tailored application, portal or workflow requiring discovery and a manually confirmed scope.' },
     ],
     supportOneOff: [
         { id: 'diagnosis', name: 'Initial diagnosis', price: '€29-€69', description: 'Review of the reported problem, technical checks and a clear repair recommendation.' },

@@ -105,10 +105,17 @@ test('website build estimates react to type, size, design and functionality', ()
   const basic = estimateServiceRange('WEBSITE_BUILD', [issue('site-landing'), issue('pages-1-3'), issue('design-adapted')]);
   const business = estimateServiceRange('WEBSITE_BUILD', [issue('site-business'), issue('pages-4-7'), issue('design-custom'), issue('feature-contact'), issue('feature-seo')]);
   const store = estimateServiceRange('WEBSITE_BUILD', [issue('site-store'), issue('pages-8-15'), issue('design-custom'), issue('feature-payments'), issue('feature-accounts')]);
-  assert.equal(basic.min, 200);
+  assert.equal(basic.min, 150);
   assert.ok(business.min > basic.min);
   assert.ok(store.min > business.min);
   assert.equal(store.currency, 'EUR');
+});
+
+test('admin pricing overrides are applied to website and support estimates', () => {
+  const website = estimateServiceRange('WEBSITE_BUILD', [issue('site-business')], { websiteBuildBase: { 'site-business': { min: 280, max: 420 } } });
+  const support = estimateServiceRange('WEBSITE_SUPPORT', [issue('support-wordpress'), issue('support-small-fix')], { supportOneOff: { 'small-fix': { min: 40, max: 80 } } });
+  assert.deepEqual([website.min, website.max], [280, 420]);
+  assert.deepEqual([support.min, support.max], [40, 80]);
 });
 
 test('specialized community and content builds include their tailored scope', () => {
@@ -143,7 +150,7 @@ test('website support estimates distinguish WordPress from custom work and urgen
   assert.ok(wordpress.min >= 45);
   assert.ok(custom.min > wordpress.min);
   assert.equal(custom.currency, 'EUR');
-  assert.deepEqual(SERVICE_PRICING.websiteBuilds.map((item) => item.priceFrom), [199, 299, 399, 449, 749, 990]);
+  assert.deepEqual(SERVICE_PRICING.websiteBuilds.map((item) => item.priceFrom), [149, 229, 329, 349, 599, 790]);
   assert.deepEqual(SERVICE_PRICING.supportMonthly.map((plan) => plan.price), [49, 89, 149, 119, 229, 399]);
 });
 
