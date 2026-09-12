@@ -1,4 +1,4 @@
-export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK' | 'WEBSITE_BUILD' | 'WEBSITE_SUPPORT';
+export type ServiceRequestSource = 'WEBSITE_INSPECTOR' | 'EMAIL_DOMAIN_SECURITY' | 'SITE_CRAWL' | 'ACCESSIBILITY_CHECK' | 'WEBSITE_BUILD' | 'WEBSITE_IMPROVEMENT' | 'WEBSITE_SUPPORT';
 
 export type ServiceRequestIssue = {
     id: string;
@@ -25,6 +25,7 @@ export const REMEDIATION_RATE_CARD = {
         SITE_CRAWL: 45,
         ACCESSIBILITY_CHECK: 55,
         WEBSITE_BUILD: 95,
+        WEBSITE_IMPROVEMENT: 49,
         WEBSITE_SUPPORT: 29,
     },
     costByComplexity: {
@@ -164,6 +165,19 @@ export const WEBSITE_SUPPORT_RATE_CARD = {
     },
 } as const;
 
+export const WEBSITE_IMPROVEMENT_RATE_CARD = {
+    baseByPlatform: {
+        wordpress: { min: 69, max: 119 },
+        woocommerce: { min: 89, max: 149 },
+        shopify: { min: 89, max: 149 },
+        'next.js': { min: 99, max: 169 },
+        custom: { min: 119, max: 199 },
+        other: { min: 89, max: 159 },
+        unknown: { min: 69, max: 129 },
+    },
+    existingFeatureFactor: 0.65,
+} as const;
+
 function estimateWebsiteBuild(issues: ServiceRequestIssue[]) {
     const ids = new Set(issues.map((issue) => issue.id));
     const typeId = Object.keys(WEBSITE_BUILD_RATE_CARD.baseByType).find((id) => ids.has(id)) as keyof typeof WEBSITE_BUILD_RATE_CARD.baseByType | undefined;
@@ -175,6 +189,33 @@ function estimateWebsiteBuild(issues: ServiceRequestIssue[]) {
         min += addition.min;
         max += addition.max;
     }
+    return {
+        min: roundFive(min),
+        max: roundFive(max),
+        currency: REMEDIATION_RATE_CARD.currency,
+        breakdown: { complexity: { simple: 0, moderate: 0, complex: 0, specialist: 0 }, additionalAffectedItems: 0, cmsModifier: 1, accessModifier: 1, bundleModifier: 1 },
+    };
+}
+
+function estimateWebsiteImprovement(issues: ServiceRequestIssue[], context: ServiceEstimateContext) {
+    const ids = new Set(issues.map((issue) => issue.id));
+    const cms = String(context.cms ?? 'unknown').trim().toLowerCase();
+    const platformKey = cms.includes('woocommerce') ? 'woocommerce'
+        : cms.includes('wordpress') ? 'wordpress'
+            : cms.includes('shopify') ? 'shopify'
+                : cms.includes('next.js') ? 'next.js'
+                    : cms.includes('custom') ? 'custom'
+                        : cms === 'recommend the best option' ? 'unknown' : 'other';
+    const base = WEBSITE_IMPROVEMENT_RATE_CARD.baseByPlatform[platformKey];
+    let min = base.min;
+    let max = base.max;
+
+    for (const [id, addition] of Object.entries(WEBSITE_BUILD_RATE_CARD.additions)) {
+        if (!ids.has(id) || id.startsWith('pages-') || id.startsWith('design-')) continue;
+        min += addition.min * WEBSITE_IMPROVEMENT_RATE_CARD.existingFeatureFactor;
+        max += addition.max * WEBSITE_IMPROVEMENT_RATE_CARD.existingFeatureFactor;
+    }
+
     return {
         min: roundFive(min),
         max: roundFive(max),
@@ -298,6 +339,7 @@ const complexityBySource: Record<ServiceRequestSource, Record<string, Complexity
         'brand-not-ready': 'moderate',
         'deadline-priority': 'complex',
     },
+    WEBSITE_IMPROVEMENT: {},
     WEBSITE_SUPPORT: {},
 };
 
@@ -343,6 +385,7 @@ export function estimateServiceRange(
     context: ServiceEstimateContext = {},
 ) {
     if (source === 'WEBSITE_BUILD') return estimateWebsiteBuild(issues);
+    if (source === 'WEBSITE_IMPROVEMENT') return estimateWebsiteImprovement(issues, context);
     if (source === 'WEBSITE_SUPPORT') return estimateWebsiteSupport(issues);
     const counts: Record<Complexity, number> = { simple: 0, moderate: 0, complex: 0, specialist: 0 };
     let laborMin = 0;
