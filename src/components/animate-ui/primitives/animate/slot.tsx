@@ -62,9 +62,8 @@ function Slot<T extends HTMLElement = HTMLElement>({
   ref,
   ...props
 }: SlotProps<T>) {
-  if (!React.isValidElement(children)) return null;
-
-  const childType = children.type;
+  const validChild = React.isValidElement(children) ? children : null;
+  const childType = validChild?.type;
 
   // Check if it's already a motion component by checking for motion-specific properties
   const isAlreadyMotion =
@@ -87,7 +86,9 @@ function Slot<T extends HTMLElement = HTMLElement>({
     [isAlreadyMotion, childType],
   );
 
-  const { ref: childRef, ...childProps } = children.props as AnyProps;
+  if (!validChild) return null;
+
+  const { ref: childRef, ...childProps } = validChild.props as AnyProps;
 
   const mergedProps = mergeProps(childProps, props);
 

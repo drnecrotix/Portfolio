@@ -149,7 +149,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
             {selected && (
                 <div className="flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] p-3">
                     {activeKind === 'image' ? (
-                        // eslint-disable-next-line @next/next/no-img-element
+                         
                         <img src={selected} alt="Selected media preview" className="h-14 w-20 shrink-0 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
                     ) : (
                         <div className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-[10px] font-medium uppercase tracking-wider text-white/40">{activeKind === 'video' ? 'VIDEO' : fileBadge(selected)}</div>
@@ -194,7 +194,7 @@ export function MediaPicker({ value = '', onChange, inputName, label = 'Media', 
                                 {filtered.map((asset) => (
                                     <button key={asset.id} type="button" onClick={() => choose(asset.url)} className="min-w-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] text-left hover:border-white/30">
                                         {asset.mimeType.startsWith('image/') ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
+                                             
                                             <img src={asset.url} alt={asset.altText || asset.fileName} className="aspect-video w-full object-cover" />
                                         ) : (
                                             <div className="flex aspect-video items-center justify-center text-xs text-white/35">{asset.mimeType.startsWith('video/') ? 'VIDEO' : fileBadge(asset.fileName, asset.mimeType)}</div>

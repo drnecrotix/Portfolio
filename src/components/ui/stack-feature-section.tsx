@@ -124,7 +124,7 @@ export default function FeatureSection() {
                                 style={{ color: cfg.darkColor ? "inherit" : cfg.color }} 
                               />
                             ) : (
-                              // eslint-disable-next-line @next/next/no-img-element
+                               
                               <img
                                 src={cfg.img}
                                 alt="icon"

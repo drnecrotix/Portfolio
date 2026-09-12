@@ -8,7 +8,7 @@ export const BoxesCore = ({ className, ...rest }: { className?: string }) => {
   const isMobile = useIsMobile();
   const rows = new Array(isMobile ? 10 : 20).fill(1);
   const cols = new Array(isMobile ? 8 : 15).fill(1);
-  let colors = [
+  const colors = [
     "#f8fafc", // slate-50 (pure bright)
     "#e2e8f0", // slate-200
     "#94a3b8", // slate-400

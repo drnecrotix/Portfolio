@@ -60,7 +60,8 @@ const MovingStars = ({ color, paused }: { color: string, paused?: boolean }) => 
     useFrame((state, delta) => {
         if (paused || !mesh.current) return;
         particles.forEach((particle, i) => {
-            let { t, speed, xFactor, yFactor, zFactor } = particle;
+            let { t } = particle;
+            const { speed, xFactor, yFactor, zFactor } = particle;
             t += speed * 50;
             particle.zFactor += delta * 50;
             if (particle.zFactor > 20) particle.zFactor = -100;

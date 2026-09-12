@@ -261,7 +261,7 @@ export const ThoughtStreamClosing = () => {
 
                     {/* Heading */}
                     <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4 bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-                        Don't Miss My Next Thought
+                        Don’t Miss My Next Thought
                     </h2>
 
                     <p className="text-muted-foreground font-mono text-sm md:text-base mb-8 max-w-lg mx-auto">

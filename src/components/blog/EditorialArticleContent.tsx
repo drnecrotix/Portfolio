@@ -269,7 +269,7 @@ export function EditorialArticleContent({ html, postType }: { html: string; post
             {previewImage && (
                 <div role="dialog" aria-modal="true" aria-label="Image preview" onClick={() => setPreviewImage(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5 backdrop-blur-sm">
                     <button type="button" onClick={() => setPreviewImage(null)} className="absolute right-5 top-5 grid size-10 place-items-center rounded-full border border-white/15 bg-black/50 text-white" aria-label="Close image preview"><X className="size-5" /></button>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img src={previewImage.src} alt={previewImage.alt} onClick={(event) => event.stopPropagation()} className="max-h-[90vh] max-w-[94vw] rounded-xl object-contain" />
                 </div>
             )}

@@ -246,7 +246,7 @@ export function BlogArticleFrame({
             {featuredImage && !compactPublication && (
                 <div className="container mx-auto mt-12 max-w-6xl px-6">
                     <motion.button type="button" onClick={() => setPreviewFeatured(true)} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }} className="group block w-full overflow-hidden rounded-3xl border border-foreground/10 bg-foreground/[0.025] text-left" aria-label="Open featured image">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        { }
                         <img src={featuredImage} alt={displayTitle} className="max-h-[42rem] w-full object-cover transition duration-700 group-hover:scale-[1.012]" />
                     </motion.button>
                 </div>
@@ -322,7 +322,7 @@ export function BlogArticleFrame({
                                     <Link href={`/blog/${post.slug}`} className="group grid h-full grid-cols-[110px_minmax(0,1fr)] sm:grid-cols-[140px_minmax(0,1fr)]">
                                         <div className="min-h-36 overflow-hidden bg-foreground/[0.035]">
                                             {post.image ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
+                                                 
                                                 <img src={post.image} alt="" loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
                                             ) : <div className="grid h-full place-items-center font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/40">Journal</div>}
                                         </div>
@@ -345,7 +345,7 @@ export function BlogArticleFrame({
             {previewFeatured && featuredImage && (
                 <div role="dialog" aria-modal="true" aria-label="Featured image preview" onClick={() => setPreviewFeatured(false)} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5 backdrop-blur-sm">
                     <button type="button" onClick={() => setPreviewFeatured(false)} className="absolute right-5 top-5 grid size-10 place-items-center rounded-full border border-white/15 bg-black/50 text-white" aria-label="Close featured image preview"><X className="size-5" /></button>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img src={featuredImage} alt={displayTitle} onClick={(event) => event.stopPropagation()} className="max-h-[90vh] max-w-[94vw] rounded-xl object-contain" />
                 </div>
             )}

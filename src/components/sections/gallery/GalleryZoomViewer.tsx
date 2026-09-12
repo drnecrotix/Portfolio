@@ -111,7 +111,7 @@ export function GalleryZoomViewer({
         >
           {/* CMS media can live on a configurable R2/custom domain. Use the validated
               public URL directly instead of routing it through Next's fixed remotePatterns. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img
             src={activeImage}
             alt={activeIndex === 0 ? alt : `${alt} - ${activeIndex + 1}`}
@@ -151,7 +151,7 @@ export function GalleryZoomViewer({
               className={cn('relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border bg-black transition sm:h-20 sm:w-28', activeIndex === index ? 'border-foreground/70 ring-1 ring-foreground/20' : 'border-foreground/10 opacity-60 hover:opacity-100')}
               aria-label={`View image ${index + 1}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              { }
               <img src={image} alt="" loading="lazy" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-cover [-webkit-user-drag:none]" />
             </button>
           ))}

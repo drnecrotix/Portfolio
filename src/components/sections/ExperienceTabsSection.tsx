@@ -200,7 +200,7 @@ function JourneyContent() {
                     Changelog from my journey
                 </h2>
                 <p className="text-muted-foreground max-w-lg">
-                    I've been working on various projects and roles. Here's a timeline of my professional journey.
+                    I’ve been working on various projects and roles. Here’s a timeline of my professional journey.
                 </p>
             </div>
 

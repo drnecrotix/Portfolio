@@ -134,7 +134,7 @@ export function WikiArticlePage({
                 <aside>
                     {(content.image || facts.length) ? (
                         <div className="sticky top-28 overflow-hidden rounded-[1.4rem] border border-foreground/10 bg-foreground/[0.018]">
-                            {content.image ? <div className="border-b border-foreground/10 p-4 text-center">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={content.image} alt={title} className="mx-auto h-36 w-36 rounded-2xl border border-foreground/10 object-cover" />{content.imageCaption ? <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.15em] text-muted-foreground">{content.imageCaption}</p> : null}</div> : null}
+                            {content.image ? <div className="border-b border-foreground/10 p-4 text-center">{ }<img src={content.image} alt={title} className="mx-auto h-36 w-36 rounded-2xl border border-foreground/10 object-cover" />{content.imageCaption ? <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.15em] text-muted-foreground">{content.imageCaption}</p> : null}</div> : null}
                             <div className="p-5">
                                 <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{content.infoboxTitle}</p>
                                 <h2 className="mt-2 text-xl font-black tracking-tight">{title}</h2>

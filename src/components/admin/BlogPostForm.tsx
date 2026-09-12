@@ -218,7 +218,7 @@ export function BlogPostForm({ value = {}, postTypes, categories, action, submit
                         <section className={panelClass}>
                             <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Note cover</h3><span className="font-mono text-[9px] uppercase tracking-[0.16em] text-fuchsia-200/45">Automatic</span></div>
                             <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                { }
                                 <img src={NOTE_SYSTEM_IMAGE} alt="Necrotix Lab Note system cover" className="aspect-[1200/630] w-full object-cover" />
                             </div>
                             <p className="mt-3 text-[11px] leading-5 text-white/35">Notes are text-only. This system cover is used automatically in the Blog archive and social sharing, but is not displayed inside the Note itself.</p>
