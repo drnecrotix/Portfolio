@@ -251,7 +251,7 @@ export function LabPageClient() {
                                 </span>
                                 <span className="min-w-0">
                                     <span className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-sky-500 sm:tracking-[0.26em]">Kreatrics services</span>
-                                    <span className="mt-2 block text-2xl font-black tracking-[-0.04em] sm:text-3xl">Website Services</span>
+                                    <span className="mt-2 block text-2xl font-black tracking-[-0.04em] sm:text-3xl">Lab Services</span>
                                     <span className="mt-2 block max-w-2xl text-sm leading-6 text-muted-foreground">Inspect a website, configure a new build or request WordPress and custom support.</span>
                                     <span className="mt-4 flex flex-wrap gap-2 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground"><span>Inspect</span><span aria-hidden="true">/</span><span>Build</span><span aria-hidden="true">/</span><span>Support</span></span>
                                 </span>

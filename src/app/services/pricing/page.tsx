@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SERVICE_PRICING } from '@/modules/service-requests/pricing';
+import { prisma } from '@/lib/prisma';
+import { normalizeWebsiteBuildBase, SERVICE_PRICING_CONFIG_SLUG } from '@/modules/service-requests/pricing-settings';
 
 export const metadata: Metadata = {
     title: 'Service Pricing',
@@ -15,7 +17,10 @@ function oneOffPrice(item: (typeof SERVICE_PRICING.oneOff)[number]) {
     return `€${item.priceFrom}-€${item.priceTo}`;
 }
 
-export default function ServicePricingPage() {
+export default async function ServicePricingPage() {
+    const config = await prisma.page.findUnique({ where: { slug: SERVICE_PRICING_CONFIG_SLUG }, select: { content: true } }).catch(() => null);
+    const buildBase = normalizeWebsiteBuildBase(config?.content);
+    const buildKeys = { landing: 'site-landing', portfolio: 'site-portfolio', business: 'site-business', blog: 'site-blog', store: 'site-store', custom: 'site-custom' } as const;
     return (
         <main className="min-h-screen bg-background px-5 pb-24 pt-28 text-foreground sm:px-8 lg:pt-36">
             <div className="mx-auto max-w-6xl">
@@ -60,7 +65,7 @@ export default function ServicePricingPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[680px] border-collapse text-left">
                             <thead className="font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground"><tr className="border-b border-border/70"><th className="py-3 pr-5">Website</th><th className="py-3 pr-5">Scope</th><th className="py-3 text-right">Starting at</th></tr></thead>
-                            <tbody>{SERVICE_PRICING.websiteBuilds.map((item) => <tr key={item.id} className="border-b border-border/60 align-top"><th className="py-4 pr-5 text-sm font-semibold">{item.name}</th><td className="py-4 pr-5 text-xs leading-5 text-muted-foreground">{item.description}</td><td className="whitespace-nowrap py-4 text-right font-mono text-sm font-bold">€{item.priceFrom}</td></tr>)}</tbody>
+                            <tbody>{SERVICE_PRICING.websiteBuilds.map((item) => <tr key={item.id} className="border-b border-border/60 align-top"><th className="py-4 pr-5 text-sm font-semibold">{item.name}</th><td className="py-4 pr-5 text-xs leading-5 text-muted-foreground">{item.description}</td><td className="whitespace-nowrap py-4 text-right font-mono text-sm font-bold">€{buildBase[buildKeys[item.id]]?.min ?? item.priceFrom}</td></tr>)}</tbody>
                         </table>
                     </div>
                     <Link href="/services/website" className="mt-5 inline-flex items-center justify-center border border-foreground bg-foreground px-5 py-3 text-sm font-bold text-background transition hover:bg-transparent hover:text-foreground">Configure a website</Link>
