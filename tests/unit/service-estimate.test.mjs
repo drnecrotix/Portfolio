@@ -4,6 +4,7 @@ import test from 'node:test';
 import { estimateServiceRange, REMEDIATION_RATE_CARD } from '../../src/modules/service-requests/estimate.ts';
 import { SERVICE_PRICING } from '../../src/modules/service-requests/pricing.ts';
 import { domainSuggestions, domainTld, normalizeDomainCandidate } from '../../src/modules/domain-availability/domain.ts';
+import { validWebsiteUrl } from '../../src/modules/service-requests/website-order.ts';
 
 function issue(id, status = 'warning', summary = 'Finding detected.') {
   return {
@@ -118,6 +119,22 @@ test('specialized community and content builds include their tailored scope', ()
   assert.ok(gamingCommunity.min > recipeSite.min);
   assert.ok(customDirectory.min > gamingCommunity.min);
   assert.equal(customDirectory.currency, 'EUR');
+});
+
+test('existing website improvements do not use a full new-build base price', () => {
+  const build = estimateServiceRange('WEBSITE_BUILD', [issue('site-business'), issue('feature-performance')], { cms: 'WordPress' });
+  const improvement = estimateServiceRange('WEBSITE_IMPROVEMENT', [issue('existing-site-project'), issue('site-business'), issue('feature-performance')], { cms: 'WordPress' });
+
+  assert.ok(improvement.min < build.min);
+  assert.ok(improvement.max < build.max);
+  assert.equal(improvement.currency, 'EUR');
+});
+
+test('existing website flow accepts real hosts and rejects arbitrary text', () => {
+  assert.equal(validWebsiteUrl('example.com'), true);
+  assert.equal(validWebsiteUrl('https://sub.example.com/path'), true);
+  assert.equal(validWebsiteUrl('not a website'), false);
+  assert.equal(validWebsiteUrl('localhost'), false);
 });
 
 test('website support estimates distinguish WordPress from custom work and urgency', () => {

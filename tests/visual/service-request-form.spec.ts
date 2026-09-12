@@ -88,3 +88,32 @@ test('service request estimate reacts to remediation context but not customer bu
 
   await expect(page.getByText('Your entered budget does not change the automated estimate.')).toBeVisible();
 });
+
+test('website configurator validates an existing site and preserves contact details', async ({ page }) => {
+  await page.goto('/services/website', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Redesign or expand' }).click();
+
+  const website = page.getByLabel('Website URL');
+  await website.fill('not a website');
+  await expect(page.getByText('Enter an address such as https://example.com')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue' }).first()).toBeDisabled();
+
+  await website.fill('example.com');
+  await page.getByRole('button', { name: 'Business / services' }).click();
+  await page.getByRole('button', { name: 'Continue' }).first().click();
+  await expect(page.getByText('Recommended starting point')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Continue' }).first().click();
+  await expect(page.getByText('Project size')).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).first().click();
+
+  await page.getByLabel('Project name').fill('Existing site refresh');
+  await page.getByLabel('Your name').fill('Test Customer');
+  await page.getByLabel('Email').fill('customer@example.com');
+  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Continue' }).first().click();
+
+  await expect(page.getByLabel('Project name')).toHaveValue('Existing site refresh');
+  await expect(page.getByLabel('Your name')).toHaveValue('Test Customer');
+  await expect(page.getByLabel('Email')).toHaveValue('customer@example.com');
+});

@@ -14,7 +14,7 @@ import { hasValidOrigin, isRateLimited, noStoreHeaders } from '@/modules/web-hea
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const sourceSchema = z.enum(['WEBSITE_INSPECTOR', 'EMAIL_DOMAIN_SECURITY', 'SITE_CRAWL', 'ACCESSIBILITY_CHECK', 'WEBSITE_BUILD', 'WEBSITE_SUPPORT']);
+const sourceSchema = z.enum(['WEBSITE_INSPECTOR', 'EMAIL_DOMAIN_SECURITY', 'SITE_CRAWL', 'ACCESSIBILITY_CHECK', 'WEBSITE_BUILD', 'WEBSITE_IMPROVEMENT', 'WEBSITE_SUPPORT']);
 const issueSchema = z.object({
     id: z.string().trim().min(1).max(100),
     label: z.string().trim().min(1).max(160),
@@ -26,7 +26,7 @@ const schema = z.object({
     source: sourceSchema,
     target: z.string().trim().min(3).max(2048),
     score: z.number().int().min(0).max(100).optional(),
-    issues: z.array(issueSchema).max(40),
+    issues: z.array(issueSchema).max(60),
     snapshot: z.unknown().optional(),
     name: z.string().trim().min(2).max(80),
     email: z.string().trim().email().max(200),
@@ -65,6 +65,7 @@ const sourceLabels: Record<z.infer<typeof sourceSchema>, string> = {
     SITE_CRAWL: 'Site Crawl remediation',
     ACCESSIBILITY_CHECK: 'Accessibility remediation',
     WEBSITE_BUILD: 'New website build',
+    WEBSITE_IMPROVEMENT: 'Existing website improvement',
     WEBSITE_SUPPORT: 'Website support and maintenance',
 };
 
